@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 
 from FixedRateBond import FixedRateBond
-from RealKreditInstitut import RealKreditInstitut
 from util import print_time_prefixed
 
 
@@ -37,11 +36,3 @@ class ScraperOrchestrator:
     @property
     def scrapers(self):
         return self._scrapers
-
-    @property
-    def url(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def institute(self) -> RealKreditInstitut:
-        raise NotImplementedError
