@@ -1,0 +1,14 @@
+# Ignore the node_modules directory
+Kurser/
+
+# Ignore Logs
+logs
+*.log
+
+# The file containing environment variables 
+.env
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.sw*
