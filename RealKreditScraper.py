@@ -25,7 +25,8 @@ if __name__ == "__main__":
 
         scraper_orchestrator = ScraperOrchestrator(scrapers)
 
-        scraper_orchestrator.try_scrape(now)
+        # scraper_orchestrator.try_scrape(now) # Used for testing
+
         if now.minute % 5 == 0:
             if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
                 if scraper_orchestrator.try_scrape(now):
