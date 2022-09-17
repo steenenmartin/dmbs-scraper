@@ -25,7 +25,7 @@ if __name__ == "__main__":
             TotalKreditScraper()
         ]
 
-        result_handler = CsvResultHandler(now, )
+        result_handler = CsvResultHandler(now)
 
         scraper_orchestrator = ScraperOrchestrator(scrapers)
 
