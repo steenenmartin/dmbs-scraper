@@ -33,7 +33,7 @@ if __name__ == "__main__":
         if now.minute % 5 == 0:
             if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
                 if not result_handler.result_exists():
-                    fixed_rate_bonds = scraper_orchestrator.try_scrape()
+                    fixed_rate_bonds = scraper_orchestrator.scrape()
                     result_handler.export_result(fixed_rate_bonds)
                     # create_single_day_plot(now.today())
 

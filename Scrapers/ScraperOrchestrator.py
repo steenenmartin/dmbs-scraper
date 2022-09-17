@@ -7,7 +7,7 @@ class ScraperOrchestrator:
     def __init__(self, scrapers: list[Scraper]):
         self._scrapers = scrapers
 
-    def try_scrape(self) -> list[FixedRateBond]:
+    def scrape(self) -> list[FixedRateBond]:
         fixed_rate_bonds: list[FixedRateBond] = []
         while True:
             for scraper in self.scrapers:
