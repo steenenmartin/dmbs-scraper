@@ -2,6 +2,7 @@ import time as timeit
 from datetime import datetime, time
 from Plotting import create_single_day_plot, create_multi_day_plot
 from ResultHandlers.CsvResultHandler import CsvResultHandler
+from ResultHandlers.ResultHandler import ResultHandler
 from Scrapers.Scraper import Scraper
 from util import print_time_prefixed
 
@@ -25,7 +26,7 @@ if __name__ == "__main__":
             TotalKreditScraper()
         ]
 
-        result_handler = CsvResultHandler(now)
+        result_handler: ResultHandler = CsvResultHandler(now)
 
         scraper_orchestrator = ScraperOrchestrator(scrapers)
 
