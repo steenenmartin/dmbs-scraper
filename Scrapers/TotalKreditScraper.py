@@ -4,9 +4,6 @@ from Scrapers.Scraper import Scraper
 
 
 class TotalKreditScraper(Scraper):
-    def __init__(self):
-        pass
-
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBond]:
         return [

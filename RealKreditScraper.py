@@ -1,6 +1,7 @@
 import time as timeit
 from datetime import datetime, time
 from Plotting import create_single_day_plot, create_multi_day_plot
+from ResultHandlers.CsvResultHandler import CsvResultHandler
 from Scrapers.Scraper import Scraper
 from util import print_time_prefixed
 
@@ -12,6 +13,7 @@ from Scrapers.RealKreditDanmarkScraper import RealKreditDanmarkScraper
 
 
 if __name__ == "__main__":
+    # TODO: Remove while-loop when program is executed using pinger/task-scheduler.
     while True:
         start_time = timeit.time()
         now = datetime.utcnow()
@@ -23,14 +25,15 @@ if __name__ == "__main__":
             TotalKreditScraper()
         ]
 
-        scraper_orchestrator = ScraperOrchestrator(scrapers)
+        result_handler = CsvResultHandler(now, )
 
-        # scraper_orchestrator.try_scrape(now) # Used for testing
+        scraper_orchestrator = ScraperOrchestrator(scrapers)
 
         if now.minute % 5 == 0:
             if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
-                if scraper_orchestrator.try_scrape(now):
-                    pass
+                if not result_handler.result_exists():
+                    fixed_rate_bonds = scraper_orchestrator.try_scrape()
+                    result_handler.export_result(fixed_rate_bonds)
                     # create_single_day_plot(now.today())
 
             if now.hour == 15 and now.minute == 5:
