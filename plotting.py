@@ -6,7 +6,7 @@ import pandas as pd
 import warnings
 
 from datetime import datetime
-from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
+from matplotlib.ticker import AutoMinorLocator, MultipleLocator
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 

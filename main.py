@@ -1,19 +1,19 @@
 import time as timeit
 from datetime import datetime, time
 
-from BondData.FixedRateBondData import FixedRateBondData
-from Plotting import create_single_day_plot_per_institute, create_multi_day_plot
-from ResultHandlers.CsvResultHandler import CsvResultHandler
-from ResultHandlers.DatabaseResultHandler import DatabaseResultHandler
-from ResultHandlers.ResultHandler import ResultHandler
-from Scrapers.Scraper import Scraper
+from bond_data.fixed_rate_bond_data import FixedRateBondData
+from plotting import create_single_day_plot_per_institute, create_multi_day_plot
+from result_handlers.csv_result_handler import CsvResultHandler
+from result_handlers.database_result_handler import DatabaseResultHandler
+from result_handlers.result_handler import ResultHandler
+from scrapers.scraper import Scraper
 from util import print_time_prefixed
 
-from Scrapers.ScraperOrchestrator import ScraperOrchestrator
-from Scrapers.JyskeScraper import JyskeScraper
-from Scrapers.NordeaScraper import NordeaScraper
-from Scrapers.TotalKreditScraper import TotalKreditScraper
-from Scrapers.RealKreditDanmarkScraper import RealKreditDanmarkScraper
+from scrapers.scraper_orchestrator import ScraperOrchestrator
+from scrapers.jyske_scraper import JyskeScraper
+from scrapers.nordea_scraper import NordeaScraper
+from scrapers.total_kredit_scraper import TotalKreditScraper
+from scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
 
 
 def main():
