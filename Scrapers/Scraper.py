@@ -21,7 +21,7 @@ class Scraper:
         def wrapper(self):
             self.tries_count += 1
 
-            data = json.loads(requests.get(self.url).text)
+            data = json.loads(requests.get(self.url, timeout=10).text)
             bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
             self.scrape_success = True
