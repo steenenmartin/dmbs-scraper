@@ -1,6 +1,6 @@
-from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from CreditInstitute import CreditInstitute
-from Scrapers.Scraper import Scraper
+from bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from credit_insitute import CreditInstitute
+from scrapers.scraper import Scraper
 
 
 class NordeaScraper(Scraper):
