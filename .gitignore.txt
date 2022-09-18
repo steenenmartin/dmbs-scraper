@@ -1,4 +1,4 @@
-# Ignore the node_modules directory
+# Ignore these directories
 Kurser/
 
 # Ignore Logs
