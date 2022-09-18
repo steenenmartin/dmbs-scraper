@@ -1,5 +1,5 @@
 from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from RealKreditInstitut import RealKreditInstitut
+from CreditInstitute import CreditInstitute
 from Scrapers.Scraper import Scraper
 
 
@@ -22,5 +22,5 @@ class JyskeScraper(Scraper):
         return "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
 
     @property
-    def institute(self) -> RealKreditInstitut:
-        return RealKreditInstitut.Jyske
+    def institute(self) -> CreditInstitute:
+        return CreditInstitute.Jyske

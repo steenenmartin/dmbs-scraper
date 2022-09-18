@@ -1,5 +1,5 @@
 from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from RealKreditInstitut import RealKreditInstitut
+from CreditInstitute import CreditInstitute
 from Scrapers.Scraper import Scraper
 
 
@@ -22,5 +22,5 @@ class RealKreditDanmarkScraper(Scraper):
         return "https://rd.dk/api/Rates/GetOpenOffers"
 
     @property
-    def institute(self) -> RealKreditInstitut:
-        return RealKreditInstitut.RealKreditDanmark
+    def institute(self) -> CreditInstitute:
+        return CreditInstitute.RealKreditDanmark

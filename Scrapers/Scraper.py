@@ -2,7 +2,7 @@ import requests
 import json
 
 from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from RealKreditInstitut import RealKreditInstitut
+from CreditInstitute import CreditInstitute
 
 
 class Scraper:
@@ -37,7 +37,7 @@ class Scraper:
         raise NotImplementedError
 
     @property
-    def institute(self) -> RealKreditInstitut:
+    def institute(self) -> CreditInstitute:
         raise NotImplementedError
 
     @property

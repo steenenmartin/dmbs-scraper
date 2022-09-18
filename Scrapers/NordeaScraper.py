@@ -1,5 +1,5 @@
 from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from RealKreditInstitut import RealKreditInstitut
+from CreditInstitute import CreditInstitute
 from Scrapers.Scraper import Scraper
 
 
@@ -22,5 +22,5 @@ class NordeaScraper(Scraper):
         return "https://ebolig.nordea.dk/wemapp/api/credit/fixedrate/bonds.json"
 
     @property
-    def institute(self) -> RealKreditInstitut:
-        return RealKreditInstitut.Nordea
+    def institute(self) -> CreditInstitute:
+        return CreditInstitute.Nordea

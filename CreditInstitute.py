@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class RealKreditInstitut(Enum):
+class CreditInstitute(Enum):
     Jyske = 0
     Nordea = 1
     RealKreditDanmark = 2

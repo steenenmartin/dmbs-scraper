@@ -1,5 +1,5 @@
 from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from RealKreditInstitut import RealKreditInstitut
+from CreditInstitute import CreditInstitute
 from Scrapers.Scraper import Scraper
 
 
@@ -22,5 +22,5 @@ class TotalKreditScraper(Scraper):
         return "https://www.totalkredit.dk//api/bondinformation/table?tableId=privat-udbetaling-af-laan-aktuelle-kurser-kunder&domain=totalkredit"
 
     @property
-    def institute(self) -> RealKreditInstitut:
-        return RealKreditInstitut.TotalKredit
+    def institute(self) -> CreditInstitute:
+        return CreditInstitute.TotalKredit
