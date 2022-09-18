@@ -18,7 +18,7 @@ class Scraper:
 
         :param parse_bond_data_func: The parsing function from child Scraper-class
         """
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self):
             self.tries_count += 1
 
             data = json.loads(requests.get(self.url).text)
@@ -43,5 +43,6 @@ class Scraper:
 
     @property
     def max_tries(self):
+        # Can be overridden by each Scraper-child class if necessary.
         return 3
 
