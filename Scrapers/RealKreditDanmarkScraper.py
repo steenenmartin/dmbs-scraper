@@ -1,13 +1,13 @@
-from FixedRateBond import FixedRateBond
+from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
 from RealKreditInstitut import RealKreditInstitut
 from Scrapers.Scraper import Scraper
 
 
 class RealKreditDanmarkScraper(Scraper):
     @Scraper.scraper
-    def parse_fixed_rate_bonds(self, data) -> list[FixedRateBond]:
+    def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
         return [
-            FixedRateBond(
+            FixedRateBondDataEntry(
                 self.institute.name,
                 int(float(product["termToMaturityYears"])),
                 float(product["prices"][0]["price"].replace(",", ".")),

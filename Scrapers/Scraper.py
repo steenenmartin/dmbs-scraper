@@ -1,7 +1,7 @@
 import requests
 import json
 
-from FixedRateBond import FixedRateBond
+from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
 from RealKreditInstitut import RealKreditInstitut
 
 
@@ -23,14 +23,14 @@ class Scraper:
 
             data = json.loads(requests.get(self.url).text)
 
-            bonds: list[FixedRateBond] = parse_bond_data_func(self, data)
+            bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
             self.scrape_success = True
             return bonds
 
         return wrapper
 
-    def parse_fixed_rate_bonds(self) -> list[FixedRateBond]:
+    def parse_fixed_rate_bonds(self) -> list[FixedRateBondDataEntry]:
         raise NotImplementedError
 
     @property
