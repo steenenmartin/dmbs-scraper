@@ -16,7 +16,7 @@ class ScraperOrchestrator:
                         fixed_rate_bonds.extend(scraper.parse_fixed_rate_bonds())
                         print_time_prefixed(f"Scraping '{scraper.institute.name}' succeeded")
                     except Exception as e:
-                        print_time_prefixed(f"Scraping '{scraper.institute.name}' failed: {e}")
+                        print_time_prefixed(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
 
             if all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
                 break
