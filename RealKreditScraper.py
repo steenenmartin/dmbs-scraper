@@ -15,7 +15,7 @@ from Scrapers.TotalKreditScraper import TotalKreditScraper
 from Scrapers.RealKreditDanmarkScraper import RealKreditDanmarkScraper
 
 
-if __name__ == "__main__":
+def main():
     # TODO: Remove while-loop when program is executed using pinger/task-scheduler.
     while True:
         start_time = timeit.time()
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
         scraper_orchestrator = ScraperOrchestrator(scrapers)
 
-        if now.minute % 5 == 0:
+        if now.minute % 1 == 0:
             # TODO: Incorporate accounting for Danish banking holidays.
             if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
                 if not result_handler.result_exists():
@@ -46,3 +46,7 @@ if __name__ == "__main__":
                 timeit.sleep(60)
 
         timeit.sleep(max(10 - (timeit.time() - start_time), 0))
+
+
+if __name__ == "__main__":
+    main()
