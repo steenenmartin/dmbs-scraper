@@ -4,6 +4,7 @@ from datetime import datetime, time
 from BondData.FixedRateBondData import FixedRateBondData
 from Plotting import create_single_day_plot_per_institute, create_multi_day_plot
 from ResultHandlers.CsvResultHandler import CsvResultHandler
+from ResultHandlers.DatabaseResultHandler import DatabaseResultHandler
 from ResultHandlers.ResultHandler import ResultHandler
 from Scrapers.Scraper import Scraper
 from util import print_time_prefixed
@@ -20,6 +21,7 @@ def main():
     while True:
         start_time = timeit.time()
         now = datetime.utcnow()
+        now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
         scrapers: list[Scraper] = [
             JyskeScraper(),
@@ -28,17 +30,17 @@ def main():
             TotalKreditScraper()
         ]
 
-        result_handler: ResultHandler = CsvResultHandler(now)
+        result_handler: ResultHandler = DatabaseResultHandler(now)
 
         scraper_orchestrator = ScraperOrchestrator(scrapers)
 
-        if now.minute % 1 == 0:
+        if now.minute % 5 == 0:
             # TODO: Incorporate accounting for Danish banking holidays.
             if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
                 if not result_handler.result_exists():
                     fixed_rate_bond_data: FixedRateBondData = scraper_orchestrator.scrape()
                     result_handler.export_result(fixed_rate_bond_data)
-                    create_single_day_plot_per_institute(now.today())
+                    # create_single_day_plot_per_institute(now.today())
 
             if now.hour == 15 and now.minute == 5:
                 # create_multi_day_plot()

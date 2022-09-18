@@ -1,14 +1,10 @@
 import os
-from datetime import datetime
 
 from BondData.FixedRateBondData import FixedRateBondData
 from ResultHandlers.ResultHandler import ResultHandler
 
 
 class CsvResultHandler(ResultHandler):
-    def __init__(self, scrape_time: datetime):
-        self.scrape_time = scrape_time
-
     def result_exists(self):
         return os.path.exists(self.csv_path)
 
