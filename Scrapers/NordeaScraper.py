@@ -11,7 +11,7 @@ class NordeaScraper(Scraper):
                 self.institute.name,
                 int(product["loanPeriodMax"]),
                 float(product["rate"].strip("*&nbsp;").replace(",", ".")),
-                float(product["repaymentFreedomMax"]) if product["repaymentFreedomMax"] != "Nej" else 0,
+                float(product["repaymentFreedomMax"]) if product["repaymentFreedomMax"] != "Nej" else 0.0,
                 float(product["fundName"].split(" ")[0].strip("%").replace(",", ".")),
                 product["isinCode"]
             ) for product in data

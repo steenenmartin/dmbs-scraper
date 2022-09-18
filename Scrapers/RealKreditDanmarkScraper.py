@@ -11,7 +11,7 @@ class RealKreditDanmarkScraper(Scraper):
                 self.institute.name,
                 int(float(product["termToMaturityYears"])),
                 float(product["prices"][0]["price"].replace(",", ".")),
-                float(product["numberOfTermsWithoutRepayment"]) * 3 / 12,
+                float(product["numberOfTermsWithoutRepayment"]) * 3.0 / 12.0,
                 float(product["nominelInterestRate"]),
                 product["isinCode"]
             ) for product in data

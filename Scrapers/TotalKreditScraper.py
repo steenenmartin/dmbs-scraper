@@ -11,7 +11,7 @@ class TotalKreditScraper(Scraper):
                 self.institute.name,
                 int(float(product["lifetime"].split(" ")[0])),
                 float(product["spotPriceRatePayment"].replace(",", ".")),
-                0 if product["name"].endswith("med afdrag") else float(product["name"].split(" ")[5]),
+                0.0 if product["name"].endswith("med afdrag") else float(product["name"].split(" ")[5]),
                 float(product["name"].split(" ")[0].strip("%").replace(",", ".")),
                 "DKK000" + product["fondCode"]
             ) for product in data["groups"][0]['entries']
