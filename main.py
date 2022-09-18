@@ -2,12 +2,9 @@ import time as timeit
 from datetime import datetime, time
 
 from bond_data.fixed_rate_bond_data import FixedRateBondData
-from plotting import create_single_day_plot_per_institute, create_multi_day_plot
-from result_handlers.csv_result_handler import CsvResultHandler
 from result_handlers.database_result_handler import DatabaseResultHandler
 from result_handlers.result_handler import ResultHandler
 from scrapers.scraper import Scraper
-from util import print_time_prefixed
 
 from scrapers.scraper_orchestrator import ScraperOrchestrator
 from scrapers.jyske_scraper import JyskeScraper

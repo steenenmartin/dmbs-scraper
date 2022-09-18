@@ -14,4 +14,5 @@ def client_factory():
 
 
 if __name__ == '__main__':
-    print(query_db("select * from prices"))
+    df = query_db("select * from prices")
+    print(df)
