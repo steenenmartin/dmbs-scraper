@@ -1,6 +1,6 @@
-from BondData.fixed_rate_bond_data import FixedRateBondData
-from BondData.fixed_rate_bond_data_entry import FixedRateBondDataEntry
-from Scrapers.scraper import Scraper
+from bond_data.fixed_rate_bond_data import FixedRateBondData
+from bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from scrapers.scraper import Scraper
 from util import print_time_prefixed
 
 
