@@ -1,6 +1,6 @@
 import sqlite3
 import pandas as pd
-from ResultHandlers.result_handler import ResultHandler
+from result_handlers.result_handler import ResultHandler
 
 
 class DatabaseResultHandler(ResultHandler):

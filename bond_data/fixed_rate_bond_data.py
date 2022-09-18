@@ -1,6 +1,6 @@
 import pandas as pd
 
-from BondData.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 
 
 class FixedRateBondData:
