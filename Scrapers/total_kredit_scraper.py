@@ -1,6 +1,6 @@
-from BondData.FixedRateBondDataEntry import FixedRateBondDataEntry
-from CreditInstitute import CreditInstitute
-from Scrapers.Scraper import Scraper
+from BondData.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from credit_insitute import CreditInstitute
+from Scrapers.scraper import Scraper
 
 
 class TotalKreditScraper(Scraper):

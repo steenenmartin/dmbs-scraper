@@ -1,7 +1,7 @@
 import os
 
-from BondData.FixedRateBondData import FixedRateBondData
-from ResultHandlers.ResultHandler import ResultHandler
+from BondData.fixed_rate_bond_data import FixedRateBondData
+from ResultHandlers.result_handler import ResultHandler
 
 
 class CsvResultHandler(ResultHandler):
