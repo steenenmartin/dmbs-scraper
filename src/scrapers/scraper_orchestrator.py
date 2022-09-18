@@ -1,7 +1,7 @@
-from bond_data.fixed_rate_bond_data import FixedRateBondData
-from bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
-from scrapers.scraper import Scraper
-from utils.date_helper import print_time_prefixed
+from ..bond_data.fixed_rate_bond_data import FixedRateBondData
+from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from ..scrapers.scraper import Scraper
+from ..utils.date_helper import print_time_prefixed
 
 
 class ScraperOrchestrator:

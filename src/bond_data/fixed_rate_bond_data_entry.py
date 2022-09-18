@@ -1,4 +1,4 @@
-from credit_insitute import CreditInstitute
+from ..credit_insitute import CreditInstitute
 
 
 class FixedRateBondDataEntry:

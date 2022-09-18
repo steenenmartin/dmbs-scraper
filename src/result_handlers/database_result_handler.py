@@ -1,5 +1,5 @@
-from database import query_db, client_factory
-from result_handlers.result_handler import ResultHandler
+from ..database import query_db, client_factory
+from ..result_handlers.result_handler import ResultHandler
 
 
 class DatabaseResultHandler(ResultHandler):
