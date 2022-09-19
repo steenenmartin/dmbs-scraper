@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import datetime as dt
-from src.database import client_factory
+from src.database.sqlite_conn import client_factory
 
 df_lst = []
 main_dir = '../kurser'
