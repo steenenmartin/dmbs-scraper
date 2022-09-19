@@ -1,5 +1,5 @@
 import logging
-LOGGING_PATH = f'{__file__}\\..\\..\\..\\'
+LOGGING_PATH = f'{__file__}\\..\\..\\..\\..\\'
 
 
 def initiate_logger(logging_level=logging.INFO):

@@ -1,4 +1,4 @@
-from src.types.credit_insitute import CreditInstitute
+from ..types.credit_insitute import CreditInstitute
 
 
 class FixedRateBondDataEntry:
