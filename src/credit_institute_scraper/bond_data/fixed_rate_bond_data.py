@@ -8,3 +8,4 @@ class FixedRateBondData:
 
     def to_pandas_data_frame(self):
         return pd.DataFrame.from_dict([x.__dict__ for x in self.fixed_rate_bond_data_entries])
+3
