@@ -2,3 +2,5 @@ pandas
 seaborn
 requests
 matplotlib==3.5.0  # newest version 3.5.2 has a bug, so we downgrade
+dash==2.5.1
+dash_bootstrap_components==1.1.0
