@@ -31,7 +31,12 @@ and max_interest_only_period = :max_interest_only_period""", params=locals())
     scatters = []
     for cr in sorted(df['coupon_rate'].unique()):
         tmp_df = df[df['coupon_rate'] == cr]
-        scatters.append(go.Scatter(x=tmp_df['timestamp'], y=tmp_df['spot_price'], line=dict(width=3), name=cr))
+        scatters.append(go.Scatter(x=tmp_df['timestamp'],
+                                   y=tmp_df['spot_price'],
+                                   line=dict(width=3),
+                                   name=cr,
+                                   line_shape='hv'
+                                   ))
     fig = go.Figure(scatters)
     fig.update_layout(title=f'Years to maturity: {years_to_maturity}, max interest only period: {max_interest_only_period}, institute: {institute}, date={date.isoformat()}',
                       xaxis_title='Timestamp',
