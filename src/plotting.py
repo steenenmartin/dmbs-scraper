@@ -1,44 +1,33 @@
-import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
 import pandas as pd
 import warnings
-
-from datetime import datetime
+from src.database import query_db
 from matplotlib.ticker import AutoMinorLocator, MultipleLocator
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 def create_single_day_plot_per_institute(date):
-    kurs_dfs = None
-    day_path = f"./Kurser/{date.strftime('%Y%m%d')}"
+    day_path = f"./plots/{date.strftime('%Y%m%d')}"
 
-    if len(os.listdir(day_path)) == 1:
-        return
-
-    for file in sorted(os.listdir(day_path)):
-        if file.endswith(".csv"):
-            time_string = file.split(".")[0]
-            time = datetime(int(time_string[0:4]), int(time_string[4:6]), int(time_string[6:8]), int(time_string[8:10]), int(time_string[10:12]))
-            kurs_df = pd.read_csv(f"{day_path}/{file}")
-            kurs_df["time"] = time
-            kurs_df.set_index(["institute", "years_to_maturity", "maximum_years_without_repayment", "coupon_rate"], inplace=True)
-            if kurs_dfs is None:
-                kurs_dfs = kurs_df
-            else:
-                kurs_dfs = pd.concat([kurs_dfs, kurs_df])
+    kurs_dfs = query_db("select * from prices")
+    kurs_dfs.set_index(["institute", "years_to_maturity", "maximum_years_without_repayment", "coupon_rate"],
+                       inplace=True)
+    kurs_dfs['time'] = pd.to_datetime(kurs_dfs['time'])
+    kurs_dfs.sort_values("time")
 
     for institute in kurs_dfs.index.levels[0].values:
         indices = [i for i in set(kurs_dfs.index.values) if i[0] == institute and i[1] == 30 and i[2] == 0]
         with sns.color_palette("RdYlGn", n_colors=len(indices)):
             plt.figure(figsize=(20, 15))
 
-            for index in reversed(sorted(indices)):
+            for index in sorted(indices, reverse=True):
                 group_df = kurs_dfs.loc[index]
                 plt.step(group_df["time"], group_df["spot_price"], where='post', label=f"{index[2]} %")
-                plt.title(f"{index[0]}: Løbetid {index[1]} år, {index[2]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
+                plt.title(
+                    f"{index[0]}: Løbetid {index[1]} år, {index[2]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
 
             ax = plt.gca()
             ax.xaxis.set_major_locator(MultipleLocator(3600 / (60 * 60 * 24)))
@@ -59,31 +48,17 @@ def create_single_day_plot_per_institute(date):
 
 
 def create_multi_day_plot():
-    kurs_dfs = None
-    kurser_folder = f"./Kurser"
-    for root, subdirectories, files in os.walk(kurser_folder):
-        for subdirectory in sorted(subdirectories):
-            for file in reversed(sorted(os.listdir(kurser_folder + "/" + subdirectory))):
-                if file.endswith(".csv"):
-                    time_string = file.split(".")[0]
-                    time = datetime(int(time_string[0:4]), int(time_string[4:6]), int(time_string[6:8]))
-                    kurs_df = pd.read_csv(kurser_folder + "/" + subdirectory + "/" + file)
-                    kurs_df["time"] = time
-                    kurs_df.set_index(["years_to_maturity", "maximum_years_without_repayment", "coupon_rate"], inplace=True)
-                    if kurs_dfs is None:
-                        kurs_dfs = kurs_df
-                    else:
-                        kurs_dfs = pd.concat([kurs_dfs, kurs_df])
-                    break
-
+    kurs_dfs = query_db("select * from prices")
+    kurs_dfs.set_index(["years_to_maturity", "maximum_years_without_repayment", "coupon_rate"], inplace=True)
+    kurs_dfs['time'] = pd.to_datetime(kurs_dfs['time'])
     kurs_dfs.sort_values("time")
     indices = [i for i in set(kurs_dfs.index.values) if i[0] == 30 and i[1] == 0]
     with sns.color_palette("RdYlGn", n_colors=len(indices)):
         plt.figure(figsize=(20, 15))
 
-        for index in reversed(sorted(indices)):
+        for index in sorted(indices, reverse=True):
             group_df = kurs_dfs.loc[index]
-            plt.plot(group_df["time"], group_df["aktuel_kurs"], label=f"{index[2]} %")
+            plt.plot(group_df["time"], group_df["spot_price"], label=f"{index[2]} %")
             plt.title(f"Løbetid {index[0]} år, {index[1]} års afdragsfrihed")
 
         ax = plt.gca()
@@ -100,5 +75,12 @@ def create_multi_day_plot():
         plt.xlabel("Dato")
         plt.ylabel("Kurs")
 
-        plt.savefig(f"{kurser_folder}/ClosingPrices")
+        # plt.show()
+        plt.savefig(f".plots/ClosingPrices")
         plt.close('all')
+
+
+if __name__ == '__main__':
+    import datetime as dt
+
+    create_single_day_plot_per_institute(dt.date(2022, 9, 16))
