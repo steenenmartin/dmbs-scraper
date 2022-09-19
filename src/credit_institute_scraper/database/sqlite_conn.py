@@ -1,6 +1,6 @@
 import pandas as pd
 import sqlite3
-DATABASE_PATH = "../database.db"
+DATABASE_PATH = "../../../database.db"
 
 
 def query_db(sql: str) -> pd.DataFrame:

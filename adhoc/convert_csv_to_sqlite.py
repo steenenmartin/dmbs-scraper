@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 import datetime as dt
-from src.database import client_factory
+from credit_institute_scraper.database.sqlite_conn import client_factory
 
 df_lst = []
 main_dir = '../kurser'
@@ -21,7 +21,7 @@ for date_name in os.listdir(main_dir):
                                'institut': 'institute'
                                },
                       inplace=True)
-        if 'institut' not in tmp_df.columns:
+        if 'institute' not in tmp_df.columns:
             tmp_df['institute'] = 'Jyske'
         tmp_df['timestamp'] = dt.datetime.strptime(data_file.strip('.csv'), '%Y%m%d%H%M%S')
         tmp_df = tmp_df[['timestamp', 'institute', 'isin', 'years_to_maturity', 'max_interest_only_period', 'coupon_rate', 'spot_price']]
