@@ -10,7 +10,7 @@ class DatabaseResultHandler(ResultHandler):
             result_df.to_sql(name="prices", con=conn, if_exists='append', index=False)
 
     def result_exists(self) -> bool:
-        result = query_db(f"select * from prices where time = '{self.scrape_time}'")
+        result = query_db(f"select * from prices where timestamp = '{self.scrape_time}'")
         return not result.empty
 
     @property
