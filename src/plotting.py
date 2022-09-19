@@ -13,7 +13,8 @@ def create_single_day_plot_per_institute(date):
     day_path = f"./plots/{date.strftime('%Y%m%d')}"
 
     kurs_dfs = query_db("select * from prices")
-    kurs_dfs.set_index(["institute", "years_to_maturity", "maximum_years_without_repayment", "coupon_rate"], inplace=True)
+    kurs_dfs.set_index(["institute", "years_to_maturity", "maximum_years_without_repayment", "coupon_rate"],
+                       inplace=True)
     kurs_dfs['time'] = pd.to_datetime(kurs_dfs['time'])
     kurs_dfs.sort_values("time")
 
@@ -25,7 +26,8 @@ def create_single_day_plot_per_institute(date):
             for index in sorted(indices, reverse=True):
                 group_df = kurs_dfs.loc[index]
                 plt.step(group_df["time"], group_df["spot_price"], where='post', label=f"{index[2]} %")
-                plt.title(f"{index[0]}: Løbetid {index[1]} år, {index[2]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
+                plt.title(
+                    f"{index[0]}: Løbetid {index[1]} år, {index[2]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
 
             ax = plt.gca()
             ax.xaxis.set_major_locator(MultipleLocator(3600 / (60 * 60 * 24)))
@@ -80,4 +82,5 @@ def create_multi_day_plot():
 
 if __name__ == '__main__':
     import datetime as dt
+
     create_single_day_plot_per_institute(dt.date(2022, 9, 16))
