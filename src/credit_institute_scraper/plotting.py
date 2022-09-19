@@ -3,8 +3,8 @@ import matplotlib.dates as mdates
 import seaborn as sns
 import pandas as pd
 import warnings
-from src.database.sqlite_conn import query_db
-from matplotlib.ticker import AutoMinorLocator, MultipleLocator
+from credit_institute_scraper.database.sqlite_conn import query_db
+from matplotlib.ticker import MultipleLocator
 
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
