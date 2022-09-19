@@ -6,7 +6,7 @@ class DatabaseResultHandler(ResultHandler):
     def export_result(self, result) -> None:
         with client_factory() as conn:
             result_df = result.to_pandas_data_frame()
-            result_df["timestamp"] = self.scrape_time
+            result_df.insert(0, "timestamp", self.scrape_time)
             result_df.to_sql(name="prices", con=conn, if_exists='append', index=False)
 
     def result_exists(self) -> bool:
