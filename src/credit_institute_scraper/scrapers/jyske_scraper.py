@@ -1,5 +1,5 @@
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
-from ..types.credit_insitute import CreditInstitute
+from ..enums.credit_insitute import CreditInstitute
 from ..scrapers.scraper import Scraper
 
 
