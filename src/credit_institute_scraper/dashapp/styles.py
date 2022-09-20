@@ -39,3 +39,5 @@ ROW_STYLE = {
 DROPDOWN_STYLE = {
     "style": {"border": "none"}
 }
+
+app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
