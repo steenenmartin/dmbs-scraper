@@ -11,6 +11,10 @@ h2 {
     color: #ffffff;
 }
 
+p {
+    color: #ffffff;
+}
+
 .form-label {
     color: #ffffff;
 }
@@ -41,14 +45,6 @@ h2 {
 .app__content {
     display: flex;
     margin-top: 20px;
-}
-
-.wind__speed__container {
-    display: flex;
-    flex-direction: column;
-    background-color: #082255;
-    border-radius: 0.55rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 }
 
 .graph__title {
@@ -94,15 +90,6 @@ h2 {
 
 .second {
     margin-top: 15px;
-}
-
-.histogram__direction {
-    margin-left: 15px;
-}
-
-#wind-direction {
-    display: flex;
-    justify-content: center;
 }
 
 @media only screen and (max-width: 600px) {
