@@ -22,4 +22,4 @@ if __name__ == '__main__':
     # df = query_db("select * from prices where to_date(timestamp, 'yyyy-mm-dd') >= :stamp", params={'stamp': dt.datetime(2022, 9, 16)})
     df = query_db("select * from prices")#" where date(timestamp) = :stamp", params={'stamp': dt.date(2022, 9, 16)})
 
-    print(sorted(df.max_interest_only_period.unique()))
+    print(df)
