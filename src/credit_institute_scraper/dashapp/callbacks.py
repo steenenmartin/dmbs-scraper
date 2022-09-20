@@ -47,7 +47,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         scatters.append(go.Scatter(x=tmp_df['timestamp'],
                                    y=tmp_df['spot_price'],
                                    line=dict(width=3),
-                                   name='<br>'.join(f'{f}: {v}' for f, v in zip(filters, g)),
+                                   name='<br>'.join(f'{f.title().replace("_", " ")}: {v}' for f, v in zip(filters, g)),
                                    line_shape='hv',
                                    showlegend=True
                                    ))
