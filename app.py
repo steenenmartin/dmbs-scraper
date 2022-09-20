@@ -3,4 +3,4 @@ from src.credit_institute_scraper.dashapp import layout, callbacks
 
 app.layout = layout.layout
 server = app.server
-server.run()
+# server.run()
