@@ -33,7 +33,7 @@ RIGHT_COL_STYLE = {
 
 ROW_STYLE = {
     "align": "center",
-    "style": {"background-color": "#082255",}
+    "style": {"background-color": "#082255"}
 }
 
 DROPDOWN_STYLE = {

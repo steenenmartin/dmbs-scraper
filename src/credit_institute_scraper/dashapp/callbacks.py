@@ -1,5 +1,5 @@
 from credit_institute_scraper.dashapp.app import dash_app as app
-from .pages import page_not_found, home, plots
+from .pages import page_not_found, home, daily_plots
 from .app_config import app_color
 from dash import Output, Input
 from ..database.sqlite_conn import query_db
@@ -15,8 +15,8 @@ df = query_db("select * from prices where date(timestamp) = :date", params={'dat
 def render_page_content(pathname):
     if pathname == "/":
         return home.home_page()
-    elif pathname == "/Plots":
-        return plots.plot_page()
+    elif pathname == "/Daily":
+        return daily_plots.daily_plot_page()
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
 
@@ -47,31 +47,33 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         scatters.append(go.Scatter(x=tmp_df['timestamp'],
                                    y=tmp_df['spot_price'],
                                    line=dict(width=3),
-                                   name='<br>'.join(f'{f}: {v}' for f, v in zip(filters, g)),
+                                   name='<br>'.join(
+                                       f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(filters, g)),
                                    line_shape='hv',
                                    showlegend=True
                                    ))
     fig = go.Figure(scatters)
-    fig.update_layout(plot_bgcolor=app_color["graph_bg"],
-                      paper_bgcolor=app_color["graph_bg"],
-                      font={"color": "#fff"},
-                      height=700,
-                      xaxis={
-                          "showline": True,
-                          "zeroline": False,
-                          # "fixedrange": True,
-                          "showgrid": False,
-                      },
-                      yaxis={
-                          "showgrid": True,
-                          "showline": True,
-                          # "fixedrange": True,
-                          "zeroline": False,
-                          "gridcolor": app_color["graph_line"],
-                      },
-                      legend={
-                          "font": {"size": 10}
-                      })
+    fig.update_layout(
+        plot_bgcolor=app_color["graph_bg"],
+        paper_bgcolor=app_color["graph_bg"],
+        font={"color": "#fff"},
+        height=700,
+        xaxis={
+            "showline": True,
+            "zeroline": False,
+            # "fixedrange": True,
+            "showgrid": False,
+        },
+        yaxis={
+            "showgrid": True,
+            "showline": True,
+            # "fixedrange": True,
+            "zeroline": False,
+            "gridcolor": app_color["graph_line"],
+        },
+        legend={
+            "font": {"size": 10}
+        })
     return fig
 
 
