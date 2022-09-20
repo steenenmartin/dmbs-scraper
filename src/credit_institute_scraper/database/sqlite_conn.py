@@ -11,6 +11,8 @@ def query_db(sql: str, params: dict = None) -> pd.DataFrame:
 
 
 def client_factory():
+    print(DATABASE_PATH)
+    logging.info(DATABASE_PATH)
     return sqlite3.connect(DATABASE_PATH)
 
 
