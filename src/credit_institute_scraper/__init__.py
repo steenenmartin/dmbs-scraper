@@ -1,5 +1,5 @@
 import pandas as pd
-from credit_institute_scraper.utils.logging_helper import initiate_logger as __initiate_logger
+from .utils.logging_helper import initiate_logger as __initiate_logger
 __initiate_logger()
 
 
