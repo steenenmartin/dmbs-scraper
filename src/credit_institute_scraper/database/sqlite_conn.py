@@ -2,7 +2,6 @@ import pandas as pd
 import sqlite3
 import os
 DATABASE_PATH = os.path.abspath(f"{__file__}/../../../../database.db")
-print(DATABASE_PATH)
 
 
 def query_db(sql: str, params: dict = None) -> pd.DataFrame:
