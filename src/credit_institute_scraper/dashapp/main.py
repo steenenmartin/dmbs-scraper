@@ -5,7 +5,7 @@ from dash import html, dcc
 
 sidebar = html.Div(
     [
-        html.H3("C.I.S."),
+        html.H3("Cool beans", className="app__header"),
         html.Hr(),
         dbc.Nav(
             [

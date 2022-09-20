@@ -1,11 +1,10 @@
 from credit_institute_scraper.dashapp.app import dash_app as app
 from .pages import page_not_found, home, plots
+from .app_config import app_color
 from dash import Output, Input
-from dash.exceptions import PreventUpdate
 from ..database.sqlite_conn import query_db
 import plotly.graph_objects as go
 import datetime as dt
-import pandas as pd
 import inspect
 
 date = dt.date(2022, 9, 16)
@@ -53,10 +52,35 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                                    showlegend=True
                                    ))
     fig = go.Figure(scatters)
-    fig.update_layout(title=f'Daily spot prices',
-                      xaxis_title='Timestamp',
-                      yaxis_title='Spot price',
-                      )
+    fig.update_layout(plot_bgcolor=app_color["graph_bg"],
+                      paper_bgcolor=app_color["graph_bg"],
+                      font={"color": "#fff"},
+                      height=700,
+                      xaxis={
+                          # "range": [0, 200],
+                          "showline": True,
+                          "zeroline": False,
+                          "fixedrange": True,
+                          "showgrid": False,
+                          # "tickvals": [0, 50, 100, 150, 200],
+                          # "ticktext": ["200", "150", "100", "50", "0"],
+                          # "title": "Time Elapsed (sec)",
+                      },
+                      yaxis={
+                          # "range": [
+                          #     min(0, min(df["Speed"])),
+                          #     max(45, max(df["Speed"]) + max(df["SpeedError"])),
+                          # ],
+                          "showgrid": True,
+                          "showline": True,
+                          "fixedrange": True,
+                          "zeroline": False,
+                          "gridcolor": app_color["graph_line"],
+                          # "nticks": max(6, round(df["Speed"].iloc[-1] / 10)),
+                      },
+                      legend={
+                          "font": {"size": 10}
+                      })
     return fig
 
 
@@ -65,7 +89,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                Output('select_ytm_daily_plot', 'options'),
                Output('select_max_io_daily_plot', 'options')],
               Input('daily_plot', 'figure')
-)
+              )
 def update_dropdowns(_):
     inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
     coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
