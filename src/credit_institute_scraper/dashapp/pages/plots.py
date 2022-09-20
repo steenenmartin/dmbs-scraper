@@ -4,7 +4,7 @@ from .. import styles
 
 
 def plot_page():
-    return dbc.Container(
+    return dbc.Container(id='daily_plot_container', children=
         [
             dbc.Card(
                 [
@@ -16,7 +16,7 @@ def plot_page():
                                     dbc.Card(
                                         [
                                             dcc.Dropdown(id='select_institute_daily_plot',
-                                                         options=[{'label': v, 'value': v} for v in ['Jyske', 'Nordea', 'RealKreditDanmark', 'TotalKredit']])
+                                                         options=[])
                                         ]
                                     ),
                                     html.Br(),
@@ -24,7 +24,7 @@ def plot_page():
                                     dbc.Card(
                                         [
                                             dcc.Dropdown(id='select_coupon_daily_plot',
-                                                         options=[{'label': v, 'value': v} for v in [-0.5, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0]])
+                                                         options=[])
                                         ]
                                     ),
                                     html.Br(),
@@ -32,8 +32,7 @@ def plot_page():
                                     dbc.Card(
                                         [
                                             dcc.Dropdown(id='select_ytm_daily_plot',
-                                                         options=[{'label': v, 'value': v} for v in
-                                                                  [0, 10, 15, 20, 30]])
+                                                         options=[])
                                         ]
                                     ),
                                     html.Br(),
@@ -41,8 +40,7 @@ def plot_page():
                                     dbc.Card(
                                         [
                                             dcc.Dropdown(id='select_max_io_daily_plot',
-                                                         options=[{'label': v, 'value': v} for v in
-                                                                  [0.0, 10.0, 29.75, 30.0, 40.0, 119.0, 120.0]])
+                                                         options=[])
                                         ]
                                     ),
 
