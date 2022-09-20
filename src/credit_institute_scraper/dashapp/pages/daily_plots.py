@@ -1,7 +1,6 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 from .. import styles
-from ..app_config import app_color
 
 
 def daily_plot_page():
@@ -56,8 +55,8 @@ def daily_plot_page():
                             dcc.Graph(id='daily_plot',
                                       figure=dict(
                                           layout=dict(
-                                              plot_bgcolor=app_color['graph_bg'],
-                                              paper_bgcolor=app_color['graph_bg'],
+                                              plot_bgcolor=styles.app_color['graph_bg'],
+                                              paper_bgcolor=styles.app_color['graph_bg'],
                                           )
                                       )),
                             **styles.RIGHT_COL_STYLE

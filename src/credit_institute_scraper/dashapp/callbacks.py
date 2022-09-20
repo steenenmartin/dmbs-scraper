@@ -1,6 +1,6 @@
-from credit_institute_scraper.dashapp.app import dash_app as app
+from .dash_app import dash_app as app
 from .pages import page_not_found, home, daily_plots
-from .app_config import app_color
+from .styles import app_color
 from dash import Output, Input
 from ..database.sqlite_conn import query_db
 import plotly.graph_objects as go

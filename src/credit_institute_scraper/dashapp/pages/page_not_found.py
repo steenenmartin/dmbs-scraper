@@ -7,6 +7,6 @@ def page_not_found(pathname):
         [
             html.H2("404: Not found", className="text-danger"),
             html.Hr(),
-            html.P(f"The pathname {pathname} was not recognised..."),
+            html.P(f'The pathname "{pathname}" was not recognised...'),
         ]
     )
