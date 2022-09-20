@@ -1,9 +1,14 @@
 from credit_institute_scraper.dashapp.app import dash_app as app
 from .pages import page_not_found, home, plots
+from .app_config import app_color
 from dash import Output, Input
 from ..database.sqlite_conn import query_db
 import plotly.graph_objects as go
 import datetime as dt
+import inspect
+
+date = dt.date(2022, 9, 16)
+df = query_db("select * from prices where date(timestamp) = :date", params={'date': date})
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
@@ -21,28 +26,19 @@ def render_page_content(pathname):
                                                Input("select_ytm_daily_plot", "value"),
                                                Input("select_max_io_daily_plot", "value")])
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period):
-    date = dt.date(2022, 9, 16)
-    sql = f"select * from prices where date(timestamp) = :date"
+    global df
+
+    argspec = inspect.getargvalues(inspect.currentframe())
+    sql = "select * from prices where date(timestamp) = :date"
 
     filters = []
-    if institute is not None:
-        sql += " and institute = :institute"
-    else:
-        filters.append('institute')
-    if coupon_rate is not None:
-        sql += " and coupon_rate = :coupon_rate"
-    else:
-        filters.append('coupon_rate')
-    if years_to_maturity is not None:
-        sql += " and years_to_maturity = :years_to_maturity"
-    else:
-        filters.append('years_to_maturity')
+    for arg in argspec.args:
+        if argspec.locals[arg] is not None:
+            sql += f" and {arg} = :{arg}"
+        else:
+            filters.append(arg)
 
-    if max_interest_only_period is not None:
-        sql += " and max_interest_only_period = :max_interest_only_period"
-    else:
-        filters.append('max_interest_only_period')
-    df = query_db(sql, params=locals())
+    df = query_db(sql, params={**locals(), 'date': date})
 
     scatters = []
     groups = df.groupby(filters) if filters else [('', df)]
@@ -56,8 +52,38 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                                    showlegend=True
                                    ))
     fig = go.Figure(scatters)
-    fig.update_layout(title=f'Daily spot prices',
-                      xaxis_title='Timestamp',
-                      yaxis_title='Spot price',
-                      )
+    fig.update_layout(plot_bgcolor=app_color["graph_bg"],
+                      paper_bgcolor=app_color["graph_bg"],
+                      font={"color": "#fff"},
+                      height=700,
+                      xaxis={
+                          "showline": True,
+                          "zeroline": False,
+                          # "fixedrange": True,
+                          "showgrid": False,
+                      },
+                      yaxis={
+                          "showgrid": True,
+                          "showline": True,
+                          # "fixedrange": True,
+                          "zeroline": False,
+                          "gridcolor": app_color["graph_line"],
+                      },
+                      legend={
+                          "font": {"size": 10}
+                      })
     return fig
+
+
+@app.callback([Output('select_institute_daily_plot', 'options'),
+               Output('select_coupon_daily_plot', 'options'),
+               Output('select_ytm_daily_plot', 'options'),
+               Output('select_max_io_daily_plot', 'options')],
+              Input('daily_plot', 'figure')
+              )
+def update_dropdowns(_):
+    inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
+    coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
+    ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
+    maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
+    return inst, coup, ytm, maxio

@@ -4,9 +4,9 @@ SIDEBAR_STYLE = {
     "top": 0,
     "left": 0,
     "bottom": 0,
-    "width": "13rem",
+    "width": "17rem",
     "padding": "2rem 1rem",
-    "background-color": "#f8f9fa",
+    "background-color": "#031333",
 }
 
 # the styles for the main content position it to the right of the sidebar and
@@ -24,7 +24,7 @@ LIST_STYLE = {
 }
 
 LEFT_COL_STYLE = {
-    "style": {"margin-left": "10px"}
+    "style": {"margin-left": "5px"}
 }
 
 RIGHT_COL_STYLE = {
@@ -32,5 +32,10 @@ RIGHT_COL_STYLE = {
 }
 
 ROW_STYLE = {
-    "align": "center"
+    "align": "center",
+    "style": {"background-color": "#082255",}
+}
+
+DROPDOWN_STYLE = {
+    "style": {"border": "none"}
 }
