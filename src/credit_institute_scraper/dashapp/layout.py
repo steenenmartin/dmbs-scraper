@@ -1,5 +1,4 @@
-from credit_institute_scraper.dashapp.app import dash_app as app
-from credit_institute_scraper.dashapp import styles, callbacks
+from credit_institute_scraper.dashapp import styles
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
@@ -20,9 +19,4 @@ sidebar = html.Div(
 )
 
 content = html.Div(id="page-content", style=styles.CONTENT_STYLE)
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
-server = app.server
-
-
-if __name__ == '__main__':
-    app.run_server(port=8888)
+layout = html.Div([dcc.Location(id="url"), sidebar, content])

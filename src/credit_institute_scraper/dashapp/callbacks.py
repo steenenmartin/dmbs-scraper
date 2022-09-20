@@ -1,4 +1,4 @@
-from credit_institute_scraper.dashapp.app import dash_app as app
+from credit_institute_scraper.dashapp.dash_app import dash_app as app
 from .pages import page_not_found, home, daily_plots
 from .styles import app_color
 from dash import Output, Input
