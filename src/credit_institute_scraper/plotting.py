@@ -18,16 +18,21 @@ def create_single_day_plot_per_institute(date):
     kurs_dfs = kurs_dfs.loc[(datetime(date.year, date.month, date.day, 0, 0) < kurs_dfs['timestamp']) & (kurs_dfs['timestamp'] < datetime(date.year, date.month, date.day, 23, 59))]
     kurs_dfs.sort_values('timestamp')
 
+    [institute_index_number] = [i for i in range(len(kurs_dfs.index.names)) if kurs_dfs.index.names[i] == "institute"]
+    [years_to_maturity_index_number] = [i for i in range(len(kurs_dfs.index.names)) if kurs_dfs.index.names[i] == "years_to_maturity"]
+    [max_interest_only_index_number] = [i for i in range(len(kurs_dfs.index.names)) if kurs_dfs.index.names[i] == "max_interest_only_period"]
+    [coupon_rate_index_number] = [i for i in range(len(kurs_dfs.index.names)) if kurs_dfs.index.names[i] == "coupon_rate"]
+
     for institute in kurs_dfs.index.levels[0].values:
-        indices = [i for i in set(kurs_dfs.index.values) if i[0] == institute and i[1] == 30 and i[2] == 0]
+        indices = [i for i in set(kurs_dfs.index.values) if i[institute_index_number] == institute and i[years_to_maturity_index_number] == 30 and i[max_interest_only_index_number] == 0]
         with sns.color_palette("RdYlGn", n_colors=len(indices)):
             plt.figure(figsize=(20, 15))
 
             for index in sorted(indices, reverse=True):
                 group_df = kurs_dfs.loc[index]
-                plt.step(group_df['timestamp'], group_df["spot_price"], where='post', label=f"{index[2]} %")
+                plt.step(group_df['timestamp'], group_df["spot_price"], where='post', label=f"{index[coupon_rate_index_number]} %")
                 plt.title(
-                    f"{index[0]}: Løbetid {index[1]} år, {index[2]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
+                    f"{index[institute_index_number]}: Løbetid {index[years_to_maturity_index_number]} år, {index[max_interest_only_index_number]} års afdragsfrihed ({date.strftime('%Y/%m/%d')})")
 
             ax = plt.gca()
             ax.xaxis.set_major_locator(MultipleLocator(3600 / (60 * 60 * 24)))
