@@ -3,9 +3,9 @@ from dash import html
 
 
 def page_not_found(pathname):
-    return dbc.Card(
+    return dbc.Container(
         [
-            html.H1("404: Not found", className="text-danger"),
+            html.H2("404: Not found", className="text-danger"),
             html.Hr(),
             html.P(f"The pathname {pathname} was not recognised..."),
         ]
