@@ -4,7 +4,7 @@ from .. import styles
 from ..app_config import app_color
 
 
-def plot_page():
+def daily_plot_page():
     return dbc.Container([
         html.H2('Daily change in spot prices'),
         dbc.Card(

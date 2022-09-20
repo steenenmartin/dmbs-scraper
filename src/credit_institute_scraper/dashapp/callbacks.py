@@ -1,5 +1,5 @@
 from credit_institute_scraper.dashapp.app import dash_app as app
-from .pages import page_not_found, home, plots
+from .pages import page_not_found, home, daily_plots
 from .app_config import app_color
 from dash import Output, Input
 from ..database.sqlite_conn import query_db
@@ -15,8 +15,8 @@ df = query_db("select * from prices where date(timestamp) = :date", params={'dat
 def render_page_content(pathname):
     if pathname == "/":
         return home.home_page()
-    elif pathname == "/Plots":
-        return plots.plot_page()
+    elif pathname == "/Daily":
+        return daily_plots.daily_plot_page()
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
 
