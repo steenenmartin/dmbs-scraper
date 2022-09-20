@@ -57,26 +57,17 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                       font={"color": "#fff"},
                       height=700,
                       xaxis={
-                          # "range": [0, 200],
                           "showline": True,
                           "zeroline": False,
-                          "fixedrange": True,
+                          # "fixedrange": True,
                           "showgrid": False,
-                          # "tickvals": [0, 50, 100, 150, 200],
-                          # "ticktext": ["200", "150", "100", "50", "0"],
-                          # "title": "Time Elapsed (sec)",
                       },
                       yaxis={
-                          # "range": [
-                          #     min(0, min(df["Speed"])),
-                          #     max(45, max(df["Speed"]) + max(df["SpeedError"])),
-                          # ],
                           "showgrid": True,
                           "showline": True,
-                          "fixedrange": True,
+                          # "fixedrange": True,
                           "zeroline": False,
                           "gridcolor": app_color["graph_line"],
-                          # "nticks": max(6, round(df["Speed"].iloc[-1] / 10)),
                       },
                       legend={
                           "font": {"size": 10}
