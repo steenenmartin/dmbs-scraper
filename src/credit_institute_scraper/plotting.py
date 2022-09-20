@@ -1,3 +1,4 @@
+from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns
@@ -10,12 +11,11 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 def create_single_day_plot_per_institute(date):
-    day_path = f"./plots/{date.strftime('%Y%m%d')}"
-
     kurs_dfs = query_db("select * from prices")
     kurs_dfs.set_index(["institute", "years_to_maturity", "max_interest_only_period", "coupon_rate"],
                        inplace=True)
     kurs_dfs['timestamp'] = pd.to_datetime(kurs_dfs['timestamp'])
+    kurs_dfs = kurs_dfs.loc[(datetime(date.year, date.month, date.day, 0, 0) < kurs_dfs['timestamp']) & (kurs_dfs['timestamp'] < datetime(date.year, date.month, date.day, 23, 59))]
     kurs_dfs.sort_values('timestamp')
 
     for institute in kurs_dfs.index.levels[0].values:
@@ -43,7 +43,7 @@ def create_single_day_plot_per_institute(date):
             plt.xlabel("Tid (UTC)")
             plt.ylabel("Kurs")
             plt.tick_params(axis='y', which='both', labelleft='on', labelright='on')
-            plt.savefig(f"{day_path}/{date.strftime('%Y%m%d')}_{institute}")
+            plt.savefig(f"./plots/{date.strftime('%Y%m%d')}_{institute}")
             plt.close('all')
 
 
@@ -83,4 +83,4 @@ def create_multi_day_plot():
 if __name__ == '__main__':
     import datetime as dt
 
-    create_single_day_plot_per_institute(dt.date(2022, 9, 16))
+    create_single_day_plot_per_institute(dt.datetime.now())
