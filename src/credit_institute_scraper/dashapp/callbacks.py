@@ -62,14 +62,17 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             "showline": True,
             "zeroline": False,
             # "fixedrange": True,
-            "showgrid": False,
+            "showgrid": True,
+            "gridcolor": "#676565",
+            "griddash": 'dash',
+            "minor_griddash": "dot"
         },
         yaxis={
             "showgrid": True,
             "showline": True,
             # "fixedrange": True,
             "zeroline": False,
-            "gridcolor": app_color["graph_line"],
+            "gridcolor":"#676565",
         },
         legend={
             "font": {"size": 10}
