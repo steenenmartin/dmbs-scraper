@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import datetime as dt
 import inspect
 
-date = dt.date(2022, 9, 16)
+date = dt.date(2022, 9, 20)
 df = query_db("select * from prices where date(timestamp) = :date", params={'date': date})
 
 
