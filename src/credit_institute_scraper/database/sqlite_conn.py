@@ -12,3 +12,10 @@ def query_db(sql: str, params: dict = None) -> pd.DataFrame:
 
 def client_factory():
     return sqlite3.connect(DATABASE_PATH)
+
+
+if __name__ == '__main__':
+    import datetime as dt
+    date = dt.date(2022, 9, 16)
+    df = query_db("select * from prices")
+    print(df)

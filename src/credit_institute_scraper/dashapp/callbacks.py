@@ -6,8 +6,9 @@ from ..database.sqlite_conn import query_db
 import plotly.graph_objects as go
 import datetime as dt
 import inspect
+from colour import Color
 
-date = dt.date(2022, 9, 16)
+date = dt.date(2022, 9, 15)
 df = query_db("select * from prices where date(timestamp) = :date", params={'date': date})
 
 
@@ -42,7 +43,9 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     scatters = []
     groups = df.groupby(filters) if filters else [('', df)]
-    for g, tmp_df in groups:
+    colors = list(Color("Blue").range_to(Color("green"), len(groups)))
+    for i, grp in enumerate(sorted(groups, key=lambda x: x[1]['spot_price'].mean())):
+        g, tmp_df = grp
         g = g if isinstance(g, (list, tuple)) else [g]
         scatters.append(go.Scatter(x=tmp_df['timestamp'],
                                    y=tmp_df['spot_price'],
@@ -50,7 +53,8 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                                    name='<br>'.join(
                                        f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(filters, g)),
                                    line_shape='hv',
-                                   showlegend=True
+                                   showlegend=True,
+                                   marker={'color': colors[i].get_hex()}
                                    ))
     fig = go.Figure(scatters)
     fig.update_layout(
