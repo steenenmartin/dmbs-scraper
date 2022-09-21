@@ -8,7 +8,7 @@ import datetime as dt
 import inspect
 from colour import Color
 
-date = dt.date(2022, 9, 15)
+date = dt.date(2022, 9, 20)
 df = query_db("select * from prices where date(timestamp) = :date", params={'date': date})
 
 
