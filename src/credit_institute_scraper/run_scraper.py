@@ -1,6 +1,8 @@
 import time as timeit
 from datetime import datetime, time
+
 from credit_institute_scraper.bond_data.fixed_rate_bond_data import FixedRateBondData
+from credit_institute_scraper.database import sqlite_conn
 from credit_institute_scraper.result_handlers.database_result_handler import DatabaseResultHandler
 from credit_institute_scraper.result_handlers.result_handler import ResultHandler
 from credit_institute_scraper.scrapers.scraper import Scraper
@@ -18,29 +20,32 @@ def main():
         now = datetime.utcnow()
         now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
-        scrapers: list[Scraper] = [
-            JyskeScraper(),
-            RealKreditDanmarkScraper(),
-            NordeaScraper(),
-            TotalKreditScraper()
-        ]
+        # TODO: Incorporate accounting for Danish banking holidays.
+        if now.isoweekday() <= 5:
+            if time(7, 0) <= now.time() < time(15, 1) and now.minute % 5 == 0:
+                prices_result_handler: ResultHandler = DatabaseResultHandler("prices", now)
+                if not prices_result_handler.result_exists():
+                    scrapers: list[Scraper] = [
+                        JyskeScraper(),
+                        RealKreditDanmarkScraper(),
+                        NordeaScraper(),
+                        TotalKreditScraper()
+                    ]
 
-        result_handler: ResultHandler = DatabaseResultHandler(now)
-
-        scraper_orchestrator = ScraperOrchestrator(scrapers)
-
-        if now.minute % 5 == 0:
-            # TODO: Incorporate accounting for Danish banking holidays.
-            if time(7, 0) <= now.time() < time(15, 1) and now.isoweekday() <= 5:
-                if not result_handler.result_exists():
-                    fixed_rate_bond_data: FixedRateBondData = scraper_orchestrator.scrape()
-                    result_handler.export_result(fixed_rate_bond_data)
+                    fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
+                    prices_result_handler.export_result(fixed_rate_bond_data.to_pandas_data_frame(now))
                     # create_single_day_plot_per_institute(now.today())
 
-            if now.hour == 15 and now.minute == 5:
+            if now.hour == 15 and now.minute == 1:
+                ohlc_prices_result_handler = DatabaseResultHandler("ohlc_prices", now)
+                if not ohlc_prices_result_handler.result_exists():
+                    today = datetime(now.year, now.month, now.day)
+                    # ohlc_prices = sqlite_conn.calculate_open_high_low_close_prices(today)
+                    # ohlc_prices_result_handler.export_result(ohlc_prices)
+
                 # create_multi_day_plot()
                 # print_time_prefixed("Updated multi day plot")
-                timeit.sleep(60)
+                # timeit.sleep(60)
 
         timeit.sleep(max(10 - (timeit.time() - start_time), 0))
 
