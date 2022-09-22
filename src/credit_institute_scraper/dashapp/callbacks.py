@@ -66,7 +66,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             marker={'color': c.get_hex()},
         ))
     fig = go.Figure(lines)
-    fig.update_layout(**{**styles.GRAPH_STYLE, 'title': f'{date.isoformat()}: Daily change in spot prices'})
+    fig.update_layout(**styles.GRAPH_STYLE, title=f'{date.isoformat()}: Daily change in spot prices')
     logging.info(f'Updated daily plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
     return fig
 
