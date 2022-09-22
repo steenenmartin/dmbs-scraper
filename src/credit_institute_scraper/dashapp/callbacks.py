@@ -9,7 +9,12 @@ import datetime as dt
 import logging
 from colour import Color
 
-date = dt.date(2022, 9, 21)
+date = dt.date.today()
+weekday = dt.date.today().weekday()
+if weekday == 6 or dt.datetime.now().hour < 7:
+    date -= dt.timedelta(days=1)
+elif weekday == 7:
+    date -= dt.timedelta(days=2)
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
