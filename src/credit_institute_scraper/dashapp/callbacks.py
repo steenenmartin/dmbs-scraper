@@ -69,7 +69,6 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             "range": [dt.datetime(date.year, date.month, date.day, 7, 0, 0), dt.datetime(date.year, date.month, date.day, 15, 0, 0)],
             "showgrid": True,
             "gridcolor": "#676565",
-            "griddash": 'dash',
             "minor_griddash": "dot"
         },
         yaxis={
@@ -78,6 +77,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             # "fixedrange": True,
             "zeroline": False,
             "gridcolor":"#676565",
+            "minor_griddash": "dot"
         },
         legend={
             "font": {"size": 10}
