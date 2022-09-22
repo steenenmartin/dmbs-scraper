@@ -16,18 +16,18 @@ def scrape(conn_module):
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
     prices_result_handler: ResultHandler = DatabaseResultHandler(conn_module, "prices", now)
-    if not prices_result_handler.result_exists():
-        scrapers: list[Scraper] = [
-            JyskeScraper(),
-            RealKreditDanmarkScraper(),
-            NordeaScraper(),
-            TotalKreditScraper()
-        ]
+    # if not prices_result_handler.result_exists():
+    scrapers: list[Scraper] = [
+        JyskeScraper(),
+        RealKreditDanmarkScraper(),
+        NordeaScraper(),
+        TotalKreditScraper()
+    ]
 
-        fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
-        prices_result_handler.export_result(fixed_rate_bond_data.to_pandas_data_frame(now))
+    fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
+    prices_result_handler.export_result(fixed_rate_bond_data.to_pandas_data_frame(now))
 
-    if now.hour == 15 and now.minute == 5:
+    if now.hour == 15 and now.minute == 0:
         ohlc_prices_result_handler = DatabaseResultHandler(conn_module, "ohlc_prices", now)
         if not ohlc_prices_result_handler.result_exists():
             today = datetime(now.year, now.month, now.day)
