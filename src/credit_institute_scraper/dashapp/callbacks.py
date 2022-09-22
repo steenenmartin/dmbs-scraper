@@ -62,10 +62,11 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                                    ))
     fig = go.Figure(scatters)
     fig.update_layout(
+        title='Daily change in spot prices',
         plot_bgcolor=app_color["graph_bg"],
         paper_bgcolor=app_color["graph_bg"],
         font={"color": "#fff"},
-        height=1000,
+        height=870,
         xaxis={
             "showline": True,
             "zeroline": False,
