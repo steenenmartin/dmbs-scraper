@@ -1,6 +1,6 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from ...database.sqlite_conn import query_db
+from ...database.postgres_conn import query_db
 from .. import styles
 
 
