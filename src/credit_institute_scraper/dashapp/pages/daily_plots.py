@@ -20,6 +20,7 @@ def daily_plot_page(date):
                                     [
                                         dcc.Dropdown(id='select_institute_daily_plot',
                                                      options=[],
+                                                     multi=True,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -29,6 +30,7 @@ def daily_plot_page(date):
                                     [
                                         dcc.Dropdown(id='select_coupon_daily_plot',
                                                      options=[],
+                                                     multi=True,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -38,6 +40,7 @@ def daily_plot_page(date):
                                     [
                                         dcc.Dropdown(id='select_ytm_daily_plot',
                                                      options=[],
+                                                     multi=True,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -47,6 +50,7 @@ def daily_plot_page(date):
                                     [
                                         dcc.Dropdown(id='select_max_io_daily_plot',
                                                      options=[],
+                                                     multi=True,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),

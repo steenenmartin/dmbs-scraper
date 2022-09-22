@@ -29,15 +29,15 @@ def render_page_content(pathname):
               State("daily_store", "data")
               )
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, df):
-    legends, filters = [], []
+    groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period)]
     for k, v in args:
-        if v is None:
-            legends.append(k)
-        else:
+        if v is not None:
             v_str = f'"{v}"' if isinstance(v, str) else v
             filters.append(f"{k} == {v_str}")
+        if v is None or len(v) > 1:
+            groupers.append(k)
 
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
@@ -45,7 +45,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         df = df.query(' and '.join(filters))
 
     scatters = []
-    groups = df.groupby(legends) if legends else [('', df)]
+    groups = df.groupby(groupers) if groupers else [('', df)]
     full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
     colors = list(Color("Blue").range_to(Color("green"), len(groups))) if groups else []
     for i, grp in enumerate(sorted(groups, key=lambda x: x[1]['spot_price'].mean(), reverse=True)):
@@ -55,10 +55,9 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
         scatters.append(go.Scatter(x=tmp_df.index,
                                    y=tmp_df['spot_price'],
-                                   line=dict(width=3),
+                                   line=dict(width=3, shape='hv'),
                                    name='<br>'.join(
-                                       f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(legends, g)),
-                                   line_shape='hv',
+                                       f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g)),
                                    showlegend=True,
                                    marker={'color': colors[i].get_hex()}
                                    ))
