@@ -10,9 +10,9 @@ class DatabaseResultHandler(ResultHandler):
         super().__init__(*args,  **kwargs)
 
     def export_result(self, result_df: pd.DataFrame) -> None:
-        with self.database_conn.client_factory() as conn:
-            result_df.to_sql(name=self.table_name, con=conn, if_exists='append', index=False)
-            logging.info(f'Wrote df with size={len(result_df)} to {conn}')
+        conn = self.database_conn.client_factory()
+        result_df.to_sql(name=self.table_name, con=conn, if_exists='append', index=False)
+        logging.info(f'Wrote df with size={len(result_df)} to {conn}')
 
     def result_exists(self) -> bool:
         result = self.database_conn.query_db(f"select * from {self.table_name} where timestamp = '{self.scrape_time}'")
