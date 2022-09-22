@@ -1,5 +1,4 @@
-import time as timeit
-from datetime import datetime, time
+from datetime import datetime
 from .bond_data.fixed_rate_bond_data import FixedRateBondData
 from .database import sqlite_conn, postgres_conn
 from .result_handlers.database_result_handler import DatabaseResultHandler
@@ -16,7 +15,7 @@ def scrape():
     now = datetime.utcnow()
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
-    prices_result_handler: ResultHandler = DatabaseResultHandler("prices", postgres_conn, now)
+    prices_result_handler: ResultHandler = DatabaseResultHandler(sqlite_conn, "prices", now)
     if not prices_result_handler.result_exists():
         scrapers: list[Scraper] = [
             JyskeScraper(),
@@ -29,7 +28,7 @@ def scrape():
         prices_result_handler.export_result(fixed_rate_bond_data.to_pandas_data_frame(now))
 
     if now.hour == 15 and now.minute == 5:
-        ohlc_prices_result_handler = DatabaseResultHandler("ohlc_prices", postgres_conn, now)
+        ohlc_prices_result_handler = DatabaseResultHandler(sqlite_conn, "ohlc_prices", now)
         if not ohlc_prices_result_handler.result_exists():
             today = datetime(now.year, now.month, now.day)
             ohlc_prices = sqlite_conn.calculate_open_high_low_close_prices(today)
