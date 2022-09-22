@@ -12,7 +12,7 @@ from .scrapers.total_kredit_scraper import TotalKreditScraper
 from .scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
 
 
-def main():
+def scrape():
     now = datetime.utcnow()
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
@@ -37,4 +37,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    scrape()
