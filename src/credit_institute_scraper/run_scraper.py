@@ -1,7 +1,8 @@
 import time as timeit
 from datetime import datetime, time
+
+import credit_institute_scraper.database.load_data
 from .bond_data.fixed_rate_bond_data import FixedRateBondData
-from .database import sqlite_conn, postgres_conn
 from .result_handlers.database_result_handler import DatabaseResultHandler
 from .result_handlers.result_handler import ResultHandler
 from .scrapers.scraper import Scraper
@@ -12,11 +13,11 @@ from .scrapers.total_kredit_scraper import TotalKreditScraper
 from .scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
 
 
-def scrape():
+def scrape(conn_module):
     now = datetime.utcnow()
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
 
-    prices_result_handler: ResultHandler = DatabaseResultHandler("prices", postgres_conn, now)
+    prices_result_handler: ResultHandler = DatabaseResultHandler("prices", conn_module, now)
     if not prices_result_handler.result_exists():
         scrapers: list[Scraper] = [
             JyskeScraper(),
@@ -29,10 +30,10 @@ def scrape():
         prices_result_handler.export_result(fixed_rate_bond_data.to_pandas_data_frame(now))
 
     if now.hour == 15 and now.minute == 5:
-        ohlc_prices_result_handler = DatabaseResultHandler("ohlc_prices", postgres_conn, now)
+        ohlc_prices_result_handler = DatabaseResultHandler("ohlc_prices", conn_module, now)
         if not ohlc_prices_result_handler.result_exists():
             today = datetime(now.year, now.month, now.day)
-            ohlc_prices = sqlite_conn.calculate_open_high_low_close_prices(today)
+            ohlc_prices = credit_institute_scraper.database.load_data.calculate_open_high_low_close_prices(today, conn_module.query_db)
             ohlc_prices_result_handler.export_result(ohlc_prices)
 
 
