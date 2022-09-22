@@ -1,5 +1,5 @@
 import pandas as pd
-import psycopg2
+from sqlalchemy import create_engine
 import os
 
 DATABASE_PATH = os.environ.get('DATABASE_URL')
@@ -14,5 +14,5 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
 
 
 def client_factory():
-    return psycopg2.connect(DATABASE_PATH, sslmode='require')
+    return create_engine(DATABASE_PATH)
 
