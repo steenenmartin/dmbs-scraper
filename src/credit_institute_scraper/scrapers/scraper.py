@@ -2,9 +2,32 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import json
+import urllib3
+import ssl
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
+
+
+class CustomHttpAdapter(requests.adapters.HTTPAdapter):
+    # "Transport adapter" that allows us to use custom ssl_context.
+
+    def __init__(self, ssl_context=None, **kwargs):
+        self.ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = urllib3.poolmanager.PoolManager(
+            num_pools=connections, maxsize=maxsize,
+            block=block, ssl_context=self.ssl_context)
+
+
+def get_legacy_session():
+    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
+    session = requests.session()
+    session.mount('https://', CustomHttpAdapter(ctx))
+    return session
 
 
 class Scraper:
@@ -23,15 +46,8 @@ class Scraper:
         def wrapper(self):
             self.tries_count += 1
 
-            data = json.loads(requests.get(self.url, timeout=10).text)
+            data = json.loads(get_legacy_session().get(self.url).text)
 
-            session = requests.Session()
-            retry = Retry(connect=3, backoff_factor=0.5)
-            adapter = HTTPAdapter(max_retries=retry)
-            session.mount('http://', adapter)
-            session.mount('https://', adapter)
-
-            session.get(self.url)
             bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
             self.scrape_success = True
