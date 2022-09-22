@@ -45,7 +45,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     if filters:
         df = df.query(' and '.join(filters))
 
-    scatters = []
+    lines = []
     groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
     colors = Color("Blue").range_to(Color("green"), len(groups))
     for grp, c in zip(groups, colors):
@@ -53,17 +53,20 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         g = listify(g)
 
         tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
-        scatters.append(go.Scatter(
+        tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
+        lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
+        hover = 'Time: %{x}<br>Price: %{y:.2f}'
+        lines.append(go.Scatter(
             x=tmp_df.index,
             y=tmp_df['spot_price'],
-            line=dict(width=3, shape='hv'),
-            name='<br>'.join(
-                f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g)),
+            line=dict(width=2, shape='hv'),
+            name=lgnd,
+            hovertemplate=hover,
             showlegend=True,
-            marker={'color': c.get_hex()}
+            marker={'color': c.get_hex()},
         ))
-    fig = go.Figure(scatters)
-    fig.update_layout(**styles.GRAPH_STYLE)
+    fig = go.Figure(lines)
+    fig.update_layout(**{**styles.GRAPH_STYLE, 'title': f'{date.isoformat()}: Daily change in spot prices'})
     logging.info(f'Updated daily plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
     return fig
 
