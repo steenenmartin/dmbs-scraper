@@ -31,9 +31,10 @@ def render_page_content(pathname):
               [Input("select_institute_daily_plot", "value"),
                Input("select_coupon_daily_plot", "value"),
                Input("select_ytm_daily_plot", "value"),
-               Input("select_max_io_daily_plot", "value")],
+               Input("select_max_io_daily_plot", "value"),
+               Input('interval-component', 'n_intervals')],
               State("daily_store", "data"))
-def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, df):
+def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, _, df):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period)]

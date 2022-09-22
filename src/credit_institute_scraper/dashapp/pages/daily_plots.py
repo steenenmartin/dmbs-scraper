@@ -8,6 +8,7 @@ def daily_plot_page(date):
     return dbc.Container([
         dcc.Store(id='daily_store', data=query_db(sql="select * from prices where date(timestamp) = :date",
                                                   params={'date': date}).to_dict("records")),
+        dcc.Interval(id='interval-component',  interval=int(3e5), n_intervals=0),
         dbc.Card(
             [
                 dbc.Row(
