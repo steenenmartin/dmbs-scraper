@@ -1,6 +1,6 @@
 from .dash_app import dash_app as app
 from .pages import page_not_found, home, daily_plots
-from .styles import app_color
+from . import styles
 from dash import Output, Input, State
 import plotly.graph_objects as go
 import pandas as pd
@@ -26,8 +26,7 @@ def render_page_content(pathname):
                Input("select_coupon_daily_plot", "value"),
                Input("select_ytm_daily_plot", "value"),
                Input("select_max_io_daily_plot", "value")],
-              State("daily_store", "data")
-              )
+              State("daily_store", "data"))
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, df):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
@@ -41,14 +40,14 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
+    full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
     if filters:
         df = df.query(' and '.join(filters))
 
     scatters = []
-    groups = df.groupby(groupers) if groupers else [('', df)]
-    full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
+    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
     colors = list(Color("Blue").range_to(Color("green"), len(groups))) if groups else []
-    for i, grp in enumerate(sorted(groups, key=lambda x: x[1]['spot_price'].mean(), reverse=True)):
+    for i, grp in enumerate(groups):
         g, tmp_df = grp
         g = g if isinstance(g, (list, tuple)) else [g]
 
@@ -62,32 +61,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                                    marker={'color': colors[i].get_hex()}
                                    ))
     fig = go.Figure(scatters)
-    fig.update_layout(
-        title='Daily change in spot prices',
-        plot_bgcolor=app_color["graph_bg"],
-        paper_bgcolor=app_color["graph_bg"],
-        font={"color": "#fff"},
-        height=870,
-        xaxis={
-            "showline": True,
-            "zeroline": False,
-            "fixedrange": True,
-            "range": [dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15))],
-            "showgrid": True,
-            "gridcolor": "#676565",
-            "minor_griddash": "dot"
-        },
-        yaxis={
-            "showgrid": True,
-            "showline": True,
-            # "fixedrange": True,
-            "zeroline": False,
-            "gridcolor":"#676565",
-            "minor_griddash": "dot"
-        },
-        legend={
-            "font": {"size": 10}
-        })
+    fig.update_layout(**styles.GRAPH_STYLE)
     logging.info(f'Updated daily plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
     return fig
 

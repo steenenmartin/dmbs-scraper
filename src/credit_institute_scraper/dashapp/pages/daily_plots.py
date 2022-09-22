@@ -2,6 +2,7 @@ import dash_bootstrap_components as dbc
 from dash import dcc, html
 from ...database.sqlite_conn import query_db
 from .. import styles
+import datetime as dt
 
 
 def daily_plot_page(date):
@@ -61,10 +62,7 @@ def daily_plot_page(date):
                         dbc.Col(
                             dcc.Graph(id='daily_plot',
                                       figure=dict(
-                                          layout=dict(
-                                              plot_bgcolor=styles.app_color['graph_bg'],
-                                              paper_bgcolor=styles.app_color['graph_bg'],
-                                          )
+                                          layout=styles.GRAPH_STYLE
                                       )),
                             **styles.RIGHT_COL_STYLE
                         ),

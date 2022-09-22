@@ -41,3 +41,30 @@ DROPDOWN_STYLE = {
 }
 
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
+
+GRAPH_STYLE = dict(
+    title='Daily change in spot prices',
+    plot_bgcolor=app_color["graph_bg"],
+    paper_bgcolor=app_color["graph_bg"],
+    font={"color": "#fff"},
+    height=870,
+    xaxis={
+        "showline": True,
+        "zeroline": False,
+        "fixedrange": True,
+        "showgrid": True,
+        "gridcolor": "#676565",
+        "minor_griddash": "dot"
+    },
+    yaxis={
+        "showgrid": True,
+        "showline": True,
+        # "fixedrange": True,
+        "zeroline": False,
+        "gridcolor": "#676565",
+        "minor_griddash": "dot"
+    },
+    legend={
+        "font": {"size": 10}
+    }
+)
