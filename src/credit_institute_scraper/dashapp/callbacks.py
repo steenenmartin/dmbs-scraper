@@ -32,10 +32,10 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period)]
     for k, v in args:
-        if v is not None:
+        if v:
             v_str = f'"{v}"' if isinstance(v, str) else v
             filters.append(f"{k} == {v_str}")
-        if v is None or len(v) > 1:
+        if not v or len(v) > 1:
             groupers.append(k)
 
     df = pd.DataFrame(df)
