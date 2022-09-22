@@ -1,25 +1,11 @@
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 import json
 import urllib3
 import ssl
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
-
-
-class CustomHttpAdapter(requests.adapters.HTTPAdapter):
-    # "Transport adapter" that allows us to use custom ssl_context.
-
-    def __init__(self, ssl_context=None, **kwargs):
-        self.ssl_context = ssl_context
-        super().__init__(**kwargs)
-
-    def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = urllib3.poolmanager.PoolManager(
-            num_pools=connections, maxsize=maxsize,
-            block=block, ssl_context=self.ssl_context)
 
 
 def get_legacy_session():
@@ -70,4 +56,17 @@ class Scraper:
     def max_tries(self):
         # Can be overridden by each Scraper-child class if necessary.
         return 3
+
+
+class CustomHttpAdapter(HTTPAdapter):
+    # "Transport adapter" that allows us to use custom ssl_context.
+
+    def __init__(self, ssl_context=None, **kwargs):
+        self.ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, connections, maxsize, block=False):
+        self.poolmanager = urllib3.poolmanager.PoolManager(
+            num_pools=connections, maxsize=maxsize,
+            block=block, ssl_context=self.ssl_context)
 
