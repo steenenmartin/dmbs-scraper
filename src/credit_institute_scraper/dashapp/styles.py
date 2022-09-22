@@ -4,7 +4,7 @@ SIDEBAR_STYLE = {
     "top": 0,
     "left": 0,
     "bottom": 0,
-    "width": "17rem",
+    "width": "18rem",
     "padding": "2rem 1rem",
     "background-color": "#031333",
 }
@@ -12,28 +12,14 @@ SIDEBAR_STYLE = {
 # the styles for the main content position it to the right of the sidebar and
 # add some padding.
 CONTENT_STYLE = {
-    "margin-left": "14rem",
-    "margin-right": "2rem",
+    "margin-left": "18rem",
     "padding": "2rem 1rem",
-}
-
-LIST_STYLE = {
-    "labelStyle": {"display": "block"},
-    "style": {"margin-left": "4px",
-              "font-size": "14px"}
-}
-
-LEFT_COL_STYLE = {
-    "style": {"margin-left": "5px"}
-}
-
-RIGHT_COL_STYLE = {
-    "md": 10
 }
 
 ROW_STYLE = {
     "align": "center",
-    "style": {"background-color": "#082255", "height": "100%"}
+    "style": {"margin-left": "4px",
+              "margin-right": "4px"}
 }
 
 DROPDOWN_STYLE = {
