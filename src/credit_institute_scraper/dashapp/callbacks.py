@@ -1,6 +1,7 @@
 from .dash_app import dash_app as app
 from .pages import page_not_found, home, daily_plots
 from . import styles
+from ..utils.object_helper import listify
 from dash import Output, Input, State
 import plotly.graph_objects as go
 import pandas as pd
@@ -46,20 +47,21 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     scatters = []
     groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
-    colors = list(Color("Blue").range_to(Color("green"), len(groups))) if groups else []
-    for i, grp in enumerate(groups):
+    colors = Color("Blue").range_to(Color("green"), len(groups))
+    for grp, c in zip(groups, colors):
         g, tmp_df = grp
-        g = g if isinstance(g, (list, tuple)) else [g]
+        g = listify(g)
 
         tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
-        scatters.append(go.Scatter(x=tmp_df.index,
-                                   y=tmp_df['spot_price'],
-                                   line=dict(width=3, shape='hv'),
-                                   name='<br>'.join(
-                                       f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g)),
-                                   showlegend=True,
-                                   marker={'color': colors[i].get_hex()}
-                                   ))
+        scatters.append(go.Scatter(
+            x=tmp_df.index,
+            y=tmp_df['spot_price'],
+            line=dict(width=3, shape='hv'),
+            name='<br>'.join(
+                f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g)),
+            showlegend=True,
+            marker={'color': c.get_hex()}
+        ))
     fig = go.Figure(scatters)
     fig.update_layout(**styles.GRAPH_STYLE)
     logging.info(f'Updated daily plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
