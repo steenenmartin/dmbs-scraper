@@ -43,7 +43,7 @@ DROPDOWN_STYLE = {
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
 
 GRAPH_STYLE = dict(
-    title='Daily change in spot prices',
+    title='0000-00-00: Daily change in spot prices',
     plot_bgcolor=app_color["graph_bg"],
     paper_bgcolor=app_color["graph_bg"],
     font={"color": "#fff"},
@@ -54,7 +54,9 @@ GRAPH_STYLE = dict(
         "fixedrange": True,
         "showgrid": True,
         "gridcolor": "#676565",
-        "minor_griddash": "dot"
+        "minor_griddash": "dot",
+        "nticks": 8,
+        # "showspikes": True
     },
     yaxis={
         "showgrid": True,
