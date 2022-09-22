@@ -8,10 +8,13 @@ if DATABASE_PATH and DATABASE_PATH.startswith("postgres://"):
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
-    with client_factory() as conn:
-        result = pd.read_sql(sql=sql, con=conn, params=params)
+    conn = create_engine(DATABASE_PATH)
+
+    result = pd.read_sql(sql=sql, con=conn, params=params)
+
     if cast_date_col is not None:
         result[cast_date_col] = pd.to_datetime(result[cast_date_col])
+
     return result
 
 
