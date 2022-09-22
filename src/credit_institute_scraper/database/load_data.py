@@ -1,6 +1,6 @@
 import datetime as dt
 import pandas as pd
-from credit_institute_scraper.enums.price_type import PriceType
+from ..enums.price_type import PriceType
 from typing import Callable
 
 
