@@ -5,7 +5,7 @@ from .. import styles
 
 def daily_plot_page():
     return dbc.Container([
-        html.H2('Daily change in spot prices'),
+        # html.H2('Daily change in spot prices'),
         dbc.Card(
             [
                 dbc.Row(
