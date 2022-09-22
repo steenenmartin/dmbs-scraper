@@ -34,6 +34,3 @@ def scrape(conn_module):
             ohlc_prices = load_data.calculate_open_high_low_close_prices(today, conn_module.query_db)
             ohlc_prices_result_handler.export_result(ohlc_prices)
 
-
-if __name__ == "__main__":
-    scrape()
