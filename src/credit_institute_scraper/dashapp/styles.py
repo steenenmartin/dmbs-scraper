@@ -33,7 +33,7 @@ RIGHT_COL_STYLE = {
 
 ROW_STYLE = {
     "align": "center",
-    "style": {"background-color": "#082255"}
+    "style": {"background-color": "#082255", "height": "100%"}
 }
 
 DROPDOWN_STYLE = {
@@ -46,7 +46,7 @@ GRAPH_STYLE = dict(
     plot_bgcolor=app_color["graph_bg"],
     paper_bgcolor=app_color["graph_bg"],
     font={"color": "#fff"},
-    height=870,
+    # height="100%",
     xaxis={
         "showline": True,
         "zeroline": False,
