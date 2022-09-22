@@ -7,15 +7,7 @@ h6 {
     margin-top: 0;
 }
 
-h2 {
-    color: #ffffff;
-}
-
-p {
-    color: #ffffff;
-}
-
-.form-label {
+h1, h2, h3, h4, h5, h6, p, .form-label {
     color: #ffffff;
 }
 
@@ -27,6 +19,18 @@ p {
     display: flex;
     justify-content: space-between;
     color: #fff;
+}
+
+
+.header__graph {
+    justify-content: space-between;
+    display: flex;
+    margin-top: 1rem;
+    margin-left: 1rem;
+    margin-bottom: -5rem;
+    letter-spacing: 0.15rem;
+    z-index: 1000;
+    position: relative;
 }
 
 .app__header__title {

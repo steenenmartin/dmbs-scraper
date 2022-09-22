@@ -12,6 +12,7 @@ def daily_plot_page(date):
             [
                 dbc.Row(
                     [
+                        html.H4(f'{date.isoformat()}: Daily change in spot prices', className='header__graph'),
                         dbc.Col(
                             [
                                 dbc.Label('Institute'),
@@ -55,7 +56,7 @@ def daily_plot_page(date):
                                 ),
 
                             ],
-                            **styles.LEFT_COL_STYLE
+                            width={"size": 2}
                         ),
                         dbc.Col(
                             dcc.Graph(id='daily_plot',
@@ -63,12 +64,12 @@ def daily_plot_page(date):
                                           layout=styles.GRAPH_STYLE
                                       ),
                                       style={'height': '95vh'}),
-                            **styles.RIGHT_COL_STYLE
+                            width={"size": 10}
                         ),
                     ],
                     **styles.ROW_STYLE
                 ),
-            ], style={"border": "none"}
+            ], className='graph__container'
         ),
     ],
 )
