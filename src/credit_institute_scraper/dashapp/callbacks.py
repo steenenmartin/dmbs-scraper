@@ -9,9 +9,6 @@ import datetime as dt
 import inspect
 from colour import Color
 
-date = dt.date(2022, 9, 21)
-df = query_db("select * from prices where date(timestamp) = :date", params={'date': date})
-
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -28,7 +25,7 @@ def render_page_content(pathname):
                                                Input("select_ytm_daily_plot", "value"),
                                                Input("select_max_io_daily_plot", "value")])
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period):
-    global df
+    date = dt.date(2022, 9, 21)
 
     argspec = inspect.getargvalues(inspect.currentframe())
     sql = "select * from prices where date(timestamp) = :date"
@@ -71,7 +68,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             "showline": True,
             "zeroline": False,
             "fixedrange": True,
-            "range": [dt.datetime(date.year, date.month, date.day, 7, 0, 0), dt.datetime(date.year, date.month, date.day, 15, 0, 0)],
+            "range": [dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15))],
             "showgrid": True,
             "gridcolor": "#676565",
             "griddash": 'dash',
@@ -90,15 +87,15 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     return fig
 
 
-@app.callback([Output('select_institute_daily_plot', 'options'),
-               Output('select_coupon_daily_plot', 'options'),
-               Output('select_ytm_daily_plot', 'options'),
-               Output('select_max_io_daily_plot', 'options')],
-              Input('daily_plot', 'figure')
-              )
-def update_dropdowns(_):
-    inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
-    coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
-    ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
-    maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
-    return inst, coup, ytm, maxio
+# @app.callback([Output('select_institute_daily_plot', 'options'),
+#                Output('select_coupon_daily_plot', 'options'),
+#                Output('select_ytm_daily_plot', 'options'),
+#                Output('select_max_io_daily_plot', 'options')],
+#               Input('daily_plot', 'figure')
+#               )
+# def update_dropdowns(_):
+#     inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
+#     coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
+#     ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
+#     maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
+#     return inst, coup, ytm, maxio
