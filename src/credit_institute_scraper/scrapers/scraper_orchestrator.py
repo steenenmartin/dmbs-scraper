@@ -1,7 +1,7 @@
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..scrapers.scraper import Scraper
-from ..utils.date_helper import print_time_prefixed
+import logging
 
 
 class ScraperOrchestrator:
@@ -15,9 +15,9 @@ class ScraperOrchestrator:
                 if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
                     try:
                         fixed_rate_bond_data_entries.extend(scraper.parse_fixed_rate_bonds())
-                        print_time_prefixed(f"Scraping '{scraper.institute.name}' succeeded")
+                        logging.info(f"Scraping '{scraper.institute.name}' succeeded")
                     except Exception as e:
-                        print_time_prefixed(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
+                        logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
 
             if all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
                 break
