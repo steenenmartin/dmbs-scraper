@@ -39,9 +39,9 @@ def main():
             if now.hour == 15 and now.minute == 1:
                 ohlc_prices_result_handler = DatabaseResultHandler("ohlc_prices", now)
                 if not ohlc_prices_result_handler.result_exists():
-                    today = datetime(now.year, now.month, now.day)
-                    # ohlc_prices = sqlite_conn.calculate_open_high_low_close_prices(today)
-                    # ohlc_prices_result_handler.export_result(ohlc_prices)
+                    today = datetime(now.year, now.month, 21)
+                    ohlc_prices = sqlite_conn.calculate_open_high_low_close_prices(today)
+                    ohlc_prices_result_handler.export_result(ohlc_prices)
 
                 # create_multi_day_plot()
                 # print_time_prefixed("Updated multi day plot")

@@ -18,7 +18,8 @@ def client_factory():
 
 
 def calculate_open_high_low_close_prices(today: datetime) -> pd.DataFrame:
-    today_prices = query_db("select * from prices where date(timestamp) = :stamp", params={'stamp': today})
+    eod = datetime(today.year, today.month, today.day, 23, 59, 59)
+    today_prices = query_db("select * from prices where :stamp1 <= datetime(timestamp) and datetime(timestamp) <= :stamp2", params={'stamp1': today, 'stamp2': eod})
     today_prices.sort_values("timestamp")
 
     ohlc_prices = pd.DataFrame()
