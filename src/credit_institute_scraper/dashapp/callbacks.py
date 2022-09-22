@@ -4,6 +4,7 @@ from .styles import app_color
 from dash import Output, Input
 from ..database.sqlite_conn import query_db
 import plotly.graph_objects as go
+import pandas as pd
 import datetime as dt
 import inspect
 from colour import Color
@@ -40,6 +41,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             filters.append(arg)
 
     df = query_db(sql, params={**locals(), 'date': date})
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
 
     scatters = []
     groups = df.groupby(filters) if filters else [('', df)]
@@ -47,7 +49,9 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     for i, grp in enumerate(sorted(groups, key=lambda x: x[1]['spot_price'].mean(), reverse=True)):
         g, tmp_df = grp
         g = g if isinstance(g, (list, tuple)) else [g]
-        scatters.append(go.Scatter(x=tmp_df['timestamp'],
+        full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
+        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
+        scatters.append(go.Scatter(x=tmp_df.index,
                                    y=tmp_df['spot_price'],
                                    line=dict(width=3),
                                    name='<br>'.join(
