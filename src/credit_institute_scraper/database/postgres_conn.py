@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 from ..enums.price_type import PriceType
 
-DATABASE_PATH = os.environ['DATABASE_URL']
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
@@ -16,6 +15,7 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
 
 
 def client_factory():
+    DATABASE_PATH = os.environ['DATABASE_URL']
     return psycopg2.connect(DATABASE_PATH, sslmode='require')
 
 

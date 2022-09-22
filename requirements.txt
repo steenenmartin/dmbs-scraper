@@ -7,5 +7,5 @@ dash_bootstrap_components==1.1.0
 plotly==5.8.2
 gunicorn
 colour
-APScheduler==3.0.0
+APScheduler
 psycopg2
