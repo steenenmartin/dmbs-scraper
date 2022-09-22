@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 from ..enums.price_type import PriceType
 
-DATABASE_PATH = os.environ['DATABASE_URL']
+DATABASE_PATH = os.environ.get('DATABASE_URL')
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
