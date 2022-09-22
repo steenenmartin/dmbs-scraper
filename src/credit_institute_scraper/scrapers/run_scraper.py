@@ -1,14 +1,14 @@
 from datetime import datetime
-from credit_institute_scraper.bond_data.fixed_rate_bond_data import FixedRateBondData
-from credit_institute_scraper.result_handlers.database_result_handler import DatabaseResultHandler
-from credit_institute_scraper.result_handlers.result_handler import ResultHandler
-from credit_institute_scraper.scrapers.scraper import Scraper
-from credit_institute_scraper.scrapers.scraper_orchestrator import ScraperOrchestrator
-from credit_institute_scraper.scrapers.jyske_scraper import JyskeScraper
-from credit_institute_scraper.scrapers.nordea_scraper import NordeaScraper
-from credit_institute_scraper.scrapers.total_kredit_scraper import TotalKreditScraper
-from credit_institute_scraper.scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
-from credit_institute_scraper.database import load_data
+from ..bond_data.fixed_rate_bond_data import FixedRateBondData
+from ..result_handlers.database_result_handler import DatabaseResultHandler
+from ..result_handlers.result_handler import ResultHandler
+from ..scrapers.scraper import Scraper
+from ..scrapers.scraper_orchestrator import ScraperOrchestrator
+from ..scrapers.jyske_scraper import JyskeScraper
+from ..scrapers.nordea_scraper import NordeaScraper
+from ..scrapers.total_kredit_scraper import TotalKreditScraper
+from ..scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
+from ..database import load_data
 
 
 def scrape(conn_module):
