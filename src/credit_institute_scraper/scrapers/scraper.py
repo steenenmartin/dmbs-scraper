@@ -1,4 +1,6 @@
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import json
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
@@ -22,6 +24,14 @@ class Scraper:
             self.tries_count += 1
 
             data = json.loads(requests.get(self.url, timeout=10).text)
+
+            session = requests.Session()
+            retry = Retry(connect=3, backoff_factor=0.5)
+            adapter = HTTPAdapter(max_retries=retry)
+            session.mount('http://', adapter)
+            session.mount('https://', adapter)
+
+            session.get(self.url)
             bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
             self.scrape_success = True
