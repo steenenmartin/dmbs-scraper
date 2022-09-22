@@ -1,11 +1,14 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
+from ...database.sqlite_conn import query_db
 from .. import styles
 
 
-def daily_plot_page():
+def daily_plot_page(date):
     return dbc.Container([
         # html.H2('Daily change in spot prices'),
+        dcc.Store(id='daily_store', data=query_db(sql="select * from prices where date(timestamp) = :date",
+                                                  params={'date': date}).to_dict("records")),
         dbc.Card(
             [
                 dbc.Row(
