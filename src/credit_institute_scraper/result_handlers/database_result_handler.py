@@ -12,6 +12,7 @@ class DatabaseResultHandler(ResultHandler):
     def export_result(self, result_df: pd.DataFrame) -> None:
         conn = self.database_conn.client_factory()
         result_df.to_sql(name=self.table_name, con=conn, if_exists='append', index=False)
+        conn.dispose()
         logging.info(f'Wrote df with size={len(result_df)} to {conn}')
 
     def result_exists(self) -> bool:
