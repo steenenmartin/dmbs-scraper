@@ -6,8 +6,9 @@ LOGGING_PATH = os.path.abspath(f'{__file__}\\..\\..\\..\\..\\')
 
 def initiate_logger(logging_level=logging.INFO):
     if is_heroku_server():
-        return
-    log_formatter = logging.Formatter("%(asctime)s [%(name)s: %(threadName)s] [%(levelname)s]  %(message)s")
+        log_formatter = logging.Formatter("[%(name)s: %(threadName)s] [%(levelname)s]  %(message)s")
+    else:
+        log_formatter = logging.Formatter("%(asctime)s [%(name)s: %(threadName)s] [%(levelname)s]  %(message)s")
     root_logger = logging.getLogger()
 
     file_handler = logging.FileHandler(LOGGING_PATH + 'realkreditscraper.log', mode='w', delay=True)
