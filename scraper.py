@@ -5,7 +5,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 sched = BlockingScheduler()
 
 
-@sched.scheduled_job('cron', day_of_week='mon-fri', hour="2-15", minute="*/5")
+@sched.scheduled_job('cron', day_of_week='mon-fri', hour="7-15", minute="*/5")
 def scheduled_job():
     scrape(postgres_conn)
 
