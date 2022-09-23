@@ -6,4 +6,4 @@ dash_app = dash.Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     external_stylesheets=[dbc.themes.BOOTSTRAP],
 )
-dash_app.title = 'Mortgage Price Dashboard'
+dash_app.title = 'Bond stats'
