@@ -14,6 +14,7 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
 
     sql = sqlalchemy.text(sql)
     result = pd.read_sql(sql=sql, con=conn, params=params)
+    conn.dispose()
     result.columns = [x.lower() for x in result.columns]
 
     if cast_date_col is not None:
