@@ -1,17 +1,11 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from ...utils.server_helper import is_heroku_server
-if is_heroku_server():
-    from ...database.postgres_conn import query_db
-else:
-    from ...database.sqlite_conn import query_db
 from .. import styles
 
 
 def daily_plot_page(date):
     return dbc.Container([
-        dcc.Store(id='daily_store', data=query_db(sql="select * from prices where date(timestamp) = :date",
-                                                  params={'date': date}).to_dict("records")),
+        dcc.Store(id='daily_store'),
         dcc.Interval(id='interval-component',  interval=int(3e5), n_intervals=0),
         dbc.Card(
             [

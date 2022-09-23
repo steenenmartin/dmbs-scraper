@@ -5,7 +5,8 @@ import logging
 
 DATABASE_PATH = os.environ.get('HEROKU_POSTGRESQL_BRONZE_URL')
 if DATABASE_PATH and DATABASE_PATH.startswith("postgres://"):
-    DATABASE_PATH = DATABASE_PATH.replace("postgres://", "postgresql://", 1)  # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
+    # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
+    DATABASE_PATH = DATABASE_PATH.replace("postgres://", "postgresql://", 1)
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
