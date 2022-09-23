@@ -1,8 +1,12 @@
 import logging
-LOGGING_PATH = f'{__file__}\\..\\..\\..\\..\\'
+from .server_helper import is_heroku_server
+import os
+LOGGING_PATH = os.path.abspath(f'{__file__}\\..\\..\\..\\..\\')
 
 
 def initiate_logger(logging_level=logging.INFO):
+    if is_heroku_server():
+        return
     log_formatter = logging.Formatter("%(asctime)s [%(name)s: %(threadName)s] [%(levelname)s]  %(message)s")
     root_logger = logging.getLogger()
 
