@@ -1,6 +1,10 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
-from ...database.postgres_conn import query_db
+from ...utils.server_helper import is_heroku_server
+if is_heroku_server():
+    from ...database.postgres_conn import query_db
+else:
+    from ...database.sqlite_conn import query_db
 from .. import styles
 
 
@@ -22,6 +26,7 @@ def daily_plot_page(date):
                                         dcc.Dropdown(id='select_institute_daily_plot',
                                                      options=[],
                                                      multi=True,
+                                                     searchable=False,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -32,6 +37,7 @@ def daily_plot_page(date):
                                         dcc.Dropdown(id='select_coupon_daily_plot',
                                                      options=[],
                                                      multi=True,
+                                                     searchable=False,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -42,6 +48,7 @@ def daily_plot_page(date):
                                         dcc.Dropdown(id='select_ytm_daily_plot',
                                                      options=[],
                                                      multi=True,
+                                                     searchable=False,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
@@ -52,6 +59,7 @@ def daily_plot_page(date):
                                         dcc.Dropdown(id='select_max_io_daily_plot',
                                                      options=[],
                                                      multi=True,
+                                                     searchable=False,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),

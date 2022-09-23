@@ -2,6 +2,7 @@ from .dash_app import dash_app as app
 from .pages import page_not_found, home, daily_plots
 from . import styles
 from ..utils.object_helper import listify
+from ..utils.date_helper import get_active_date
 from dash import Output, Input, State
 import plotly.graph_objects as go
 import pandas as pd
@@ -9,12 +10,7 @@ import datetime as dt
 import logging
 from colour import Color
 
-date = dt.date.today()
-weekday = dt.date.today().weekday()
-if weekday == 6 or dt.datetime.now().hour < 7:
-    date -= dt.timedelta(days=1)
-elif weekday == 7:
-    date -= dt.timedelta(days=2)
+date = get_active_date()
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
