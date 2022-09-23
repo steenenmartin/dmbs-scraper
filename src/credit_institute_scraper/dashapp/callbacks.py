@@ -22,7 +22,7 @@ date = get_active_date()
 def render_page_content(pathname):
     if pathname == "/":
         return home.home_page()
-    elif pathname == "/Daily":
+    elif pathname == "/daily":
         return daily_plots.daily_plot_page(date=date)
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
