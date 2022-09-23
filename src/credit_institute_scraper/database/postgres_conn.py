@@ -1,6 +1,7 @@
 import pandas as pd
 import sqlalchemy
 import os
+import logging
 
 DATABASE_PATH = os.environ.get('HEROKU_POSTGRESQL_BRONZE_URL')
 if DATABASE_PATH and DATABASE_PATH.startswith("postgres://"):
@@ -17,6 +18,7 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
     if cast_date_col is not None:
         result[cast_date_col] = pd.to_datetime(result[cast_date_col])
 
+    logging.info(f'Loaded df with size={len(result)} and columns={result.columns}')
     return result
 
 
