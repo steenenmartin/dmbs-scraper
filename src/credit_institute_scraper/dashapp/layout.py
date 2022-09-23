@@ -4,12 +4,12 @@ from dash import html, dcc
 
 sidebar = html.Div(
     [
-        html.H3("Cool beans", className="app__header"),
+        html.H3("Bond stats", className="app__header"),
         html.Hr(),
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Daily changes", href="/Daily", active="exact")
+                dbc.NavLink("Daily changes", href="/daily", active="exact")
             ],
             vertical=True,
             pills=True,
