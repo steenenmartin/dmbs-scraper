@@ -42,6 +42,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             groupers.append(k)
 
     df = pd.DataFrame(df)
+    logging.info(df.columns)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
     if filters:
@@ -82,6 +83,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
               )
 def update_dropdowns(_, df):
     df = pd.DataFrame(df)
+    logging.info(df.columns)
     inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
     coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
     ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
