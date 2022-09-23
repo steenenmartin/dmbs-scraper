@@ -6,7 +6,7 @@ from .. import styles
 def daily_plot_page(date):
     return dbc.Container([
         dcc.Store(id='daily_store'),
-        dcc.Interval(id='interval-component',  interval=int(3e5), n_intervals=0),
+        dcc.Interval(id='interval-component',  interval=60000, n_intervals=0),
         dbc.Card(
             [
                 dbc.Row(
