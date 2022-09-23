@@ -47,7 +47,7 @@ def daily_plot_page(date):
                                     ]
                                 ),
                                 html.Br(),
-                                dbc.Label('Max interest only period'),
+                                dbc.Label('Max interest-only period'),
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_max_io_daily_plot',
