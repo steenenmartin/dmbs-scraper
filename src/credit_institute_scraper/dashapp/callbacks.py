@@ -9,6 +9,11 @@ import pandas as pd
 import datetime as dt
 import logging
 from colour import Color
+from ..utils.server_helper import is_heroku_server
+if is_heroku_server():
+    from ..database.postgres_conn import query_db
+else:
+    from ..database.sqlite_conn import query_db
 
 date = get_active_date()
 
@@ -28,8 +33,8 @@ def render_page_content(pathname):
                Input("select_coupon_daily_plot", "value"),
                Input("select_ytm_daily_plot", "value"),
                Input("select_max_io_daily_plot", "value"),
-               Input('interval-component', 'n_intervals')],
-              State("daily_store", "data"))
+               Input('interval-component', 'n_intervals'),
+               Input("daily_store", "data")])
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, _, df):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
@@ -77,10 +82,9 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
                Output('select_coupon_daily_plot', 'options'),
                Output('select_ytm_daily_plot', 'options'),
                Output('select_max_io_daily_plot', 'options')],
-              Input('daily_plot', 'value'),
-              State('daily_store', 'data')
+              Input('daily_store', 'data')
               )
-def update_dropdowns(_, df):
+def update_dropdowns(df):
     df = pd.DataFrame(df)
     inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
     coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
@@ -88,3 +92,11 @@ def update_dropdowns(_, df):
     maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
     logging.info('Updated dropdown labels for daily plot')
     return inst, coup, ytm, maxio
+
+
+@app.callback(Output('daily_store', 'data'), Input('interval-component', 'n_intervals'))
+def periodic_data_update(n):
+    logging.info(f'Updated data at interval {n}')
+    df = query_db(sql="select * from prices where date(timestamp) = :date",
+                  params={'date': date}).to_dict("records")
+    return df
