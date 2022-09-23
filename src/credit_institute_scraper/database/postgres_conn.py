@@ -2,7 +2,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 import os
 
-DATABASE_PATH = os.environ.get('DATABASE_URL')
+DATABASE_PATH = os.environ.get('HEROKU_POSTGRESQL_BRONZE_URL')
 if DATABASE_PATH and DATABASE_PATH.startswith("postgres://"):
     DATABASE_PATH = DATABASE_PATH.replace("postgres://", "postgresql://", 1)  # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
 
