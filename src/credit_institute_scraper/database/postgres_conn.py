@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import create_engine
+import sqlalchemy
 import os
 
 DATABASE_PATH = os.environ.get('HEROKU_POSTGRESQL_BRONZE_URL')
@@ -8,8 +8,9 @@ if DATABASE_PATH and DATABASE_PATH.startswith("postgres://"):
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
-    conn = create_engine(DATABASE_PATH)
+    conn = client_factory()
 
+    sql = sqlalchemy.text(sql)
     result = pd.read_sql(sql=sql, con=conn, params=params)
 
     if cast_date_col is not None:
@@ -19,5 +20,5 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
 
 
 def client_factory():
-    return create_engine(DATABASE_PATH)
+    return sqlalchemy.create_engine(DATABASE_PATH)
 
