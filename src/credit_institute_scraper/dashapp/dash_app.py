@@ -1,5 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
+from ..utils.server_helper import is_heroku_server
 
 dash_app = dash.Dash(
     __name__,
@@ -8,34 +9,34 @@ dash_app = dash.Dash(
 )
 dash_app.title = 'Bond stats'
 
-
-dash_app.index_string = """
-<!DOCTYPE html>
-<html>
-    <head>
-        <!-- Google tag (gtag.js) -->
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-V3RXS9EHBM"></script>
-        <script>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-        
-          gtag('config', 'G-V3RXS9EHBM');
-        </script>
-        {%metas%}
-        <title>{%title%}</title>
-        {%favicon%}
-        {%css%}
-    </head>
-    <body>
-        <div>My Custom header</div>
-        {%app_entry%}
-        <footer>
-            {%config%}
-            {%scripts%}
-            {%renderer%}
-        </footer>
-        <div>My Custom footer</div>
-    </body>
-</html>
-"""
+if is_heroku_server():
+    dash_app.index_string = """
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-V3RXS9EHBM"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+            
+              gtag('config', 'G-V3RXS9EHBM');
+            </script>
+            {%metas%}
+            <title>{%title%}</title>
+            {%favicon%}
+            {%css%}
+        </head>
+        <body>
+            <div>My Custom header</div>
+            {%app_entry%}
+            <footer>
+                {%config%}
+                {%scripts%}
+                {%renderer%}
+            </footer>
+            <div>My Custom footer</div>
+        </body>
+    </html>
+    """
