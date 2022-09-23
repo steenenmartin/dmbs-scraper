@@ -34,6 +34,7 @@ GRAPH_STYLE = dict(
     font={"color": "#fff"},
     # height="100%",
     xaxis={
+        "title": "Time (UTC)",
         "showline": True,
         "zeroline": False,
         "fixedrange": True,
