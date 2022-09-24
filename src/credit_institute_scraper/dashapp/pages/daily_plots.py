@@ -57,14 +57,24 @@ def daily_plot_page(date):
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),
-
+                                html.Br(),
+                                dbc.Label("Isin"),
+                                dbc.Card(
+                                    [
+                                        dcc.Dropdown(id='select_isin_daily_plot',
+                                                     options=[],
+                                                     multi=True,
+                                                     searchable=False,
+                                                     **styles.DROPDOWN_STYLE)
+                                    ]
+                                ),
                             ],
                             width={"size": 2}
                         ),
                         dbc.Col(
                             dcc.Graph(id='daily_plot',
                                       figure=dict(
-                                          layout=styles.GRAPH_STYLE
+                                          layout=styles.DAILY_GRAPH_STYLE
                                       ),
                                       style={'height': '95vh'}),
                             width={"size": 10}

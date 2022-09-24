@@ -9,7 +9,8 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Daily changes", href="/daily", active="exact")
+                dbc.NavLink("Daily changes", href="/daily", active="exact"),
+                dbc.NavLink("Historical changes", href="/historical", active="exact")
             ],
             vertical=True,
             pills=True,
