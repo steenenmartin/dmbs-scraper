@@ -1,6 +1,6 @@
 body {
     font-family: "Open Sans", sans-serif;
-    background-color: #061E44;
+    background-color: #C0C0C0;
 }
 
 h6 {
@@ -8,7 +8,7 @@ h6 {
 }
 
 h1, h2, h3, h4, h5, h6, p, .form-label {
-    color: #ffffff;
+    color: #000000;
 }
 
 .app__container {
@@ -21,6 +21,18 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     color: #fff;
 }
 
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+    color: #fff;
+    background-color: #292929;
+}
+
+.nav-pills a{
+    color:#fff;
+}
+
+.nav-pills a:hover{
+    color:#BABABA;
+}
 
 .header__graph {
     justify-content: space-between;
@@ -38,7 +50,18 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
 }
 
 .app__header__title--grey {
-    color: #C4CDD5;
+    color: #000000;
+}
+
+.nav-pills>li>a.active,
+.nav-pills>li>a:hover,
+.nav-pills>li>a:focus {
+  background-color: black;
+  color: white;
+}
+
+.flex-column--grey {
+    color: #000000;
 }
 
 .app__menu__img {
@@ -83,7 +106,7 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
 }
 
 .graph__container {
-    background-color: #082255;
+    background-color: #FFFFFF;
     border-radius: 0.55rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 }

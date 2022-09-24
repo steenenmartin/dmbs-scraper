@@ -6,7 +6,7 @@ SIDEBAR_STYLE = {
     "bottom": 0,
     "width": "18rem",
     "padding": "2rem 1rem",
-    "background-color": "#031333",
+    "background-color": "#454545",
 }
 
 # the styles for the main content position it to the right of the sidebar and
@@ -26,12 +26,12 @@ DROPDOWN_STYLE = {
     "style": {"border": "none"}
 }
 
-app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
+app_color = {"graph_bg": "#f2f2f2", "graph_line": "#FFFFFF"}
 
 DAILY_GRAPH_STYLE = dict(
     plot_bgcolor=app_color["graph_bg"],
-    paper_bgcolor=app_color["graph_bg"],
-    font={"color": "#fff"},
+    paper_bgcolor="#FFFFFF",
+    font={"color": "#000000"},
     # height="100%",
     xaxis={
         "title": "Time (UTC)",
@@ -59,8 +59,8 @@ DAILY_GRAPH_STYLE = dict(
 
 HISTORICAL_GRAPH_STYLE = dict(
     plot_bgcolor=app_color["graph_bg"],
-    paper_bgcolor=app_color["graph_bg"],
-    font={"color": "#fff"},
+    paper_bgcolor="#FFFFFF",
+    font={"color": "#000000"},
     # height="100%",
     xaxis={
         "title": "Date",
