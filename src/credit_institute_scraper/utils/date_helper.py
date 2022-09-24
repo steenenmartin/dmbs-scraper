@@ -8,11 +8,11 @@ def get_active_date():
 
     date = dt.date.today()
     weekday = dt.date.today().weekday()
-    if weekday == 6 or dt.datetime.now().hour < 7:
-        if weekday == 1:
+    if weekday == 5 or dt.datetime.now().hour < 7:
+        if weekday == 0:
             date -= dt.timedelta(days=3)
         else:
             date -= dt.timedelta(days=1)
-    elif weekday == 7:
+    elif weekday == 6:
         date -= dt.timedelta(days=2)
     return date
