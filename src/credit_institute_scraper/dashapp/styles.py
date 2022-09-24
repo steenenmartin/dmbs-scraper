@@ -28,13 +28,42 @@ DROPDOWN_STYLE = {
 
 app_color = {"graph_bg": "#082255", "graph_line": "#007ACE"}
 
-GRAPH_STYLE = dict(
+DAILY_GRAPH_STYLE = dict(
     plot_bgcolor=app_color["graph_bg"],
     paper_bgcolor=app_color["graph_bg"],
     font={"color": "#fff"},
     # height="100%",
     xaxis={
         "title": "Time (UTC)",
+        "showline": True,
+        "zeroline": False,
+        "fixedrange": True,
+        "showgrid": True,
+        "gridcolor": "#676565",
+        "minor_griddash": "dot",
+        "nticks": 8,
+        # "showspikes": True
+    },
+    yaxis={
+        "showgrid": True,
+        "showline": True,
+        # "fixedrange": True,
+        "zeroline": False,
+        "gridcolor": "#676565",
+        "minor_griddash": "dot"
+    },
+    legend={
+        "font": {"size": 10}
+    }
+)
+
+HISTORICAL_GRAPH_STYLE = dict(
+    plot_bgcolor=app_color["graph_bg"],
+    paper_bgcolor=app_color["graph_bg"],
+    font={"color": "#fff"},
+    # height="100%",
+    xaxis={
+        "title": "Date",
         "showline": True,
         "zeroline": False,
         "fixedrange": True,
