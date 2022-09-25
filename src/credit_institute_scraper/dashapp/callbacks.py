@@ -58,7 +58,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     lines = []
     groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
-    colors = Color("Red").range_to(Color("yellow"), len(groups))
+    colors = Color("darkblue").range_to(Color("lightblue"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
         g = listify(g)
@@ -66,14 +66,13 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
         tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
-        hover = 'Time: %{x}<br>Price: %{y:.2f}<br>Isin: %{text}'
+        hover = 'Time: %{x}<br>Price: %{y:.2f}'
         lines.append(go.Scatter(
             x=tmp_df.index,
             y=tmp_df['spot_price'],
             line=dict(width=2, shape='hv'),
             name=lgnd,
             hovertemplate=hover,
-            text=tmp_df['isin'],
             showlegend=True,
             marker={'color': c.get_hex()},
         ))
