@@ -7,15 +7,30 @@ SIDEBAR_STYLE = {
     "left": 0,
     "bottom": 0,
     "width": "18rem",
-    "padding": "2rem 1rem",
+    "z-index": 1,
+    "overflow-x": "hidden",
+    "transition": "all 0.5s",
+    "padding": "0.5rem 1rem",
     "background-color": "#454545",
+}
+
+SIDEBAR_HIDDEN = {
+    **SIDEBAR_STYLE,
+    "left": "-18rem",
+    "padding": "0rem 0rem",
 }
 
 # the styles for the main content position it to the right of the sidebar and
 # add some padding.
 CONTENT_STYLE = {
+    "transition": "margin-left 0.5s",
     "margin-left": "18rem",
     "padding": "0rem 1rem" if is_heroku_server() else "2.4rem 1rem",
+}
+
+CONTENT_STYLE1 = {
+    **CONTENT_STYLE,
+    "margin-left": "0rem",
 }
 
 ROW_STYLE = {

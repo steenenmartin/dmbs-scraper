@@ -184,3 +184,26 @@ def update_historical_plot(institute, coupon_rate, years_to_maturity, max_intere
     logging.info(f'Updated historical plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
 
     return fig
+
+
+@app.callback(Output("sidebar", "style"),
+              Output("page-content", "style"),
+              Output("side_click", "data"),
+              Input("btn_sidebar", "n_clicks"),
+              State("side_click", "data"))
+def toggle_sidebar(n, nclick):
+    if n:
+        if nclick == "SHOW":
+            sidebar_style = styles.SIDEBAR_HIDDEN
+            content_style = styles.CONTENT_STYLE1
+            cur_nclick = "HIDDEN"
+        else:
+            sidebar_style = styles.SIDEBAR_STYLE
+            content_style = styles.CONTENT_STYLE
+            cur_nclick = "SHOW"
+    else:
+        sidebar_style = styles.SIDEBAR_STYLE
+        content_style = styles.CONTENT_STYLE
+        cur_nclick = 'SHOW'
+
+    return sidebar_style, content_style, cur_nclick
