@@ -3,9 +3,13 @@ from dash import dcc, html
 from .. import styles
 
 
-def daily_plot_page(date):
+def _extract_dropdown(arg_dict, arg):
+    return arg_dict[arg].split(',') if arg in arg_dict else []
+
+
+def daily_plot_page(date, dropdown_args):
     return dbc.Container([
-        dcc.Store(id='daily_store'),
+        dcc.Store(id='daily_store', data=None),
         dcc.Interval(id='interval-component',  interval=60000, n_intervals=0),
         dbc.Card(
             [
@@ -18,7 +22,8 @@ def daily_plot_page(date):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_institute_daily_plot',
-                                                     options=[],
+                                                     options=_extract_dropdown(dropdown_args, 'institute'),
+                                                     value=_extract_dropdown(dropdown_args, 'institute'),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -29,7 +34,8 @@ def daily_plot_page(date):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_coupon_daily_plot',
-                                                     options=[],
+                                                     options=_extract_dropdown(dropdown_args, 'coupon_rate'),
+                                                     value=_extract_dropdown(dropdown_args, 'coupon_rate'),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -40,7 +46,8 @@ def daily_plot_page(date):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_ytm_daily_plot',
-                                                     options=[],
+                                                     options=_extract_dropdown(dropdown_args, 'years_to_maturity'),
+                                                     value=_extract_dropdown(dropdown_args, 'years_to_maturity'),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -51,7 +58,8 @@ def daily_plot_page(date):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_max_io_daily_plot',
-                                                     options=[],
+                                                     options=_extract_dropdown(dropdown_args, 'max_interest_only_period'),
+                                                     value=_extract_dropdown(dropdown_args, 'max_interest_only_period'),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -62,9 +70,10 @@ def daily_plot_page(date):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_isin_daily_plot',
-                                                     options=[],
+                                                     options=_extract_dropdown(dropdown_args, 'isin'),
+                                                     value=_extract_dropdown(dropdown_args, 'isin'),
                                                      multi=True,
-                                                     searchable=False,
+                                                     searchable=True,
                                                      **styles.DROPDOWN_STYLE)
                                     ]
                                 ),

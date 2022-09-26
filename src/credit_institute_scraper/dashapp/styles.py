@@ -28,60 +28,37 @@ DROPDOWN_STYLE = {
 
 app_color = {"graph_bg": "#f2f2f2", "graph_line": "#FFFFFF"}
 
-DAILY_GRAPH_STYLE = dict(
-    plot_bgcolor=app_color["graph_bg"],
-    paper_bgcolor="#FFFFFF",
-    font={"color": "#000000"},
-    # height="100%",
-    xaxis={
-        "title": "Time (UTC)",
-        "showline": True,
-        "zeroline": False,
-        "fixedrange": True,
-        "showgrid": True,
-        "gridcolor": "#676565",
-        "minor_griddash": "dot",
-        "nticks": 8,
-        # "showspikes": True
-    },
-    yaxis={
-        "showgrid": True,
-        "showline": True,
-        # "fixedrange": True,
-        "zeroline": False,
-        "gridcolor": "#676565",
-        "minor_griddash": "dot"
-    },
-    legend={
-        "font": {"size": 10}
-    }
-)
 
-HISTORICAL_GRAPH_STYLE = dict(
-    plot_bgcolor=app_color["graph_bg"],
-    paper_bgcolor="#FFFFFF",
-    font={"color": "#000000"},
-    # height="100%",
-    xaxis={
-        "title": "Date",
-        "showline": True,
-        "zeroline": False,
-        "fixedrange": True,
-        "showgrid": True,
-        "gridcolor": "#676565",
-        "minor_griddash": "dot",
-        "nticks": 8,
-        # "showspikes": True
-    },
-    yaxis={
-        "showgrid": True,
-        "showline": True,
-        # "fixedrange": True,
-        "zeroline": False,
-        "gridcolor": "#676565",
-        "minor_griddash": "dot"
-    },
-    legend={
-        "font": {"size": 10}
-    }
-)
+def __graph_style(x_axis_title):
+    return dict(
+        plot_bgcolor=app_color["graph_bg"],
+        paper_bgcolor="#FFFFFF",
+        font={"color": "#000000"},
+        # height="100%",
+        xaxis={
+            "title": x_axis_title,
+            "showline": True,
+            "zeroline": False,
+            "fixedrange": True,
+            "showgrid": True,
+            "gridcolor": "#676565",
+            "minor_griddash": "dot",
+            "nticks": 8,
+            # "showspikes": True
+        },
+        yaxis={
+            "showgrid": True,
+            "showline": True,
+            # "fixedrange": True,
+            "zeroline": False,
+            "gridcolor": "#676565",
+            "minor_griddash": "dot"
+        },
+        legend={
+            "font": {"size": 10}
+        }
+    )
+
+
+DAILY_GRAPH_STYLE = __graph_style(x_axis_title="Time (UTC)")
+HISTORICAL_GRAPH_STYLE = __graph_style(x_axis_title="Date")

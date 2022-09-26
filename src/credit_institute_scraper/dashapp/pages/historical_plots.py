@@ -1,10 +1,16 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 from .. import styles
+from ...utils.server_helper import is_heroku_server
+if is_heroku_server():
+    from ...database.postgres_conn import query_db
+else:
+    from ...database.sqlite_conn import query_db
 
 
 def historical_plot_page():
     return dbc.Container([
+        dcc.Store(id='historical_store', data=query_db(sql="select * from ohlc_prices").to_dict('records')),
         dbc.Card(
             [
                 dbc.Row(
