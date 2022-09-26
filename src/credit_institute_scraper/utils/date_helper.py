@@ -12,7 +12,7 @@ def get_active_date():
         date -= dt.timedelta(days=2)
     elif weekday == 5:
         date -= dt.timedelta(days=1)
-    elif dt.datetime.now().hour < 7:
+    elif dt.datetime.utcnow().hour < 7:
         if weekday == 0:
             date -= dt.timedelta(days=3)
         else:
