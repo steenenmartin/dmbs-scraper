@@ -18,70 +18,49 @@ def historical_plot_page():
                         html.H4(f'Historic prices', className='header__graph'),
                         dbc.Col(
                             [
-                                dbc.Label('Institute'),
-                                dbc.Card(
-                                    [
-                                        dcc.Dropdown(id='select_institute_historical_plot',
-                                                     options=[],
-                                                     multi=True,
-                                                     searchable=False,
-                                                     **styles.DROPDOWN_STYLE)
-                                    ]
-                                ),
+                                dbc.Label('Institute', className='graph-downdown-label'),
+                                dcc.Dropdown(id='select_institute_historical_plot',
+                                             options=[],
+                                             multi=True,
+                                             searchable=False,
+                                             className='graph-dropdown'),
                                 html.Br(),
-                                dbc.Label('Coupon'),
-                                dbc.Card(
-                                    [
-                                        dcc.Dropdown(id='select_coupon_historical_plot',
-                                                     options=[],
-                                                     multi=True,
-                                                     searchable=False,
-                                                     **styles.DROPDOWN_STYLE)
-                                    ]
-                                ),
+                                dbc.Label('Coupon', className='graph-downdown-label'),
+                                dcc.Dropdown(id='select_coupon_historical_plot',
+                                             options=[],
+                                             multi=True,
+                                             searchable=False,
+                                             className='graph-dropdown'),
                                 html.Br(),
-                                dbc.Label('Years to maturity'),
-                                dbc.Card(
-                                    [
-                                        dcc.Dropdown(id='select_ytm_historical_plot',
-                                                     options=[],
-                                                     multi=True,
-                                                     searchable=False,
-                                                     **styles.DROPDOWN_STYLE)
-                                    ]
-                                ),
+                                dbc.Label('Years to maturity', className='graph-downdown-label'),
+                                dcc.Dropdown(id='select_ytm_historical_plot',
+                                             options=[],
+                                             multi=True,
+                                             searchable=False,
+                                             className='graph-dropdown'),
                                 html.Br(),
-                                dbc.Label('Max interest-only period'),
-                                dbc.Card(
-                                    [
-                                        dcc.Dropdown(id='select_max_io_historical_plot',
-                                                     options=[],
-                                                     multi=True,
-                                                     searchable=False,
-                                                     **styles.DROPDOWN_STYLE)
-                                    ]
-                                ),
+                                dbc.Label('Max interest-only period', className='graph-downdown-label'),
+                                dcc.Dropdown(id='select_max_io_historical_plot',
+                                             options=[],
+                                             multi=True,
+                                             searchable=False,
+                                             className='graph-dropdown'),
                                 html.Br(),
-                                dbc.Label("Isin"),
-                                dbc.Card(
-                                    [
-                                        dcc.Dropdown(id='select_isin_historical_plot',
-                                                     options=[],
-                                                     multi=True,
-                                                     searchable=False,
-                                                     **styles.DROPDOWN_STYLE)
-                                    ]
-                                ),
+                                dbc.Label("Isin", className='graph-downdown-label'),
+                                dcc.Dropdown(id='select_isin_historical_plot',
+                                             options=[],
+                                             multi=True,
+                                             searchable=False,
+                                             className='graph-dropdown')
                             ],
-                            width={"size": 2}
+                            md=2
                         ),
                         dbc.Col(
                             dcc.Graph(id='historical_plot',
-                                      figure=dict(
-                                          layout=styles.HISTORICAL_GRAPH_STYLE
-                                      ),
-                                      style={'height': '92vh'}),
-                            width={"size": 10}
+                                      figure=dict(layout=styles.HISTORICAL_GRAPH_STYLE),
+                                      style={'height': '92vh'},
+                                      config={'displayModeBar': False}),
+                            md=10
                         ),
                     ],
                     **styles.ROW_STYLE
