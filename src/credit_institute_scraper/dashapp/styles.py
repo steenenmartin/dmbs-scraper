@@ -15,7 +15,7 @@ SIDEBAR_STYLE = {
 # add some padding.
 CONTENT_STYLE = {
     "margin-left": "18rem",
-    "padding": "0rem 1rem" if is_heroku_server() else "2rem 1rem",
+    "padding": "0rem 1rem" if is_heroku_server() else "2.4rem 1rem",
 }
 
 ROW_STYLE = {
