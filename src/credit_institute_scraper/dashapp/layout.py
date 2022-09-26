@@ -20,4 +20,4 @@ sidebar = html.Div(
 )
 
 content = html.Div(id="page-content", style=styles.CONTENT_STYLE)
-layout = html.Div([dcc.Location(id="url"), sidebar, content])
+layout = html.Div([dcc.Location(id="url", refresh=False), sidebar, content])
