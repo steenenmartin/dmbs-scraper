@@ -189,6 +189,8 @@ def update_historical_plot(institute, coupon_rate, years_to_maturity, max_intere
 @app.callback(Output("sidebar", "style"),
               Output("page-content", "style"),
               Output("side_click", "data"),
+              Output("btn_sidebar", "style"),
+              Output("btn_sidebar", "children"),
               Input("btn_sidebar", "n_clicks"),
               State("side_click", "data"))
 def toggle_sidebar(n, nclick):
@@ -197,13 +199,19 @@ def toggle_sidebar(n, nclick):
             sidebar_style = styles.SIDEBAR_HIDDEN
             content_style = styles.CONTENT_STYLE1
             cur_nclick = "HIDDEN"
+            btn_txt = "SHOW"
+            btn_style = {'margin-left': '0rem', "transition": "all 0.5s",}
         else:
             sidebar_style = styles.SIDEBAR_STYLE
             content_style = styles.CONTENT_STYLE
             cur_nclick = "SHOW"
+            btn_txt = "HIDE"
+            btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s",}
     else:
         sidebar_style = styles.SIDEBAR_STYLE
         content_style = styles.CONTENT_STYLE
         cur_nclick = 'SHOW'
+        btn_txt = "HIDE"
+        btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s",}
 
-    return sidebar_style, content_style, cur_nclick
+    return sidebar_style, content_style, cur_nclick, btn_style, btn_txt
