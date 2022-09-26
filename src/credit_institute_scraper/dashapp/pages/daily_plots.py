@@ -65,10 +65,9 @@ def daily_plot_page(date, dropdown_args):
                         ),
                         dbc.Col(
                             dcc.Graph(id='daily_plot',
-                                      figure=dict(
-                                          layout=styles.DAILY_GRAPH_STYLE
-                                      ),
-                                      style={'height': '92vh'}),
+                                      figure=dict(layout=styles.DAILY_GRAPH_STYLE),
+                                      style={'height': '92vh'},
+                                      config={'displayModeBar': False}),
                             md=10
                         ),
                     ],

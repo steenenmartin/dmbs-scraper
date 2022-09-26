@@ -54,6 +54,7 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     letter-spacing: 0.10rem;
     z-index: 1000;
     position: relative;
+    font-family: "Segoe UI", sans-serif;
 }
 
 .app__header__title {
