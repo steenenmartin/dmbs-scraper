@@ -1,5 +1,3 @@
-from ..utils.server_helper import is_heroku_server
-
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -25,7 +23,7 @@ SIDEBAR_HIDDEN = {
 CONTENT_STYLE = {
     "transition": "margin-left 0.5s",
     "margin-left": "18rem",
-    "padding": "0rem 1rem" if is_heroku_server() else "2.4rem 1rem",
+    "padding": "2rem 1rem"
 }
 
 CONTENT_STYLE1 = {
