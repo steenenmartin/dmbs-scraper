@@ -29,15 +29,14 @@ def render_page_content(href):
     pathname = o[2]
 
     if pathname == "/":
-        out = home.home_page()
+        return home.home_page()
     elif pathname == "/daily":
-        out = daily_plots.daily_plot_page(date=date, dropdown_args=q)
+        return daily_plots.daily_plot_page(date=date, dropdown_args=q)
     elif pathname == "/historical":
-        out = historical_plots.historical_plot_page()
-    else:
-        # If the user tries to reach a different page, return a 404 message
-        out = page_not_found.page_not_found(pathname)
-    return html.Div([out, html.Div(id='dummy')])
+        return historical_plots.historical_plot_page()
+
+    # If the user tries to reach a different page, return a 404 message
+    return page_not_found.page_not_found(pathname)
 
 
 @app.callback(Output("daily_plot", "figure"),
@@ -98,13 +97,8 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     Input("select_ytm_daily_plot", "value"),
     Input("select_max_io_daily_plot", "value"),
     Input("select_isin_daily_plot", "value"),
-    Input('dummy', 'children'),
     State('url', 'search'))
-def update_search_bar(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, _, search):
-    if len(dash.callback_context.triggered) == 2:
-        # unit-input rendered, it didn't change
-        raise PreventUpdate
-
+def update_search_bar(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
 
