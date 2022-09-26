@@ -15,7 +15,7 @@ sidebar = html.Div(
             vertical=True,
             pills=True,
         ),
-        dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn')
+        # dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn')
     ],
     id='sidebar',
     style=styles.SIDEBAR_STYLE
@@ -26,6 +26,7 @@ layout = html.Div(
     [
         dcc.Store(id='side_click'),
         dcc.Location(id="url", refresh=False),
+        dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn'),
         sidebar,
         content
      ]
