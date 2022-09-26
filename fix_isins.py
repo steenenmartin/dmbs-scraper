@@ -1,3 +1,5 @@
+import logging
+
 from src.credit_institute_scraper.database import postgres_conn
 
 conn = postgres_conn.client_factory()
@@ -41,6 +43,11 @@ isin_dict = {
     'DK0009530594': 'DK0005305942',
 }
 
-for table in ["prices", "ohlc_prices"]:
-    for k, v in isin_dict.items():
-        conn.execute(f"update {table} set isin = '{v}' where isin = '{k}';")
+try:
+    for table in ["prices", "ohlc_prices"]:
+        for k, v in isin_dict.items():
+            conn.execute(f"update {table} set isin = '{v}' where isin = '{k}';")
+    logging.info(f"Succeeded update")
+except Exception as e:
+    logging.info(f"Update failed: {e}")
+
