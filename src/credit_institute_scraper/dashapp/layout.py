@@ -22,7 +22,8 @@ sidebar = html.Div(
         ),
     ],
     id='sidebar',
-    style=styles.SIDEBAR_STYLE
+    style=styles.SIDEBAR_STYLE,
+    className='sidebar'
 )
 
 content = html.Div(id="page-content", style=styles.CONTENT_STYLE)
