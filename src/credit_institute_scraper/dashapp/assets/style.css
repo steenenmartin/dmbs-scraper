@@ -40,13 +40,13 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     margin-top: 1rem;
     margin-left: 1rem;
     margin-bottom: -5rem;
-    letter-spacing: 0.15rem;
+    letter-spacing: 0.10rem;
     z-index: 1000;
     position: relative;
 }
 
 .app__header__title {
-    letter-spacing: 0.23rem;
+    letter-spacing: 0.18rem;
 }
 
 .app__header__title--grey {
@@ -119,6 +119,7 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     margin-top: 15px;
 }
 
+/*TODO: Collapse sidebar on smaller devices*/
 @media only screen and (max-width: 600px) {
     .histogram__direction {
         margin: 15px 0px 20px 0px;
