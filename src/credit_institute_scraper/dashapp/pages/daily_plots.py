@@ -88,7 +88,7 @@ def daily_plot_page(date, dropdown_args):
                                       figure=dict(
                                           layout=styles.DAILY_GRAPH_STYLE
                                       ),
-                                      style={'height': '95vh'}),
+                                      style={'height': '93vh'}),
                             width={"size": 10}
                         ),
                     ],
