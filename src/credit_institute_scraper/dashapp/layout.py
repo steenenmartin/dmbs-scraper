@@ -2,9 +2,14 @@ from . import styles
 import dash_bootstrap_components as dbc
 from dash import html, dcc
 
+
 sidebar = html.Div(
     [
-        html.H3("Bond stats", className="app__header"),
+        html.I(className="app__header",
+               style={'background-image': 'url(/assets/favicon.ico)',
+                      'height': '16rem',
+                      'background-size': '100%'}),
+        html.H3("Bond stats", className='app__header'),
         html.Hr(),
         dbc.Nav(
             [
@@ -15,7 +20,6 @@ sidebar = html.Div(
             vertical=True,
             pills=True,
         ),
-        # dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn')
     ],
     id='sidebar',
     style=styles.SIDEBAR_STYLE
