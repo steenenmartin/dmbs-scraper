@@ -3,8 +3,11 @@ from dash import dcc, html
 from .. import styles
 
 
-def _extract_dropdown(arg_dict, arg):
-    return arg_dict[arg].split(',') if arg in arg_dict else []
+def _extract_dropdown(arg_dict, arg, cast=None):
+    arglst = arg_dict[arg].split(',') if arg in arg_dict else []
+    if cast:
+        arglst = list(map(cast, arglst))
+    return arglst
 
 
 def daily_plot_page(date, dropdown_args):
@@ -34,8 +37,8 @@ def daily_plot_page(date, dropdown_args):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_coupon_daily_plot',
-                                                     options=_extract_dropdown(dropdown_args, 'coupon_rate'),
-                                                     value=_extract_dropdown(dropdown_args, 'coupon_rate'),
+                                                     options=_extract_dropdown(dropdown_args, 'coupon_rate', float),
+                                                     value=_extract_dropdown(dropdown_args, 'coupon_rate', float),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -46,8 +49,8 @@ def daily_plot_page(date, dropdown_args):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_ytm_daily_plot',
-                                                     options=_extract_dropdown(dropdown_args, 'years_to_maturity'),
-                                                     value=_extract_dropdown(dropdown_args, 'years_to_maturity'),
+                                                     options=_extract_dropdown(dropdown_args, 'years_to_maturity', int),
+                                                     value=_extract_dropdown(dropdown_args, 'years_to_maturity', int),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
@@ -58,8 +61,8 @@ def daily_plot_page(date, dropdown_args):
                                 dbc.Card(
                                     [
                                         dcc.Dropdown(id='select_max_io_daily_plot',
-                                                     options=_extract_dropdown(dropdown_args, 'max_interest_only_period'),
-                                                     value=_extract_dropdown(dropdown_args, 'max_interest_only_period'),
+                                                     options=_extract_dropdown(dropdown_args, 'max_interest_only_period', float),
+                                                     value=_extract_dropdown(dropdown_args, 'max_interest_only_period', float),
                                                      multi=True,
                                                      searchable=False,
                                                      **styles.DROPDOWN_STYLE)
