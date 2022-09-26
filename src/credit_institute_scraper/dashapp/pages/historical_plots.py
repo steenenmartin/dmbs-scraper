@@ -80,7 +80,7 @@ def historical_plot_page():
                                       figure=dict(
                                           layout=styles.HISTORICAL_GRAPH_STYLE
                                       ),
-                                      style={'height': '95vh'}),
+                                      style={'height': '94vh'}),
                             width={"size": 10}
                         ),
                     ],
