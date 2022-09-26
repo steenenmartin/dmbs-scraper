@@ -81,7 +81,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
             line=dict(width=3, shape='hv'),
             name=lgnd,
             hovertemplate=hover,
-            showlegend=True,
+            showlegend=False,
             marker={'color': c.get_hex()},
         ))
     fig = go.Figure(lines)
