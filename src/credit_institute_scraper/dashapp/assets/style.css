@@ -15,6 +15,10 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     margin: 3% 5%;
 }
 
+.graph-dropdown, .graph-downdown-label {
+    font-size: 1.35rem !important;
+}
+
 .sidebar-btn, .sidebar-btn:hover {
     color: #FFFFFF;
     position: absolute;
