@@ -60,7 +60,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     lines = []
     groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
-    colors = Color("darkblue").range_to(Color("lightblue"), len(groups))
+    colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
         g = listify(g)
