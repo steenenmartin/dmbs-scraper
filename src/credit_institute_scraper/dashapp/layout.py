@@ -5,6 +5,8 @@ from dash import html, dcc
 
 sidebar = html.Div(
     [
+        html.Div(id='dummy1'),
+        html.Div(id='dummy2'),
         html.I(className="app__header",
                style={'background-image': 'url(/assets/favicon.ico)',
                       'height': '16rem',

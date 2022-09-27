@@ -4,7 +4,16 @@ from .. import styles
 from ...database.postgres_conn import query_db
 
 
-def historical_plot_page():
+def _extract_var(dct, var_name, to_options, cast=None):
+    out = dct.get(var_name)
+    if cast and out is not None:
+        out = cast(out)
+    if to_options:
+        out = [] if out is None else [out]
+    return out
+
+
+def historical_plot_page(dropdown_args):
     return dbc.Container([
         dcc.Store(id='historical_store', data=query_db(sql="select * from ohlc_prices").to_dict('records')),
         dbc.Card(
@@ -16,37 +25,37 @@ def historical_plot_page():
                             [
                                 dbc.Label('Institute', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_institute_historical_plot',
-                                             options=[],
-                                             multi=True,
+                                             options=_extract_var(dropdown_args, 'institute', True),
+                                             value=_extract_var(dropdown_args, 'institute', False),
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Coupon', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_coupon_historical_plot',
-                                             options=[],
-                                             multi=True,
+                                             options=_extract_var(dropdown_args, 'coupon_rate', True, float),
+                                             value=_extract_var(dropdown_args, 'coupon_rate', False, float),
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Years to maturity', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_ytm_historical_plot',
-                                             options=[],
-                                             multi=True,
+                                             options=_extract_var(dropdown_args, 'years_to_maturity', True, int),
+                                             value=_extract_var(dropdown_args, 'years_to_maturity', False, int),
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Max interest-only period', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_max_io_historical_plot',
-                                             options=[],
-                                             multi=True,
+                                             options=_extract_var(dropdown_args, 'max_interest_only_period', True, float),
+                                             value=_extract_var(dropdown_args, 'max_interest_only_period', False, float),
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label("Isin", className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_isin_historical_plot',
-                                             options=[],
-                                             multi=True,
-                                             searchable=False,
+                                             options=_extract_var(dropdown_args, 'isin', True),
+                                             value=_extract_var(dropdown_args, 'isin', False),
+                                             searchable=True,
                                              className='graph-dropdown')
                             ],
                             md=2
