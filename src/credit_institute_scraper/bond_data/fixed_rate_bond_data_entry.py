@@ -3,6 +3,7 @@ class FixedRateBondDataEntry:
                  institute: str,
                  years_to_maturity: int,
                  spot_price: float,
+                 offer_price: float,
                  max_interest_only_period: float,
                  coupon_rate: float,
                  isin: str):
@@ -12,3 +13,5 @@ class FixedRateBondDataEntry:
         self.max_interest_only_period = max_interest_only_period
         self.coupon_rate = coupon_rate
         self.spot_price = spot_price
+        self.offer_price = offer_price
+
