@@ -10,15 +10,16 @@ def _extract_dropdown(arg_dict, arg, cast=None):
     return arglst
 
 
-def daily_plot_page(date, dropdown_args):
+def daily_plot_page(dropdown_args):
     return dbc.Container([
         dcc.Store(id='daily_store', data=None),
+        dcc.Store(id='date_range_store'),
         dcc.Interval(id='interval-component',  interval=60000, n_intervals=0),
         dbc.Card(
             [
                 dbc.Row(
                     [
-                        html.H4(f'{date.isoformat()}: Daily change in spot prices', className='header__graph'),
+                        html.H4('Daily change in spot prices', className='header__graph'),
                         dbc.Col(
                             [
                                 dbc.Label('Institute', className='graph-downdown-label'),
