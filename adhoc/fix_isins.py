@@ -40,9 +40,20 @@ isin_dict = {
     'DK0009530594': 'DK0005305942',
 }
 
+old_isins = "', '".join(list(isin_dict.keys()))
+sql = f"select * from ohlc_prices where isin in ('{old_isins}')"
+df_old = postgres_conn.query_db(sql)
 
-for table in ['prices', 'ohlc_prices']:
-    statements = [f"update {table} set isin = '{v}' where isin = '{k}'" for k, v in isin_dict.items()]
-    postgres_conn.execute_statements(statements)
-    logging.info(f'Updated isins for table: {table}')
+
+new_isins = "', '".join(list(isin_dict.values()))
+sql = f"select * from ohlc_prices where isin in ('{old_isins}')"
+df_new = postgres_conn.query_db(sql)
+
+
+inp = input('Do you wish to continue with the update? Write "y" for yes')
+if inp == 'y':
+    for table in ['prices', 'ohlc_prices']:
+        statements = [f"update {table} set isin = '{v}' where isin = '{k}'" for k, v in isin_dict.items()]
+        postgres_conn.execute_statements(statements)
+        logging.info(f'Updated isins for table: {table}')
 
