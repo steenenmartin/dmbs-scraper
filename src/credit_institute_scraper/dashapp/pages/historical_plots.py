@@ -1,11 +1,7 @@
 import dash_bootstrap_components as dbc
 from dash import dcc, html
 from .. import styles
-from ...utils.server_helper import is_heroku_server
-if is_heroku_server():
-    from ...database.postgres_conn import query_db
-else:
-    from ...database.sqlite_conn import query_db
+from ...database.postgres_conn import query_db
 
 
 def historical_plot_page():

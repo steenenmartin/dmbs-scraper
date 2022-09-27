@@ -34,7 +34,7 @@ def skip_holidays(date):
     return date
 
 
-def get_active_time_range(now=None):
+def get_active_time_range(now=None, force_7_15=False):
     if now is None:
         now = dt.datetime.utcnow()
 
@@ -65,6 +65,8 @@ def get_active_time_range(now=None):
 
     start = skip_holidays(start)
 
+    if force_7_15:
+        return dt.datetime(end.year, end.month, end.day, 7), dt.datetime(end.year, end.month, end.day, 15)
     return start, end
 
 
