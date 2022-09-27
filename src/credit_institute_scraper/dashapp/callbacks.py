@@ -174,7 +174,7 @@ def update_historical_plot2(institute, coupon_rate, years_to_maturity, max_inter
     for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
         fig_dct[str(g).lower()] = dat['spot_price']
     fig_dct['x'] = dat['timestamp'].dt.date
-    fig = go.Figure(data=go.Ohlc(**fig_dct))
+    fig = go.Figure(data=go.Candlestick(**fig_dct))
 
     fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
     logging.info(f'Updated historical plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
