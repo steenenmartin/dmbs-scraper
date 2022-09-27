@@ -17,6 +17,8 @@ def daily_plot_page(dropdown_args):
         dcc.Interval(id='interval-component',  interval=60000, n_intervals=0),
         dbc.Card(
             [
+                dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
+                dcc.Loading(type="default", children=html.Div(id="loading-spinner-output2"), className='spinner'),
                 dbc.Row(
                     [
                         html.H4('Daily change in spot prices', className='header__graph'),
