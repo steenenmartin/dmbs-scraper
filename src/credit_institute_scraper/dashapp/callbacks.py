@@ -4,7 +4,6 @@ from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
 from dash import Output, Input, State
-from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import pandas as pd
 import logging
@@ -41,7 +40,7 @@ def render_page_content(href):
               Input("daily_store", "data")],
               State("date_range_store", "data")
               )
-def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
+def update_daily_plot2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
@@ -92,7 +91,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     Input("select_max_io_daily_plot", "value"),
     Input("select_isin_daily_plot", "value"),
     State('url', 'search'))
-def update_search_bar(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
+def update_search_bar2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
 
@@ -124,7 +123,7 @@ def update_dropdowns(df, log_text):
         Output('select_max_io_daily_plot', 'options'),
         Output('select_isin_daily_plot', 'options')
     ],  Input('daily_store', 'data'))
-def update_dropdowns_daily_plot(df):
+def update_dropdowns_daily_plot2(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
 
 
@@ -135,14 +134,14 @@ def update_dropdowns_daily_plot(df):
         Output('select_max_io_historical_plot', 'options'),
         Output('select_isin_historical_plot', 'options')
     ], Input('historical_store', 'data'))
-def update_dropdowns_historical_plot(df):
+def update_dropdowns_historical_plot2(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
 
 
 @app.callback(Output('daily_store', 'data'),
               Output('date_range_store', 'data'),
               Input('interval-component', 'n_intervals'))
-def periodic_update_daily_plot(n):
+def periodic_update_daily_plot2(n):
     start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
@@ -157,7 +156,7 @@ def periodic_update_daily_plot(n):
                Input("select_max_io_historical_plot", "value"),
                Input("select_isin_historical_plot", "value"),
                Input("historical_store", "data")])
-def update_historical_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
+def update_historical_plot2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
     filters = []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
@@ -190,7 +189,7 @@ def update_historical_plot(institute, coupon_rate, years_to_maturity, max_intere
               Output("btn_sidebar", "children"),
               Input("btn_sidebar", "n_clicks"),
               State("side_click", "data"))
-def toggle_sidebar(n, nclick):
+def toggle_sidebar2(n, nclick):
     if n:
         if nclick == "SHOW":
             sidebar_style = styles.SIDEBAR_HIDDEN
