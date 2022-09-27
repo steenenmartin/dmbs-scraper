@@ -41,9 +41,9 @@ isin_dict = {
 }
 
 old_isins = "', '".join(list(isin_dict.keys()))
-sql_old = f"select * from ohlc_prices where isin in ('{old_isins}')"
+sql_old = f"select * from prices where isin in ('{old_isins}')"
 new_isins = "', '".join(list(isin_dict.values()))
-sql_new = f"select * from ohlc_prices where isin in ('{old_isins}')"
+sql_new = f"select * from prices where isin in ('{new_isins}')"
 
 df_old = postgres_conn.query_db(sql_old)
 logging.info(f'len of old before update {len(df_old)}')
