@@ -52,7 +52,11 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         if not v or len(v) > 1:
             groupers.append(k)
 
-    df = pd.DataFrame(df)
+    try:
+        df = pd.DataFrame(df)
+    except Exception as e:
+        logging.error(e)
+        raise PreventUpdate
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
     if filters:
