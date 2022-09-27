@@ -3,7 +3,7 @@ from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
-from dash import Output, Input, State
+from dash import Output, Input, State, ctx
 import plotly.graph_objects as go
 import pandas as pd
 import logging
@@ -23,7 +23,7 @@ def render_page_content(href):
     elif pathname == "/daily":
         return daily_plots.daily_plot_page(dropdown_args=q)
     elif pathname == "/historical":
-        return historical_plots.historical_plot_page()
+        return historical_plots.historical_plot_page(dropdown_args=q)
     elif pathname == "/about":
         return about.about_page()
 
@@ -40,7 +40,7 @@ def render_page_content(href):
               Input("daily_store", "data")],
               State("date_range_store", "data")
               )
-def update_daily_plot2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
+def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
@@ -83,26 +83,50 @@ def update_daily_plot2(institute, coupon_rate, years_to_maturity, max_interest_o
     return fig
 
 
+def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
+    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
+            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
+
+    q = dict(urllib.parse.parse_qsl(search[1:]))  # [1:] to remove the leading `?`
+    for k, v in args:
+        if v or v == 0:
+            q[k] = ','.join(map(str, v)) if isinstance(v, (list, tuple)) else str(v)
+        else:
+            q.pop(k, None)
+    query_string = urllib.parse.urlencode(q)
+    return '?' + query_string if query_string else ''
+
+
 @app.callback(
-    Output('url', 'search'),
+    Output('dummy1', 'value'),
     Input('select_institute_daily_plot', 'value'),
     Input('select_coupon_daily_plot', 'value'),
     Input("select_ytm_daily_plot", "value"),
     Input("select_max_io_daily_plot", "value"),
     Input("select_isin_daily_plot", "value"),
     State('url', 'search'))
-def update_search_bar2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
-    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
-            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
+def update_search_bar_daily(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
+    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search)
 
-    q = dict(urllib.parse.parse_qsl(search[1:]))  # [1:] to remove the leading `?`
-    for k, v in args:
-        if v:
-            q[k] = ','.join(map(str, v))
-        else:
-            q.pop(k, None)
-    query_string = urllib.parse.urlencode(q)
-    return '?' + query_string if query_string else ''
+
+@app.callback(
+    Output('dummy2', 'value'),
+    Input('select_institute_historical_plot', 'value'),
+    Input('select_coupon_historical_plot', 'value'),
+    Input("select_ytm_historical_plot", "value"),
+    Input("select_max_io_historical_plot", "value"),
+    Input("select_isin_historical_plot", "value"),
+    State('url', 'search'))
+def update_search_bar_historic(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
+    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search)
+
+
+@app.callback(Output('url', 'search'), Input('dummy1', 'value'), Input('dummy2', 'value'))
+def update_search_bar(search_daily, search_historic):
+    if ctx.triggered_id == 'dummy1':
+        return search_daily
+    else:
+        return search_historic
 
 
 def update_dropdowns(df, log_text):
@@ -123,7 +147,7 @@ def update_dropdowns(df, log_text):
         Output('select_max_io_daily_plot', 'options'),
         Output('select_isin_daily_plot', 'options')
     ],  Input('daily_store', 'data'))
-def update_dropdowns_daily_plot2(df):
+def update_dropdowns_daily_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
 
 
@@ -134,14 +158,14 @@ def update_dropdowns_daily_plot2(df):
         Output('select_max_io_historical_plot', 'options'),
         Output('select_isin_historical_plot', 'options')
     ], Input('historical_store', 'data'))
-def update_dropdowns_historical_plot2(df):
+def update_dropdowns_historical_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
 
 
 @app.callback(Output('daily_store', 'data'),
               Output('date_range_store', 'data'),
               Input('interval-component', 'n_intervals'))
-def periodic_update_daily_plot2(n):
+def periodic_update_daily_plot(n):
     start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
@@ -156,12 +180,12 @@ def periodic_update_daily_plot2(n):
                Input("select_max_io_historical_plot", "value"),
                Input("select_isin_historical_plot", "value"),
                Input("historical_store", "data")])
-def update_historical_plot2(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
+def update_historical_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
     filters = []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
     for k, v in args:
-        if v:
+        if v or v == 0:
             v_str = f'"{v}"' if isinstance(v, str) else v
             filters.append(f"{k} == {v_str}")
 
@@ -189,7 +213,7 @@ def update_historical_plot2(institute, coupon_rate, years_to_maturity, max_inter
               Output("btn_sidebar", "children"),
               Input("btn_sidebar", "n_clicks"),
               State("side_click", "data"))
-def toggle_sidebar2(n, nclick):
+def toggle_sidebar(n, nclick):
     if n:
         if nclick == "SHOW":
             sidebar_style = styles.SIDEBAR_HIDDEN
