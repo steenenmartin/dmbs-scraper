@@ -11,6 +11,7 @@ class JyskeScraper(Scraper):
                 self.institute.name,
                 int(product["loebetidAar"]),
                 float(product["aktuelKurs"]),
+                float(product["tilbudsKurs"]),
                 float(product["maxAntalAfdragsfrieAar"]),
                 float(product["kuponrenteProcent"]),
                 product["isin"]
