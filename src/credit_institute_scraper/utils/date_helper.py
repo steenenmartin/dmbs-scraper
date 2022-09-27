@@ -23,7 +23,7 @@ def get_active_date():
 
 
 def is_holiday(date):
-    if date.strftime('%Y-%m-%d') in ['2022-09-11', '2022-09-10', '2022-09-09']:
+    if date.strftime('%Y-%m-%d') in []:
         return True
     return False
 
@@ -111,8 +111,8 @@ if __name__ == '__main__':
 
     # ====================== HOLIDAY TEST ======================
     # morning
-    assert get_active_time_range(dt.datetime(2022, 9, 12, 6, 0, 0)) == (dt.datetime(2022, 9, 8, 7), dt.datetime(2022, 9, 8, 15))
-    # mid-day
-    assert get_active_time_range(dt.datetime(2022, 9, 12, 12, 0, 0)) == (dt.datetime(2022, 9, 8, 12), dt.datetime(2022, 9, 12, 12))
-    # evening
-    assert get_active_time_range(dt.datetime(2022, 9, 12, 22, 0, 0)) == (dt.datetime(2022, 9, 12, 7), dt.datetime(2022, 9, 12, 15))
+    # assert get_active_time_range(dt.datetime(2022, 9, 12, 6, 0, 0)) == (dt.datetime(2022, 9, 8, 7), dt.datetime(2022, 9, 8, 15))
+    # # mid-day
+    # assert get_active_time_range(dt.datetime(2022, 9, 12, 12, 0, 0)) == (dt.datetime(2022, 9, 8, 12), dt.datetime(2022, 9, 12, 12))
+    # # evening
+    # assert get_active_time_range(dt.datetime(2022, 9, 12, 22, 0, 0)) == (dt.datetime(2022, 9, 12, 7), dt.datetime(2022, 9, 12, 15))

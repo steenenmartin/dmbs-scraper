@@ -1,25 +1,16 @@
 from .dash_app import dash_app as app
-from .pages import page_not_found, home, daily_plots, historical_plots
+from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
-from ..utils.date_helper import get_active_date
-from dash import Output, Input, State, html
+from ..utils.date_helper import get_active_time_range
+from dash import Output, Input, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import pandas as pd
-import datetime as dt
 import logging
-import dash
 import urllib.parse
 from colour import Color
-from ..utils.server_helper import is_heroku_server
-
-if is_heroku_server():
-    from ..database.postgres_conn import query_db
-else:
-    from ..database.sqlite_conn import query_db
-
-date = get_active_date()
+from ..database.postgres_conn import query_db
 
 
 @app.callback(Output("page-content", "children"), Input("url", "href"))
@@ -31,7 +22,7 @@ def render_page_content(href):
     if pathname == "/":
         return home.home_page()
     elif pathname == "/daily":
-        return daily_plots.daily_plot_page(date=date, dropdown_args=q)
+        return daily_plots.daily_plot_page(dropdown_args=q)
     elif pathname == "/historical":
         return historical_plots.historical_plot_page()
 
@@ -41,13 +32,14 @@ def render_page_content(href):
 
 @app.callback(Output("daily_plot", "figure"),
               [Input("select_institute_daily_plot", "value"),
-               Input("select_coupon_daily_plot", "value"),
-               Input("select_ytm_daily_plot", "value"),
-               Input("select_max_io_daily_plot", "value"),
-               Input("select_isin_daily_plot", "value"),
-               Input('interval-component', 'n_intervals'),
-               Input("daily_store", "data")])
-def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, _, df):
+              Input("select_coupon_daily_plot", "value"),
+              Input("select_ytm_daily_plot", "value"),
+              Input("select_max_io_daily_plot", "value"),
+              Input("select_isin_daily_plot", "value"),
+              Input("daily_store", "data")],
+              State("date_range_store", "data")
+              )
+def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
     groupers, filters = [], []
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
             ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
@@ -60,7 +52,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
 
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    full_idx = pd.date_range(dt.datetime.combine(date, dt.time(7)), dt.datetime.combine(date, dt.time(15)), freq='5T')
+    full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
     if filters:
         df = df.query(' and '.join(filters))
 
@@ -72,7 +64,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         g = listify(g)
 
         tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
-        tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
+        # tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Time: %{x}<br>Price: %{y:.2f}'
         lines.append(go.Scatter(
@@ -145,13 +137,15 @@ def update_dropdowns_historical_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
 
 
-@app.callback(Output('daily_store', 'data'), Input('interval-component', 'n_intervals'))
+@app.callback(Output('daily_store', 'data'),
+              Output('date_range_store', 'data'),
+              Input('interval-component', 'n_intervals'))
 def periodic_data_update_daily_plot(n):
-    logging.info(f'Updated data at interval {n}')
-    df = query_db(sql="select * from prices where date(timestamp) = :date",
-                  params={'date': date}).to_dict("records")
-    return df
-
+    start_time, end_time = get_active_time_range()
+    logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
+    df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
+                  params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
+    return df, (start_time, end_time)
 
 @app.callback(Output("historical_plot", "figure"),
               [Input("select_institute_historical_plot", "value"),
