@@ -41,14 +41,14 @@ isin_dict = {
 }
 
 old_isins = "', '".join(list(isin_dict.keys()))
-sql = f"select * from ohlc_prices where isin in ('{old_isins}')"
-df_old = postgres_conn.query_db(sql)
-
-
+sql_old = f"select * from ohlc_prices where isin in ('{old_isins}')"
 new_isins = "', '".join(list(isin_dict.values()))
-sql = f"select * from ohlc_prices where isin in ('{old_isins}')"
-df_new = postgres_conn.query_db(sql)
+sql_new = f"select * from ohlc_prices where isin in ('{old_isins}')"
 
+df_old = postgres_conn.query_db(sql_old)
+logging.info(f'len of old before update {len(df_old)}')
+df_new = postgres_conn.query_db(sql_new)
+logging.info(f'len of new before update {len(df_new)}')
 
 inp = input('Do you wish to continue with the update? Write "y" for yes')
 if inp == 'y':
@@ -57,3 +57,7 @@ if inp == 'y':
         postgres_conn.execute_statements(statements)
         logging.info(f'Updated isins for table: {table}')
 
+df_old = postgres_conn.query_db(sql_old)
+logging.info(f'len of old after update {len(df_old)}')
+df_new = postgres_conn.query_db(sql_new)
+logging.info(f'len of new after update {len(df_new)}')
