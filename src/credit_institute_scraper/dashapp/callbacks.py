@@ -32,6 +32,7 @@ def render_page_content(href):
 
 
 @app.callback(Output("daily_plot", "figure"),
+              Output("loading-spinner-output2", "children"),
               [Input("select_institute_daily_plot", "value"),
               Input("select_coupon_daily_plot", "value"),
               Input("select_ytm_daily_plot", "value"),
@@ -80,7 +81,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     fig = go.Figure(lines)
     fig.update_layout(**styles.DAILY_GRAPH_STYLE)
     logging.info(f'Updated daily plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
-    return fig
+    return fig, ''
 
 
 def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
@@ -164,13 +165,14 @@ def update_dropdowns_historical_plot(df):
 
 @app.callback(Output('daily_store', 'data'),
               Output('date_range_store', 'data'),
+              Output("loading-spinner-output1", "children"),
               Input('interval-component', 'n_intervals'))
 def periodic_update_daily_plot(n):
     start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                   params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
-    return df, (start_time, end_time)
+    return df, (start_time, end_time), ''
 
 
 @app.callback(Output("historical_plot", "figure"),
