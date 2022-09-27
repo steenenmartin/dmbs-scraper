@@ -1,8 +1,8 @@
 import pandas as pd
 import sqlalchemy
-import os
 import logging
 import json
+import os
 from ..utils.server_helper import is_heroku_server
 
 
@@ -32,7 +32,7 @@ def connection_string():
             # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
             database_path = database_path.replace("postgres://", "postgresql://", 1)
     else:
-        with open('credentials.json') as fo:
+        with open(os.path.abspath(f'{__file__}/../credentials.json')) as fo:
             crd = json.load(fo)
         database_path = f'postgresql://{crd["user"]}:{crd["password"]}@{crd["host"]}:{crd["port"]}/{crd["database"]}'
     return database_path
@@ -49,3 +49,4 @@ def execute_statements(statements: list):
     except Exception as e:
         logging.error(e)
         trans.rollback()
+        raise e
