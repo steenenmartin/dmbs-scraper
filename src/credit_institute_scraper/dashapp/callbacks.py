@@ -166,14 +166,14 @@ def update_historical_plot2(institute, coupon_rate, years_to_maturity, max_inter
             filters.append(f"{k} == {v_str}")
 
     df = pd.DataFrame(df)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
     if filters:
         df = df.query(' and '.join(filters))
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
 
     fig_dct = dict()
     for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
         fig_dct[str(g).lower()] = dat['spot_price']
-    fig_dct['x'] = dat['timestamp'].dt.date
+        fig_dct['x'] = dat['timestamp'].dt.date
     fig = go.Figure(data=go.Candlestick(**fig_dct))
 
     fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
