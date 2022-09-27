@@ -6,3 +6,4 @@ class CreditInstitute(Enum):
     Nordea = 1
     RealKreditDanmark = 2
     TotalKredit = 3
+    DlrKredit = 4
