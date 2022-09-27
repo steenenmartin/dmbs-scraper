@@ -47,7 +47,7 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
 }
 
 .header__graph {
-    justify-content: space-between;
+    justify-content: center;
     display: flex;
     margin-top: 1rem;
     margin-left: 1rem;
