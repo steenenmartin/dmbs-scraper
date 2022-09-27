@@ -25,6 +25,8 @@ def render_page_content(href):
         return daily_plots.daily_plot_page(dropdown_args=q)
     elif pathname == "/historical":
         return historical_plots.historical_plot_page()
+    elif pathname == "/about":
+        return about.about_page()
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
