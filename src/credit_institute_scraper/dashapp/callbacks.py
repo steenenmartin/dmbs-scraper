@@ -52,11 +52,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         if not v or len(v) > 1:
             groupers.append(k)
 
-    try:
-        df = pd.DataFrame(df)
-    except Exception as e:
-        logging.error(e)
-        raise PreventUpdate
+    df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
     if filters:
@@ -146,7 +142,7 @@ def update_dropdowns_historical_plot(df):
 @app.callback(Output('daily_store', 'data'),
               Output('date_range_store', 'data'),
               Input('interval-component', 'n_intervals'))
-def periodic_data_update_daily_plot(n):
+def periodic_update_daily_plot(n):
     start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
