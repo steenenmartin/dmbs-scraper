@@ -143,11 +143,12 @@ def update_dropdowns_historical_plot(df):
               Output('date_range_store', 'data'),
               Input('interval-component', 'n_intervals'))
 def periodic_data_update_daily_plot(n):
-    start_time, end_time = get_active_time_range()
+    start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                   params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
     return df, (start_time, end_time)
+
 
 @app.callback(Output("historical_plot", "figure"),
               [Input("select_institute_historical_plot", "value"),
