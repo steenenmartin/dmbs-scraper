@@ -4,7 +4,7 @@ import logging
 
 
 def get_active_date():
-    if is_heroku_server():
+    if not is_heroku_server():
         return dt.date(2022, 9, 21)
 
     date = dt.date.today()
