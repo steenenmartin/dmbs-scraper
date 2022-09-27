@@ -1,7 +1,7 @@
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
 from ..scrapers.scraper import Scraper
-
+from ..utils.isin_helper import build_isin_code
 
 class TotalKreditScraper(Scraper):
     @Scraper.scraper
@@ -13,7 +13,7 @@ class TotalKreditScraper(Scraper):
                 float(product["spotPriceRatePayment"].replace(",", ".")),
                 0.0 if product["name"].endswith("med afdrag") else float(product["name"].split(" ")[5]),
                 float(product["name"].split(" ")[0].strip("%").replace(",", ".")),
-                "DKK000" + product["fondCode"]
+                build_isin_code("DK", product["fondCode"])
             ) for product in data["groups"][0]['entries']
         ]
 

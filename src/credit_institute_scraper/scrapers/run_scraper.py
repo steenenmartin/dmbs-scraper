@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..result_handlers.database_result_handler import DatabaseResultHandler
 from ..result_handlers.result_handler import ResultHandler
@@ -8,6 +9,7 @@ from ..scrapers.jyske_scraper import JyskeScraper
 from ..scrapers.nordea_scraper import NordeaScraper
 from ..scrapers.total_kredit_scraper import TotalKreditScraper
 from ..scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
+from ..scrapers.dlr_kredit_scraper import DlrKreditScraper
 from ..database import load_data
 
 
@@ -21,7 +23,8 @@ def scrape(conn_module):
         JyskeScraper(),
         RealKreditDanmarkScraper(),
         NordeaScraper(),
-        TotalKreditScraper()
+        TotalKreditScraper(),
+        DlrKreditScraper()
     ]
 
     fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
