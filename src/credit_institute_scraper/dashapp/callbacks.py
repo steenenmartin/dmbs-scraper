@@ -173,8 +173,6 @@ def periodic_update_daily_plot(n):
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                   params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
 
-    if n > 0:
-        return df, dcc.Location(pathname='/', id='loc_dummy'), ''
     return df, (start_time, end_time), ''
 
 
