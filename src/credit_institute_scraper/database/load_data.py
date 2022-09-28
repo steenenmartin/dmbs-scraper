@@ -11,6 +11,10 @@ def calculate_open_high_low_close_prices(today: dt.datetime, query_func: Callabl
     ohlc_prices = pd.DataFrame()
     for isin in set(today_prices["isin"]):
         isin_prices = today_prices.loc[today_prices["isin"] == isin]
+
+        if isin_prices.spot_price.isnull().all():
+            continue
+
         for price_type in PriceType:
             if price_type == PriceType.Open:
                 ohlc_price = isin_prices[isin_prices.timestamp == isin_prices.iloc[0].timestamp]
