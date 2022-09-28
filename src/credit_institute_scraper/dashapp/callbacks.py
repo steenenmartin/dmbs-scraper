@@ -31,15 +31,15 @@ def render_page_content(href):
     return page_not_found.page_not_found(pathname)
 
 
-@app.callback(Output("daily_plot", "figure"),
-              Output("loading-spinner-output2", "children"),
+@app.callback([Output("daily_plot", "figure"),
+              Output("loading-spinner-output2", "children")],
               [Input("select_institute_daily_plot", "value"),
               Input("select_coupon_daily_plot", "value"),
               Input("select_ytm_daily_plot", "value"),
               Input("select_max_io_daily_plot", "value"),
               Input("select_isin_daily_plot", "value"),
               Input("daily_store", "data")],
-              State("date_range_store", "data")
+              State("date_range_div", "children")
               )
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
     groupers, filters = [], []
@@ -164,7 +164,7 @@ def update_dropdowns_historical_plot(df):
 
 
 @app.callback(Output('daily_store', 'data'),
-              Output('date_range_store', 'data'),
+              Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
               Input('interval-component', 'n_intervals'))
 def periodic_update_daily_plot(n):
