@@ -12,12 +12,8 @@ def _extract_dropdown(arg_dict, arg, cast=None):
 
 def daily_plot_page(dropdown_args):
     return dbc.Container([
-        dcc.Store(id='daily_store', data=None),
-        html.Div(id='date_range_div', style={'display': 'none'}),
-        dcc.Interval(id='interval-component',  interval=60000, n_intervals=0),
         dbc.Card(
             [
-                dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
                 dcc.Loading(type="default", children=html.Div(id="loading-spinner-output2"), className='spinner'),
                 dbc.Row(
                     [
