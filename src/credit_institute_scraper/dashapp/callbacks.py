@@ -3,7 +3,7 @@ from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
-from dash import Output, Input, State, ctx
+from dash import Output, Input, State, ctx, dcc
 import plotly.graph_objects as go
 import pandas as pd
 import logging
@@ -172,6 +172,9 @@ def periodic_update_daily_plot(n):
     logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                   params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
+
+    if n > 0:
+        return df, dcc.Location(pathname='/', id='loc_dummy'), ''
     return df, (start_time, end_time), ''
 
 
