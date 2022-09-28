@@ -3,7 +3,8 @@ from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
-from dash import Output, Input, State, ctx, dcc
+from .utils import data_bars_diverging
+from dash import Output, Input, State, ctx, dcc, dash_table
 import plotly.graph_objects as go
 import pandas as pd
 import logging
@@ -32,13 +33,13 @@ def render_page_content(href):
 
 
 @app.callback([Output("daily_plot", "figure"),
-              Output("loading-spinner-output2", "children")],
+               Output("loading-spinner-output2", "children")],
               [Input("select_institute_daily_plot", "value"),
-              Input("select_coupon_daily_plot", "value"),
-              Input("select_ytm_daily_plot", "value"),
-              Input("select_max_io_daily_plot", "value"),
-              Input("select_isin_daily_plot", "value"),
-              Input("daily_store", "data")],
+               Input("select_coupon_daily_plot", "value"),
+               Input("select_ytm_daily_plot", "value"),
+               Input("select_max_io_daily_plot", "value"),
+               Input("select_isin_daily_plot", "value"),
+               Input("daily_store", "data")],
               State("date_range_div", "children")
               )
 def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
@@ -59,7 +60,8 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         df = df.query(' and '.join(filters))
 
     lines = []
-    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
+    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [
+        ('', df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
@@ -142,23 +144,23 @@ def update_dropdowns(df, log_text):
 
 
 @app.callback([
-        Output('select_institute_daily_plot', 'options'),
-        Output('select_coupon_daily_plot', 'options'),
-        Output('select_ytm_daily_plot', 'options'),
-        Output('select_max_io_daily_plot', 'options'),
-        Output('select_isin_daily_plot', 'options')
-    ],  Input('daily_store', 'data'))
+    Output('select_institute_daily_plot', 'options'),
+    Output('select_coupon_daily_plot', 'options'),
+    Output('select_ytm_daily_plot', 'options'),
+    Output('select_max_io_daily_plot', 'options'),
+    Output('select_isin_daily_plot', 'options')
+], Input('daily_store', 'data'))
 def update_dropdowns_daily_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
 
 
 @app.callback([
-        Output('select_institute_historical_plot', 'options'),
-        Output('select_coupon_historical_plot', 'options'),
-        Output('select_ytm_historical_plot', 'options'),
-        Output('select_max_io_historical_plot', 'options'),
-        Output('select_isin_historical_plot', 'options')
-    ], Input('historical_store', 'data'))
+    Output('select_institute_historical_plot', 'options'),
+    Output('select_coupon_historical_plot', 'options'),
+    Output('select_ytm_historical_plot', 'options'),
+    Output('select_max_io_historical_plot', 'options'),
+    Output('select_isin_historical_plot', 'options')
+], Input('historical_store', 'data'))
 def update_dropdowns_historical_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
 
@@ -166,10 +168,12 @@ def update_dropdowns_historical_plot(df):
 @app.callback(Output('daily_store', 'data'),
               Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
-              Input('interval-component', 'n_intervals'))
-def periodic_update_daily_plot(n):
+              Input('interval-component', 'n_intervals'),
+              Input('url', 'href'))
+def periodic_update_daily_plot(n, _):
     start_time, end_time = get_active_time_range(force_7_15=True)
-    logging.info(f'Updated data at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
+    logging.info(
+        f'Updated data by "{ctx.triggered_id}" at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
     df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                   params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
 
@@ -223,18 +227,45 @@ def toggle_sidebar(n, nclick):
             content_style = styles.CONTENT_STYLE1
             cur_nclick = "HIDDEN"
             btn_txt = "SHOW"
-            btn_style = {'margin-left': '0rem', "transition": "all 0.5s",}
+            btn_style = {'margin-left': '0rem', "transition": "all 0.5s", }
         else:
             sidebar_style = styles.SIDEBAR_STYLE
             content_style = styles.CONTENT_STYLE
             cur_nclick = "SHOW"
             btn_txt = "HIDE"
-            btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s",}
+            btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s", }
     else:
         sidebar_style = styles.SIDEBAR_STYLE
         content_style = styles.CONTENT_STYLE
         cur_nclick = 'SHOW'
         btn_txt = "HIDE"
-        btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s",}
+        btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s", }
 
     return sidebar_style, content_style, cur_nclick, btn_style, btn_txt
+
+
+@app.callback(Output('data_table_div', 'children'),
+              Input('daily_store', 'data'), prevent_initial_call=True)
+def load_home_page_table(df):
+    df = pd.DataFrame(df)
+    df = df.dropna()\
+        .groupby(['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin'])['spot_price']\
+        .agg(lambda x: x.iat[-1] - x.iat[0])\
+        .round(3)\
+        .reset_index(name='spot_price_change')
+    return dash_table.DataTable(id='home_page_table',
+                                data=df.to_dict('records'),
+                                sort_action='native',
+                                columns=[{'name': i, 'id': i} for i in df.columns],
+                                style_data_conditional=(
+                                    data_bars_diverging(df, 'spot_price_change', zero_mid=True)
+                                ),
+                                style_cell={
+                                    'width': '100px',
+                                    'minWidth': '100px',
+                                    'maxWidth': '100px',
+                                    'overflow': 'hidden',
+                                    'textOverflow': 'ellipsis',
+                                },
+                                page_size=20
+                                )

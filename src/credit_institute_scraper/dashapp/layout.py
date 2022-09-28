@@ -5,8 +5,6 @@ from dash import html, dcc
 
 sidebar = html.Div(
     [
-        html.Div(id='dummy1'),
-        html.Div(id='dummy2'),
         html.I(className="app__header",
                style={'background-image': 'url(/assets/favicon.ico)',
                       'height': '16rem',
@@ -32,6 +30,12 @@ sidebar = html.Div(
 content = html.Div(id="page-content", style=styles.CONTENT_STYLE)
 layout = html.Div(
     [
+        html.Div(id='dummy1', style={'display': 'none'}),
+        html.Div(id='dummy2', style={'display': 'none'}),
+        dcc.Store(id='daily_store', data=None),
+        dcc.Interval(id='interval-component', interval=60000, n_intervals=0),
+        html.Div(id='date_range_div', style={'display': 'none'}),
+        dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
         dcc.Store(id='side_click'),
         dcc.Location(id="url", refresh=False),
         dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn'),
