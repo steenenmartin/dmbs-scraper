@@ -11,3 +11,4 @@ APScheduler
 psycopg2
 sqlalchemy
 cryptography==36.0.2
+flask-caching
