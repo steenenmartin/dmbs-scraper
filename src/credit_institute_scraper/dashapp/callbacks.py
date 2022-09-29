@@ -3,8 +3,9 @@ from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
-from .utils import data_bars_diverging
+from .utils import data_bars_diverging, table_type
 from dash import Output, Input, State, ctx, dcc, dash_table
+from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 import pandas as pd
 import logging
@@ -169,12 +170,19 @@ def update_dropdowns_historical_plot(df):
               Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
               Input('interval-component', 'n_intervals'),
-              Input('url', 'href'),
+              Input('url', 'pathname'),
               State('daily_store', 'data'))
-def periodic_update_daily_plot(n, _, df):
+def periodic_update_daily_plot(n, pathname, df):
     start_time, end_time = get_active_time_range(force_7_15=True)
+
+    # Avoid periodic updates while on home page
+    if pathname == '/' and ctx.triggered_id == 'interval-component' and df is not None:
+        raise PreventUpdate
+
     logging.info(
         f'Updated data by "{ctx.triggered_id}" at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
+
+    # Only update data if interval-component is changed or dataframe hasn't been populated
     if ctx.triggered_id == 'interval-component' or df is None:
         df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
@@ -266,7 +274,7 @@ def load_home_page_table(df):
     return dash_table.DataTable(id='home_page_table',
                                 data=df.to_dict('records'),
                                 sort_action='native',
-                                columns=[{'name': col_name_map.get(i, i), 'id': i} for i in df.columns],
+                                columns=[{'name': col_name_map.get(i, i), 'id': i, 'type': table_type(df[i])} for i in df.columns],
                                 style_data_conditional=(
                                     data_bars_diverging(df, 'Δ Price', zero_mid=True)
                                 ),
@@ -277,7 +285,8 @@ def load_home_page_table(df):
                                     'overflow': 'hidden',
                                     'textOverflow': 'ellipsis',
                                 },
-                                page_size=20
+                                page_size=20,
+                                filter_action='native',
                                 )
 
 

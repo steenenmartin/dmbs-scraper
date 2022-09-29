@@ -1,3 +1,6 @@
+import pandas as pd
+
+
 def data_bars(df, column):
     n_bins = 100
     bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
@@ -108,3 +111,22 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
         styles.append(style)
 
     return styles
+
+
+def table_type(df_column):
+    if isinstance(df_column.dtype, pd.DatetimeTZDtype):
+        return 'datetime',
+    elif (isinstance(df_column.dtype, pd.StringDtype) or
+            isinstance(df_column.dtype, pd.BooleanDtype) or
+            isinstance(df_column.dtype, pd.CategoricalDtype) or
+            isinstance(df_column.dtype, pd.PeriodDtype)):
+        return 'text'
+    elif (isinstance(df_column.dtype, pd.SparseDtype) or
+            isinstance(df_column.dtype, pd.IntervalDtype) or
+            isinstance(df_column.dtype, pd.Int8Dtype) or
+            isinstance(df_column.dtype, pd.Int16Dtype) or
+            isinstance(df_column.dtype, pd.Int32Dtype) or
+            isinstance(df_column.dtype, pd.Int64Dtype)):
+        return 'numeric'
+    else:
+        return 'any'
