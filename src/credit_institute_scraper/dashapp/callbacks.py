@@ -1,5 +1,5 @@
 from .dash_app import dash_app as app
-from .pages import page_not_found, home, daily_plots, historical_plots, about, isin_finder
+from .pages import page_not_found, home, daily_plots, historical_plots, about
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
@@ -28,8 +28,6 @@ def render_page_content(href):
         return historical_plots.historical_plot_page(dropdown_args=q)
     elif pathname == "/about":
         return about.about_page()
-    elif pathname == "/isin_finder":
-        return isin_finder.isin_finder_page(dropdown_args=q)
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
@@ -157,43 +155,15 @@ def update_dropdowns_daily_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
 
 
-@app.callback(Output('select_isin_historical_plot', 'options'), Input('historical_store', 'data'))
-def update_dropdowns_historical_plot(df):
-    _, _, _, _, isin = update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
-    return isin
-
-
 @app.callback([
-    Output('select_institute_isin_finder', 'options'),
-    Output('select_coupon_isin_finder', 'options'),
-    Output('select_ytm_isin_finder', 'options'),
-    Output('select_max_io_isin_finder', 'options'),
-], Input('isin_finder_store', 'data'))
-def update_dropdowns_isin_finder(df):
-    inst, coup, ytm, maxio, _ = update_dropdowns(df=df, log_text='Updated dropdown labels for isin finder')
-    return inst, coup, ytm, maxio
-
-
-@app.callback(Output("isin_finder_isins", "value"),
-              [Input("select_institute_isin_finder", "value"),
-               Input("select_coupon_isin_finder", "value"),
-               Input("select_ytm_isin_finder", "value"),
-               Input("select_max_io_isin_finder", "value"),
-               Input("isin_finder_store", "data")])
-def update_isins_isin_finder(institute, coupon_rate, years_to_maturity, max_interest_only_period, df):
-    filters = []
-    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
-            ('max_interest_only_period', max_interest_only_period)]
-    for k, v in args:
-        if v is not None:
-            v_str = f'"{v}"' if isinstance(v, str) else v
-            filters.append(f"{k} == {v_str}")
-
-    df = pd.DataFrame(df)
-    if filters:
-        df = df.query(' and '.join(filters))
-
-    return ", ".join(sorted(df['isin'].unique()))
+    Output('select_institute_historical_plot', 'options'),
+    Output('select_coupon_historical_plot', 'options'),
+    Output('select_ytm_historical_plot', 'options'),
+    Output('select_max_io_historical_plot', 'options'),
+    Output('select_isin_historical_plot', 'options')
+], Input('historical_store', 'data'))
+def update_dropdowns_historical_plot(df):
+    return update_dropdowns(df=df, log_text='Updated dropdown labels for historical plot')
 
 
 @app.callback(Output('daily_store', 'data'),
@@ -220,25 +190,54 @@ def periodic_update_daily_plot(n, pathname, df):
     return df, (start_time, end_time), ''
 
 
-@app.callback(Output("historical_plot", "figure"),
-              [Input("select_isin_historical_plot", "value"),
+@app.callback([Output("historical_plot", "figure"),
+               Output('select_institute_historical_plot', 'value'),
+               Output('select_coupon_historical_plot', 'value'),
+               Output("select_ytm_historical_plot", "value"),
+               Output("select_max_io_historical_plot", "value"),
+               Output("select_isin_historical_plot", "value")],
+              [Input('select_institute_historical_plot', 'value'),
+               Input('select_coupon_historical_plot', 'value'),
+               Input("select_ytm_historical_plot", "value"),
+               Input("select_max_io_historical_plot", "value"),
+               Input("select_isin_historical_plot", "value"),
                Input("historical_store", "data")])
-def update_historical_plot(isin, df):
+def update_historical_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
+    if isin is not None and any(x is None for x in [institute, coupon_rate, years_to_maturity, max_interest_only_period]) and not all(x is None for x in [institute, coupon_rate, years_to_maturity, max_interest_only_period]):
+        isin = None
+
+    filters = []
+    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
+            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
+    for k, v in args:
+        if v is not None:
+            v_str = f'"{v}"' if isinstance(v, str) else v
+            filters.append(f"{k} == {v_str}")
+
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-    df = df.loc[df['isin'] == isin]
+    if filters:
+        df = df.query(' and '.join(filters))
+
     fig_dct = dict()
-    if isin is not None:
+    if len(df['isin'].unique()) == 1:
+        institute = df['institute'].iloc[0]
+        coupon_rate = df['coupon_rate'].iloc[0]
+        years_to_maturity = df['years_to_maturity'].iloc[0]
+        max_interest_only_period = df['max_interest_only_period'].iloc[0]
+        isin = df['isin'].iloc[0]
+
         for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
             fig_dct[str(g).lower()] = dat['spot_price']
             fig_dct['x'] = dat['timestamp'].dt.date
+
     fig = go.Figure(data=go.Candlestick(**fig_dct))
 
     fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
-    logging.info(f'Updated historical plot figure with isin {isin}')
+    logging.info(f'Updated historical plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
 
-    return fig
+    return fig, institute, coupon_rate, years_to_maturity, max_interest_only_period, isin
 
 
 @app.callback(Output("sidebar", "style"),
