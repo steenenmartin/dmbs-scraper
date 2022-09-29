@@ -169,13 +169,15 @@ def update_dropdowns_historical_plot(df):
               Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
               Input('interval-component', 'n_intervals'),
-              Input('url', 'href'))
-def periodic_update_daily_plot(n, _):
+              Input('url', 'href'),
+              State('daily_store', 'data'))
+def periodic_update_daily_plot(n, _, df):
     start_time, end_time = get_active_time_range(force_7_15=True)
     logging.info(
         f'Updated data by "{ctx.triggered_id}" at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
-    df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
-                  params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
+    if ctx.triggered_id == 'interval-component' or df is None:
+        df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
+                      params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
 
     return df, (start_time, end_time), ''
 
