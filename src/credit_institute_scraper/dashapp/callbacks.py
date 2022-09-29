@@ -1,5 +1,5 @@
 from .dash_app import dash_app as app
-from .pages import page_not_found, home, daily_plots, historical_plots, about
+from .pages import page_not_found, home, daily_plots, historical_plots, about, isin_finder
 from . import styles
 from ..utils.object_helper import listify
 from ..utils.date_helper import get_active_time_range
@@ -28,6 +28,8 @@ def render_page_content(href):
         return historical_plots.historical_plot_page(dropdown_args=q)
     elif pathname == "/about":
         return about.about_page()
+    elif pathname == "/isin_finder":
+        return isin_finder.isin_finder_page(dropdown_args=q)
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
@@ -159,6 +161,39 @@ def update_dropdowns_daily_plot(df):
 def update_dropdowns_historical_plot(df):
     _, _, _, _, isin = update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
     return isin
+
+
+@app.callback([
+    Output('select_institute_isin_finder', 'options'),
+    Output('select_coupon_isin_finder', 'options'),
+    Output('select_ytm_isin_finder', 'options'),
+    Output('select_max_io_isin_finder', 'options'),
+], Input('isin_finder_store', 'data'))
+def update_dropdowns_isin_finder(df):
+    inst, coup, ytm, maxio, _ = update_dropdowns(df=df, log_text='Updated dropdown labels for isin finder')
+    return inst, coup, ytm, maxio
+
+
+@app.callback(Output("isin_finder_isins", "value"),
+              [Input("select_institute_isin_finder", "value"),
+               Input("select_coupon_isin_finder", "value"),
+               Input("select_ytm_isin_finder", "value"),
+               Input("select_max_io_isin_finder", "value"),
+               Input("isin_finder_store", "data")])
+def update_isins_isin_finder(institute, coupon_rate, years_to_maturity, max_interest_only_period, df):
+    filters = []
+    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
+            ('max_interest_only_period', max_interest_only_period)]
+    for k, v in args:
+        if v is not None:
+            v_str = f'"{v}"' if isinstance(v, str) else v
+            filters.append(f"{k} == {v_str}")
+
+    df = pd.DataFrame(df)
+    if filters:
+        df = df.query(' and '.join(filters))
+
+    return ", ".join(sorted(df['isin'].unique()))
 
 
 @app.callback(Output('daily_store', 'data'),
