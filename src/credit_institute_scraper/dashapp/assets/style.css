@@ -33,6 +33,13 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     z-index: 9999;
 }
 
+.code-container {
+    color: #000000;
+    background: #9E9D9D;
+    border-radius: 25em;
+    padding: .2em;
+}
+
 .app__header {
     display: flex;
     justify-content: center;

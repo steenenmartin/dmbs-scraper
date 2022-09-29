@@ -9,7 +9,15 @@ def home_page():
             html.Div(
                 [
                     html.P("This table shows the cumulative change for all bonds during latest business day"),
-                    html.Div(id='data_table_div', style={'width': '60vh'})
-                ]),
+                    html.Div(children=[html.Small("To filter numerical columns, prepend with either "),
+                                       html.Code('=', className='code-container'),
+                                       html.Small(', '),
+                                       html.Code('>', className='code-container'),
+                                       html.Small(' or '),
+                                       html.Code('<', className='code-container'),
+                                       html.Small(" e.g. you could filter the Coupon column by writing "),
+                                       html.Code('>0.5', className='code-container')]),
+                    html.Div(id='data_table_div')
+                ], style={'width': '60vh'}),
         ]
     )
