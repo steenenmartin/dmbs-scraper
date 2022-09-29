@@ -155,15 +155,10 @@ def update_dropdowns_daily_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
 
 
-@app.callback([
-    Output('select_institute_historical_plot', 'options'),
-    Output('select_coupon_historical_plot', 'options'),
-    Output('select_ytm_historical_plot', 'options'),
-    Output('select_max_io_historical_plot', 'options'),
-    Output('select_isin_historical_plot', 'options')
-], Input('historical_store', 'data'))
+@app.callback(Output('select_isin_historical_plot', 'options'), Input('historical_store', 'data'))
 def update_dropdowns_historical_plot(df):
-    return update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
+    _, _, _, _, isin = update_dropdowns(df=df, log_text='Updated dropdown labels for hitorical plot')
+    return isin
 
 
 @app.callback(Output('daily_store', 'data'),
@@ -191,34 +186,22 @@ def periodic_update_daily_plot(n, pathname, df):
 
 
 @app.callback(Output("historical_plot", "figure"),
-              [Input("select_institute_historical_plot", "value"),
-               Input("select_coupon_historical_plot", "value"),
-               Input("select_ytm_historical_plot", "value"),
-               Input("select_max_io_historical_plot", "value"),
-               Input("select_isin_historical_plot", "value"),
+              [Input("select_isin_historical_plot", "value"),
                Input("historical_store", "data")])
-def update_historical_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df):
-    filters = []
-    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
-            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
-    for k, v in args:
-        if v or v == 0:
-            v_str = f'"{v}"' if isinstance(v, str) else v
-            filters.append(f"{k} == {v_str}")
-
+def update_historical_plot(isin, df):
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
-    if filters:
-        df = df.query(' and '.join(filters))
 
+    df = df.loc[df['isin'] == isin]
     fig_dct = dict()
-    for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
-        fig_dct[str(g).lower()] = dat['spot_price']
-        fig_dct['x'] = dat['timestamp'].dt.date
+    if isin is not None:
+        for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
+            fig_dct[str(g).lower()] = dat['spot_price']
+            fig_dct['x'] = dat['timestamp'].dt.date
     fig = go.Figure(data=go.Candlestick(**fig_dct))
 
     fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
-    logging.info(f'Updated historical plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
+    logging.info(f'Updated historical plot figure with isin {isin}')
 
     return fig
 
