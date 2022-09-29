@@ -17,15 +17,9 @@ def isin_finder_page(dropdown_args):
         dbc.Card(
             [
                 html.Div(
-                    dbc.Row(
+                    dbc.Row(dbc.Col(
                         [
-                            html.H4('Filter as desired to find your ISIN(s)', className='header__graph'),
-                            html.Br(),
-                            html.Br(),
-                            html.Br(),
-                            html.Br(),
-                            html.Br(),
-
+                            html.H4("Filter as desired to find ISIN's", className='header__card'),
                             dbc.Label('Institute', className='graph-downdown-label'),
                             dcc.Dropdown(id='select_institute_isin_finder',
                                          options=_extract_dropdown(dropdown_args, 'institute'),
@@ -59,17 +53,16 @@ def isin_finder_page(dropdown_args):
                                          className='graph-dropdown'),
                             html.Br(),
                             dbc.Label("Isin(s)", className='graph-downdown-label'),
-                            dcc.Textarea(id='isin_finder_isins')
-                        ],
+                            dcc.Textarea(id='isin_finder_isins', style={'width': '100%'})
+                        ]),
                         **styles.ROW_STYLE
-                    ),
-                    style={'width': '40vh'}
+                    ), style={'margin-top': '1rem'}
                 )
             ],
             className='graph__container',
             style={
-                'width': '41vh',
-                'height': '50vh'
+                'width': '45vh',
+                # 'height': '50vh',
             }
         ),
     ],

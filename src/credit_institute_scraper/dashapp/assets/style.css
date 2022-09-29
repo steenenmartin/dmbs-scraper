@@ -72,6 +72,15 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     font-family: "Segoe UI", sans-serif;
 }
 
+.header__card {
+    font-family: "Segoe UI", sans-serif;
+    letter-spacing: 0.10rem;
+    justify-content: center;
+    display: flex;
+    margin-bottom: 3rem;
+}
+
+
 .app__header__title {
     letter-spacing: 0.18rem;
 }
