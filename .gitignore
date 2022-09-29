@@ -44,3 +44,4 @@ idea/
 __pycache__/
 *.py[cod]
 *$py.class
+/src/credit_institute_scraper/database/credentials.json
