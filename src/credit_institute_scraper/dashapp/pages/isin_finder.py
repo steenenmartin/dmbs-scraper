@@ -53,7 +53,7 @@ def isin_finder_page(dropdown_args):
                                          className='graph-dropdown'),
                             html.Br(),
                             dbc.Label("Isin(s)", className='graph-downdown-label'),
-                            dcc.Textarea(id='isin_finder_isins', style={'width': '100%'})
+                            dcc.Textarea(id='isin_finder_isins', style={'width': '100%', 'height': '8rem'})
                         ]),
                         **styles.ROW_STYLE
                     ), style={'margin-top': '1rem'}
