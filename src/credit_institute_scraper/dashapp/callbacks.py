@@ -245,27 +245,37 @@ def toggle_sidebar(n, nclick):
 
 
 @app.callback(Output('data_table_div', 'children'),
-              Input('daily_store', 'data'), prevent_initial_call=True)
+              Input('daily_store', 'data'))
 def load_home_page_table(df):
+    col_name_map = {
+        'institute': 'Institute',
+        'coupon_rate': 'Coupon',
+        'years_to_maturity': 'Maturity',
+        'max_interest_only_period': 'IO Years',
+        'isin': 'ISIN'
+    }
+
     df = pd.DataFrame(df)
     df = df.dropna()\
         .groupby(['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin'])['spot_price']\
         .agg(lambda x: x.iat[-1] - x.iat[0])\
         .round(3)\
-        .reset_index(name='spot_price_change')
+        .reset_index(name='Δ Price')
     return dash_table.DataTable(id='home_page_table',
                                 data=df.to_dict('records'),
                                 sort_action='native',
-                                columns=[{'name': i, 'id': i} for i in df.columns],
+                                columns=[{'name': col_name_map.get(i, i), 'id': i} for i in df.columns],
                                 style_data_conditional=(
-                                    data_bars_diverging(df, 'spot_price_change', zero_mid=True)
+                                    data_bars_diverging(df, 'Δ Price', zero_mid=True)
                                 ),
                                 style_cell={
-                                    'width': '100px',
-                                    'minWidth': '100px',
-                                    'maxWidth': '100px',
+                                    'width': '2rem',
+                                    'minWidth': '2rem',
+                                    'maxWidth': '2rem',
                                     'overflow': 'hidden',
                                     'textOverflow': 'ellipsis',
                                 },
                                 page_size=20
                                 )
+
+
