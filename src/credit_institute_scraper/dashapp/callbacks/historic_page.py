@@ -40,6 +40,7 @@ def update_dropdowns_historical_plot(df):
 
 @app.callback(Output("isin_selector_table", "data"),
               Output("isin_selector_table", "active_cell"),
+              Output("isin_selector_table", "tooltip_data"),
               [Input('select_institute_historical_plot', 'value'),
                Input('select_coupon_historical_plot', 'value'),
                Input("select_ytm_historical_plot", "value"),
@@ -67,7 +68,15 @@ def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_in
         active_cell = None
     else:
         active_cell['row'] = next(i for i, x in enumerate(out) if x['isin'] == isin)
-    return out, active_cell
+
+    tooltip_source = df.groupby('isin').max()[['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period']]
+    tooltip_data = [
+        {
+            column: {'value': ', '.join(f'{k}: {v}' for k, v in tooltip_source.loc[value].items()), 'type': 'markdown'}
+            for column, value in row.items()
+        } for row in out
+    ]
+    return out, active_cell, tooltip_data
 
 
 @app.callback(Output("historical_plot", "figure"),
