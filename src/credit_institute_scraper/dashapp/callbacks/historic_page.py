@@ -83,6 +83,11 @@ def update_historical_plot(active_cell, df, isin_data):
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df = df[df['isin'] == isin]
 
+    # The 5 ISINs below from Nordea have maturity of both 15Y and 20Y, giving duplicates in the database. We simply
+    # apply a filter here to get the observations where maturity is highest, as candlestick plots bugs with duplicates
+    if isin in ['DK0002056134', 'DK0002054436', 'DK0002053545', 'DK0002051176', 'DK0002050285']:
+        df = df[df['years_to_maturity'] == df['years_to_maturity'].max()]
+
     fig_dct = dict()
     for g, dat in df[df['price_type'].isin(['Open', 'Close', 'Low', 'High'])].groupby('price_type'):
         fig_dct[str(g).lower()] = dat['spot_price']
