@@ -95,7 +95,7 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
             max_bound = 0
             next_min_zero = True
         min_bound_percentage = bounds[i - 1] * 100
-        max_bound_percentage = bounds[i] * 100
+        max_bound_percentage = min(bounds[i] * 100, 99.2)
 
         style = {
             'if': {
