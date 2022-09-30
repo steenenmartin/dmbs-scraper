@@ -1,14 +1,11 @@
 import logging
 import pandas as pd
 from colour import Color
-from dash import Output, Input, State, ctx
-from dash.exceptions import PreventUpdate
+from dash import Output, Input, State
 from plotly import graph_objects as go
 from ..dash_app import dash_app as app
 from .. import styles
 from .utils import update_search_bar_template, update_dropdowns
-from ...database.postgres_conn import query_db
-from ...utils.date_helper import get_active_time_range
 from ...utils.object_helper import listify
 
 
@@ -87,27 +84,3 @@ def update_search_bar_daily(institute, coupon_rate, years_to_maturity, max_inter
 ], Input('daily_store', 'data'))
 def update_dropdowns_daily_plot(df):
     return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
-
-
-@app.callback(Output('daily_store', 'data'),
-              Output('date_range_div', 'children'),
-              Output("loading-spinner-output1", "children"),
-              Input('interval-component', 'n_intervals'),
-              Input('url', 'pathname'),
-              State('daily_store', 'data'))
-def periodic_update_daily_plot(n, pathname, df):
-    start_time, end_time = get_active_time_range(force_7_15=True)
-
-    # Avoid periodic updates while on home page
-    if pathname == '/' and ctx.triggered_id == 'interval-component' and df is not None:
-        raise PreventUpdate
-
-    logging.info(
-        f'Updated data by "{ctx.triggered_id}" at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
-
-    # Only update data if interval-component is changed or dataframe hasn't been populated
-    if ctx.triggered_id == 'interval-component' or df is None:
-        df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
-                      params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
-
-    return df, (start_time, end_time), ''
