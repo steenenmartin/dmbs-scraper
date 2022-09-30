@@ -68,12 +68,14 @@ def toggle_sidebar(n, nclick):
 
 
 @app.callback(Output('daily_store', 'data'),
+              Output('master_data', 'data'),
               Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
               Input('interval-component', 'n_intervals'),
               Input('url', 'pathname'),
-              State('daily_store', 'data'))
-def periodic_update_daily_df(n, pathname, df):
+              State('daily_store', 'data'),
+              State('master_data', 'data'))
+def periodic_update_daily_df(n, pathname, df, master_data):
     start_time, end_time = get_active_time_range(force_7_15=True)
 
     # Avoid periodic updates while on home page
@@ -85,7 +87,9 @@ def periodic_update_daily_df(n, pathname, df):
 
     # Only update data if interval-component is changed or dataframe hasn't been populated
     if ctx.triggered_id == 'interval-component' or df is None:
-        df = query_db(sql="select * from prices where timestamp between :start_time and :end_time",
+        df = query_db(sql="select * from spot_prices where timestamp between :start_time and :end_time",
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
+        master_data = query_db(sql="select * from master_data").to_dict("records")
 
-    return df, (start_time, end_time), ''
+
+    return df, master_data, (start_time, end_time), ''
