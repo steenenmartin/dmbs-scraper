@@ -18,7 +18,7 @@ def scrape(conn_module):
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
     today = datetime(now.year, now.month, now.day)
 
-    prices_result_handler: ResultHandler = DatabaseResultHandler(conn_module, "prices", now)
+    prices_result_handler: ResultHandler = DatabaseResultHandler(conn_module, "spot_prices", now)
     # if not prices_result_handler.result_exists():
     scrapers: list[Scraper] = [
         JyskeScraper(),
@@ -36,7 +36,7 @@ def scrape(conn_module):
         offer_prices_result_handler.export_result(fixed_rate_bond_data.to_offer_prices_data_frame(today))
 
     if now.hour == 15 and now.minute == 0:
-        ohlc_prices_result_handler = DatabaseResultHandler(conn_module, "ohlc_prices", now)
+        ohlc_prices_result_handler = DatabaseResultHandler(conn_module, "ohlc_pricez", now)
         ohlc_prices = load_data.calculate_open_high_low_close_prices(today, conn_module.query_db)
         ohlc_prices_result_handler.export_result(ohlc_prices)
 
