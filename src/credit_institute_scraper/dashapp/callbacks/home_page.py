@@ -21,6 +21,8 @@ def load_home_page_table(df):
         .agg(lambda x: x.iat[-1] - x.iat[0])\
         .round(3)\
         .reset_index(name='Δ Price')
+    ascending = True if df['Δ Price'].mean() < 0 else False
+    df = df.sort_values(by='Δ Price', ascending=ascending)
     return dash_table.DataTable(id='home_page_table',
                                 data=df.to_dict('records'),
                                 sort_action='native',
