@@ -34,7 +34,7 @@ def scrape(conn_module):
     DatabaseResultHandler(conn_module, "master_data", now).export_result(fixed_rate_bond_data.to_master_data_frame(), if_exists="replace")
 
     if now.hour == 7 and now.minute == 0:
-        offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_prices", now)
+        offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_pricez", now)
         offer_prices_result_handler.export_result(fixed_rate_bond_data.to_offer_prices_data_frame(today))
 
     if now.hour == 15 and now.minute == 0:

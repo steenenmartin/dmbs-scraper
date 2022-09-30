@@ -5,6 +5,11 @@ from credit_institute_scraper.database import postgres_conn
 from credit_institute_scraper.result_handlers.database_result_handler import DatabaseResultHandler
 
 if __name__ == '__main__':
+    offer_prices_df = postgres_conn.query_db(f"SELECT * FROM offer_prices")
+    offer_prices_df = offer_prices_df.drop(offer_prices_df[(offer_prices_df["institute"] == "Nordea") & (offer_prices_df["years_to_maturity"] == 15)].index)
+    offer_prices_df = offer_prices_df[["timestamp", "isin", "offer_price"]].drop_duplicates()
+    DatabaseResultHandler(postgres_conn, 'offer_pricez', datetime.utcnow()).export_result(offer_prices_df)
+
     prices_df = postgres_conn.query_db(f"SELECT * FROM prices")
     master_data = prices_df[["isin", "institute", "years_to_maturity", "max_interest_only_period", "coupon_rate"]].drop_duplicates()
     master_data = master_data.drop(master_data[(master_data["institute"] == "Nordea") & (master_data["years_to_maturity"] == 15)].index)
