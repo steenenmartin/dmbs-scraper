@@ -68,8 +68,12 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
     n_bins = 100
     bounds = [i * (1.0 / n_bins) for i in range(n_bins + 1)]
 
-    col_max = df[column].max()
-    col_min = df[column].min()
+    if zero_mid:
+        col_max = df[column].abs().max()
+        col_min = -col_max
+    else:
+        col_max = df[column].max()
+        col_min = df[column].min()
     ranges = [
         ((col_max - col_min) * i) + col_min
         for i in bounds
