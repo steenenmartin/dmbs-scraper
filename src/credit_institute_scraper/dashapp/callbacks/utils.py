@@ -1,4 +1,31 @@
+import logging
+import urllib.parse
 import pandas as pd
+
+
+def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
+    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
+            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
+
+    q = dict(urllib.parse.parse_qsl(search[1:]))  # [1:] to remove the leading `?`
+    for k, v in args:
+        if v or v == 0:
+            q[k] = ','.join(map(str, v)) if isinstance(v, (list, tuple)) else str(v)
+        else:
+            q.pop(k, None)
+    query_string = urllib.parse.urlencode(q)
+    return '?' + query_string if query_string else ''
+
+
+def update_dropdowns(df, log_text):
+    df = pd.DataFrame(df)
+    inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
+    coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
+    ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
+    maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
+    isin = [{'label': opt, 'value': opt} for opt in sorted(df['isin'].unique())]
+    logging.info(log_text)
+    return inst, coup, ytm, maxio, isin
 
 
 def data_bars(df, column):
