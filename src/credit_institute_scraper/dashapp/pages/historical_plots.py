@@ -23,7 +23,7 @@ def _data_table_arg(dropdown_args):
 
 def historical_plot_page(dropdown_args):
     return dbc.Container([
-        dcc.Store(id='historical_store', data=query_db(sql="select * from ohlc_prices").to_dict('records')),
+        dcc.Store(id='master_data', data=query_db(sql="select * from master_data").to_dict('records')),
         dbc.Card(
             [
                 dbc.Row(

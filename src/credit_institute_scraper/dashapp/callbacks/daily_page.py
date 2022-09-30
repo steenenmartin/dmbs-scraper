@@ -20,7 +20,7 @@ from ...utils.object_helper import listify
                Input("master_data", "data")],
               State("date_range_div", "children")
               )
-def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, master_data, date_range):
+def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, spot_prices, master_data, date_range):
     groupers, filters = [], []
     args = [
         ('institute', institute),
@@ -40,13 +40,15 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
     if filters:
         master_data = master_data.query(' and '.join(filters))
 
-    df = pd.DataFrame(df)
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    spot_prices = pd.DataFrame(spot_prices)
+    spot_prices['timestamp'] = pd.to_datetime(spot_prices['timestamp'])
     full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
-    df = df[df["isin"].isin(master_data["isin"].unique())]
+    spot_prices = spot_prices[spot_prices["isin"].isin(master_data["isin"].unique())]
+
+    merged_df = pd.merge(spot_prices, master_data, on="isin")
 
     lines = []
-    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
+    groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', spot_prices)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
