@@ -72,7 +72,7 @@ def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_in
     tooltip_source = df.groupby('isin').max()[['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period']]
     tooltip_data = [
         {
-            column: {'value': ', '.join(f'{k}: {v}' for k, v in tooltip_source.loc[value].items()), 'type': 'markdown'}
+            column: {'value': '\n'.join(f'{k.capitalize().replace("_", " ")}: {v}' for k, v in tooltip_source.loc[value].items())}
             for column, value in row.items()
         } for row in out
     ]
