@@ -84,16 +84,10 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
         midpoint = (col_max + col_min) / 2.
 
     styles = []
-    next_min_zero = False
     for i in range(1, len(bounds)):
         min_bound = ranges[i - 1]
-        if next_min_zero:
-            min_bound = 0
-            next_min_zero = False
         max_bound = ranges[i]
-        if min_bound * max_bound < 0:
-            max_bound = 0
-            next_min_zero = True
+
         min_bound_percentage = bounds[i - 1] * 100
         max_bound_percentage = min(bounds[i] * 100, 99.2)
 
