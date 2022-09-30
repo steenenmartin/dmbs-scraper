@@ -72,11 +72,13 @@ def historical_plot_page(dropdown_args):
                                     columns=[{'id': 'isin', 'name': 'ISIN'}],
                                     page_size=6,
                                     tooltip_delay=200,
+                                    tooltip_duration=None,
                                     style_cell={'overflow': 'hidden', 'textOverflow': 'ellipsis', 'maxWidth': 0},
                                     css=[{'selector': '.dash-table-tooltip',
                                           'rule': 'background-color: #E8E8C8; '
                                                   'font-family: monospace; '
-                                                  'color: #E8E8C8;'}],
+                                                  'color: #00000;'
+                                                  'white-space: pre-line;'}],
                                     **_data_table_arg(dropdown_args)
                                 )
                             ],
