@@ -58,15 +58,27 @@ def historical_plot_page(dropdown_args):
                                 html.Br(),
                                 dbc.Label('Max interest-only period', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_max_io_historical_plot',
-                                             options=_extract_var(dropdown_args, 'max_interest_only_period', True, float),
-                                             value=_extract_var(dropdown_args, 'max_interest_only_period', False, float),
+                                             options=_extract_var(dropdown_args, 'max_interest_only_period', True,
+                                                                  float),
+                                             value=_extract_var(dropdown_args, 'max_interest_only_period', False,
+                                                                float),
                                              multi=False,
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 html.H6("Select ISIN to plot"),
-                                dash_table.DataTable(id='isin_selector_table', columns=[{'id': 'isin', 'name': 'ISIN'}],
-                                                     page_size=6, **_data_table_arg(dropdown_args))
+                                dash_table.DataTable(
+                                    id='isin_selector_table',
+                                    columns=[{'id': 'isin', 'name': 'ISIN'}],
+                                    page_size=6,
+                                    tooltip_delay=200,
+                                    style_cell={'overflow': 'hidden', 'textOverflow': 'ellipsis', 'maxWidth': 0},
+                                    css=[{'selector': '.dash-table-tooltip',
+                                          'rule': 'background-color: #E8E8C8; '
+                                                  'font-family: monospace; '
+                                                  'color: #E8E8C8;'}],
+                                    **_data_table_arg(dropdown_args)
+                                )
                             ],
                             md=2
                         ),
@@ -83,4 +95,4 @@ def historical_plot_page(dropdown_args):
             ], className='graph__container'
         ),
     ],
-)
+    )
