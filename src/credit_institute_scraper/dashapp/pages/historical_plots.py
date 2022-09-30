@@ -1,15 +1,23 @@
 import dash_bootstrap_components as dbc
-from dash import dcc, html
+from dash import dcc, html, dash_table
 from .. import styles
 from ...database.postgres_conn import query_db
 
 
-def _extract_var(dct, var_name, to_options, cast=None):
+def _extract_var(dct, var_name, to_options=False, cast=None):
     out = dct.get(var_name)
     if cast and out is not None:
         out = cast(out)
     if to_options:
         out = [] if out is None else [out]
+    return out
+
+
+def _data_table_arg(dropdown_args):
+    out = {}
+    if 'isin' in dropdown_args:
+        out['data'] = [{'isin': dropdown_args['isin']}]
+        out['active_cell'] = {'row': 0, 'column': 0, 'column_id': 'isin'}
     return out
 
 
@@ -23,46 +31,42 @@ def historical_plot_page(dropdown_args):
                         html.H4(f'Historic prices', className='header__graph'),
                         dbc.Col(
                             [
-                                html.H5("Select all"),
+                                html.H6("Filter ISIN list"),
                                 dbc.Label('Institute', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_institute_historical_plot',
-                                             options=_extract_var(dropdown_args, 'institute', str),
-                                             value=_extract_var(dropdown_args, 'institute', str),
+                                             options=_extract_var(dropdown_args, 'institute', True),
+                                             value=_extract_var(dropdown_args, 'institute', False),
                                              multi=False,
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Coupon', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_coupon_historical_plot',
-                                             options=_extract_var(dropdown_args, 'coupon_rate', float),
-                                             value=_extract_var(dropdown_args, 'coupon_rate', float),
+                                             options=_extract_var(dropdown_args, 'coupon_rate', True, float),
+                                             value=_extract_var(dropdown_args, 'coupon_rate', False, float),
                                              multi=False,
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Years to maturity', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_ytm_historical_plot',
-                                             options=_extract_var(dropdown_args, 'years_to_maturity', int),
-                                             value=_extract_var(dropdown_args, 'years_to_maturity', int),
+                                             options=_extract_var(dropdown_args, 'years_to_maturity', True, int),
+                                             value=_extract_var(dropdown_args, 'years_to_maturity', False, int),
                                              multi=False,
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Max interest-only period', className='graph-downdown-label'),
                                 dcc.Dropdown(id='select_max_io_historical_plot',
-                                             options=_extract_var(dropdown_args, 'max_interest_only_period', float),
-                                             value=_extract_var(dropdown_args, 'max_interest_only_period', float),
+                                             options=_extract_var(dropdown_args, 'max_interest_only_period', True, float),
+                                             value=_extract_var(dropdown_args, 'max_interest_only_period', False, float),
                                              multi=False,
                                              searchable=False,
                                              className='graph-dropdown'),
                                 html.Br(),
-                                html.H5("Or select"),
-                                dbc.Label("Isin", className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_isin_historical_plot',
-                                             options=_extract_var(dropdown_args, 'isin', True),
-                                             value=_extract_var(dropdown_args, 'isin', False),
-                                             searchable=True,
-                                             className='graph-dropdown')
+                                html.H6("Select ISIN to plot"),
+                                dash_table.DataTable(id='isin_selector_table', columns=[{'id': 'isin', 'name': 'ISIN'}],
+                                                     page_size=6, **_data_table_arg(dropdown_args))
                             ],
                             md=2
                         ),
