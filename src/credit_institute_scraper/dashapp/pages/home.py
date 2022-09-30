@@ -5,10 +5,9 @@ from dash import html
 def home_page():
     return dbc.Container(
         [
-            html.H3("Welcome to bond stats"),
             html.Div(
                 [
-                    html.P("This table shows the cumulative change for all bonds during latest business day"),
+                    html.H3("Cumulative daily changes", className='header__card'),
                     html.Div(children=[html.Small("To filter numerical columns, prepend with either "),
                                        html.Code('=', className='code-container'),
                                        html.Small(', '),
