@@ -6,8 +6,9 @@ from ..scrapers.scraper import Scraper
 class NordeaScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
-        return [
-            FixedRateBondDataEntry(
+        entries: list[FixedRateBondDataEntry] = []
+        for product in data:
+            entry = FixedRateBondDataEntry(
                 self.institute.name,
                 int(product["loanPeriodMax"]),
                 float(product["rate"].replace(",", ".")) if not product["rate"].startswith("*&nbsp;") else float('nan'),
@@ -15,8 +16,14 @@ class NordeaScraper(Scraper):
                 float(product["repaymentFreedomMax"]) if product["repaymentFreedomMax"] != "Nej" else 0.0,
                 float(product["fundName"].split(" ")[0].strip("%").replace(",", ".")),
                 product["isinCode"]
-            ) for product in data
-        ]
+            )
+
+            if entry.isin in ("DK0002056134", "DK0002054436", "DK0002053545", "DK0002051176", "DK0002050285") and entry.years_to_maturity == 15.0:
+                continue
+
+            entries.append(entry)
+
+        return entries
 
     @property
     def url(self) -> str:

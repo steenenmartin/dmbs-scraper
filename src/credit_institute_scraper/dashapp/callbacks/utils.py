@@ -17,13 +17,13 @@ def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_in
     return '?' + query_string if query_string else ''
 
 
-def update_dropdowns(df, log_text):
-    df = pd.DataFrame(df)
-    inst = [{'label': opt, 'value': opt} for opt in sorted(df['institute'].unique())]
-    coup = [{'label': opt, 'value': opt} for opt in sorted(df['coupon_rate'].unique())]
-    ytm = [{'label': opt, 'value': opt} for opt in sorted(df['years_to_maturity'].unique())]
-    maxio = [{'label': opt, 'value': opt} for opt in sorted(df['max_interest_only_period'].unique())]
-    isin = [{'label': opt, 'value': opt} for opt in sorted(df['isin'].unique())]
+def update_dropdowns(master_data, log_text):
+    master_data = pd.DataFrame(master_data)
+    inst = [{'label': opt, 'value': opt} for opt in sorted(master_data['institute'].unique())]
+    coup = [{'label': opt, 'value': opt} for opt in sorted(master_data['coupon_rate'].unique())]
+    ytm = [{'label': opt, 'value': opt} for opt in sorted(master_data['years_to_maturity'].unique())]
+    maxio = [{'label': opt, 'value': opt} for opt in sorted(master_data['max_interest_only_period'].unique())]
+    isin = [{'label': opt, 'value': opt} for opt in sorted(master_data['isin'].unique())]
     logging.info(log_text)
     return inst, coup, ytm, maxio, isin
 

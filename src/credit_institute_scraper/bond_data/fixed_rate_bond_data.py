@@ -11,7 +11,7 @@ class FixedRateBondData:
         df = self.to_data_frame(scrape_time)
         df = df.drop("offer_price", axis=1)
 
-        return df
+        return df[["timestamp", "isin", "spot_price"]]
 
     def to_offer_prices_data_frame(self, scrape_time: dt.datetime = None) -> pd.DataFrame:
         df = self.to_data_frame(scrape_time)

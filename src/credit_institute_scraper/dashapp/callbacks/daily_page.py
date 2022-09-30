@@ -16,13 +16,19 @@ from ...utils.object_helper import listify
                Input("select_ytm_daily_plot", "value"),
                Input("select_max_io_daily_plot", "value"),
                Input("select_isin_daily_plot", "value"),
-               Input("daily_store", "data")],
+               Input("daily_store", "data"),
+               Input("master_data", "data")],
               State("date_range_div", "children")
               )
-def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, date_range):
+def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, df, master_data, date_range):
     groupers, filters = [], []
-    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
-            ('max_interest_only_period', max_interest_only_period), ('isin', isin)]
+    args = [
+        ('institute', institute),
+        ('coupon_rate', coupon_rate),
+        ('years_to_maturity', years_to_maturity),
+        ('max_interest_only_period', max_interest_only_period),
+        ('isin', isin)
+    ]
     for k, v in args:
         if v:
             v_str = f'"{v}"' if isinstance(v, str) else v
@@ -30,15 +36,17 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         if not v or len(v) > 1:
             groupers.append(k)
 
+    master_data = pd.DataFrame(master_data)
+    if filters:
+        master_data = master_data.query(' and '.join(filters))
+
     df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
-    if filters:
-        df = df.query(' and '.join(filters))
+    df = df[df["isin"].isin(master_data["isin"].unique())]
 
     lines = []
-    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [
-        ('', df)]
+    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True) if groupers else [('', df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
@@ -81,6 +89,6 @@ def update_search_bar_daily(institute, coupon_rate, years_to_maturity, max_inter
     Output('select_ytm_daily_plot', 'options'),
     Output('select_max_io_daily_plot', 'options'),
     Output('select_isin_daily_plot', 'options')
-], Input('daily_store', 'data'))
-def update_dropdowns_daily_plot(df):
-    return update_dropdowns(df=df, log_text='Updated dropdown labels for daily plot')
+], Input('master_data', 'data'))
+def update_dropdowns_daily_plot(master_data):
+    return update_dropdowns(master_data=master_data, log_text='Updated dropdown labels for daily plot')

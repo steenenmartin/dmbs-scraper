@@ -33,6 +33,7 @@ layout = html.Div(
         html.Div(id='dummy1', style={'display': 'none'}),
         html.Div(id='dummy2', style={'display': 'none'}),
         dcc.Store(id='daily_store', data=None),
+        dcc.Store(id='master_data', data=None),
         dcc.Interval(id='interval-component', interval=60000, n_intervals=0),
         html.Div(id='date_range_div', style={'display': 'none'}),
         dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
