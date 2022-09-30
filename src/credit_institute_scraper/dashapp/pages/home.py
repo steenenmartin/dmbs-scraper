@@ -15,7 +15,7 @@ def home_page():
                                        html.Code('>', className='code-container'),
                                        html.Small(' or '),
                                        html.Code('<', className='code-container'),
-                                       html.Small(" e.g. you could filter the Coupon column by writing "),
+                                       html.Small(" - e.g. you could filter the Coupon column by writing "),
                                        html.Code('>0.5', className='code-container')]),
                     html.Div(id='data_table_div', style={'margin-top': '1rem'})
                 ], style={'width': '55rem'}),
