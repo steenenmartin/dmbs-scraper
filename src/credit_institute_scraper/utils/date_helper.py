@@ -41,10 +41,10 @@ def get_active_time_range(now=None, force_7_15=False):
     weekday = now.weekday()
     end = dt.datetime(now.year, now.month, now.day, min(now.hour, 15), now.minute - now.minute % 5)
     if weekday == 6:
-        end = dt.datetime(now.year, now.month, now.day - 2, 15)
+        end = dt.datetime(now.year, now.month, now.day, 15) - dt.timedelta(days=2)
         start = end - dt.timedelta(hours=8)
     elif weekday == 5:
-        end = dt.datetime(now.year, now.month, now.day - 1, 15)
+        end = dt.datetime(now.year, now.month, now.day, 15) - dt.timedelta(days=1)
         start = end - dt.timedelta(hours=8)
     elif 7 < now.hour < 15:
         if weekday == 0:
@@ -53,15 +53,15 @@ def get_active_time_range(now=None, force_7_15=False):
             start = end - dt.timedelta(hours=24)
     elif now.hour < 7:
         if weekday == 0:
-            end = dt.datetime(now.year, now.month, now.day - 3, 15)
+            end = dt.datetime(now.year, now.month, now.day, 15) - dt.timedelta(days=3)
         else:
-            end = dt.datetime(now.year, now.month, now.day - 1, 15)
+            end = dt.datetime(now.year, now.month, now.day, 15) - dt.timedelta(days=1)
         start = end - dt.timedelta(hours=8)
     else:
         start = end - dt.timedelta(hours=8)
 
     if is_holiday(end):
-        return get_active_time_range(dt.datetime(end.year, end.month, end.day-1, 15))
+        return get_active_time_range(dt.datetime(end.year, end.month, end.day, 15)) - dt.timedelta(days=1)
 
     start = skip_holidays(start)
 
