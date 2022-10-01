@@ -28,7 +28,7 @@ def historical_plot_page(dropdown_args):
             [
                 dbc.Row(
                     [
-                        html.H4(f'Historic prices', className='header__graph'),
+                        html.H4(f'Historical prices', className='header__graph'),
                         dbc.Col(
                             [
                                 html.H6("Filter ISIN list"),
