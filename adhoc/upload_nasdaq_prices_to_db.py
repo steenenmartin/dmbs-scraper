@@ -4,17 +4,19 @@ from credit_institute_scraper.database import postgres_conn
 from credit_institute_scraper.result_handlers.database_result_handler import DatabaseResultHandler
 
 if __name__ == "__main__":
-    isins = postgres_conn.query_db(f"SELECT * FROM ohlc_prices")['isin'].unique()
+    isins = postgres_conn.query_db(f"SELECT * FROM master_data")['isin'].unique()
+
+    postgres_conn.client_factory().execute(f"DELETE FROM ohlc_pricez where timestamp < '2022-09-23 00:00:00'")
 
     i = 0
     df_out = pd.DataFrame()
-    result_handler = DatabaseResultHandler(postgres_conn, 'ohlc_prices', datetime.datetime.utcnow())
+    result_handler = DatabaseResultHandler(postgres_conn, 'ohlc_pricez', datetime.datetime.utcnow())
 
     for isin in isins:
         i += 1
         print(i)
         nasdaq_df = pd.read_csv(fr"C:\Users\MartinSteenAndersenE\Downloads\Kurser\{isin}.csv", sep=";", skiprows=1)
-        db_df = postgres_conn.query_db(f"SELECT * FROM ohlc_prices where isin = '{isin}' limit 1")
+        db_df = postgres_conn.query_db(f"SELECT * FROM ohlc_pricez where isin = '{isin}' limit 1")
 
         prev_close = None
 
@@ -33,23 +35,11 @@ if __name__ == "__main__":
 
             if prev_close is not None:
                 db_df['timestamp'] = date
-                db_df['spot_price'] = high_price
-                db_df['price_type'] = "High"
-                df_out = pd.concat([df_out, db_df])
+                db_df['high_price'] = high_price
+                db_df['low_price'] = low_price
+                db_df['open_price'] = prev_close if prev_close < high_price else high_price
+                db_df['close_price'] = closing_price
 
-                db_df['timestamp'] = date
-                db_df['spot_price'] = low_price
-                db_df['price_type'] = "Low"
-                df_out = pd.concat([df_out, db_df])
-
-                db_df['timestamp'] = date
-                db_df['spot_price'] = prev_close
-                db_df['price_type'] = "Open"
-                df_out = pd.concat([df_out, db_df])
-
-                db_df['timestamp'] = date
-                db_df['spot_price'] = closing_price
-                db_df['price_type'] = "Close"
                 df_out = pd.concat([df_out, db_df])
 
             prev_close = closing_price
