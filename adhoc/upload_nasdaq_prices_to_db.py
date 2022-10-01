@@ -37,7 +37,15 @@ if __name__ == "__main__":
                 db_df['timestamp'] = date
                 db_df['high_price'] = high_price
                 db_df['low_price'] = low_price
-                db_df['open_price'] = prev_close if prev_close < high_price else high_price
+
+                if prev_close > high_price:
+                    open_price_proxy = high_price
+                elif prev_close < low_price:
+                    open_price_proxy = low_price
+                else:
+                    open_price_proxy = prev_close
+                db_df['open_price'] = open_price_proxy
+
                 db_df['close_price'] = closing_price
 
                 df_out = pd.concat([df_out, db_df])
