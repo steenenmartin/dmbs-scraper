@@ -34,7 +34,7 @@ def update_search_bar_historic(institute, coupon_rate, years_to_maturity, max_in
     Output('select_coupon_historical_plot', 'options'),
     Output('select_ytm_historical_plot', 'options'),
     Output('select_max_io_historical_plot', 'options'),
-], Input('master_data', 'data'))
+], Input('master_data_historic', 'data'))
 def update_dropdowns_historical_plot(master_data):
     inst, coup, ytm, max_io, _ = update_dropdowns(master_data=master_data, log_text='Updated dropdown labels for historical plot')
     return inst, coup, ytm, max_io
@@ -47,7 +47,7 @@ def update_dropdowns_historical_plot(master_data):
                Input('select_coupon_historical_plot', 'value'),
                Input("select_ytm_historical_plot", "value"),
                Input("select_max_io_historical_plot", "value")],
-              State('master_data', 'data'),
+              State('master_data_historic', 'data'),
               State('url', 'search'),
               State('isin_selector_table', 'active_cell'))
 def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_interest_only_period, master_data, search, active_cell):
