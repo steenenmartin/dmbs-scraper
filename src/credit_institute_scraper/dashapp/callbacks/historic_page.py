@@ -127,6 +127,8 @@ def update_historical_plot(active_cell, rel, isin_data):
     ymin = df.loc[df['timestamp'].between(xmin, xmax)]['low_price'].min()
     ymax = df.loc[df['timestamp'].between(xmin, xmax)]['high_price'].max()
 
+    del df
+
     fig.update_xaxes(dict(range=[xmin, xmax]))
     fig.update_yaxes(dict(range=[ymin, ymax]))
 
