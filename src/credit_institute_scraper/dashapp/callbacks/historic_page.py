@@ -97,15 +97,27 @@ def update_historical_plot(active_cell, rel, isin_data, df):
     else:
         df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df.sort_values(by="timestamp", inplace=True)
 
     fig = go.Figure(
-        data=go.Candlestick(
-            x=df['timestamp'].dt.date,
-            open=df['open_price'],
-            close=df['close_price'],
-            high=df['high_price'],
-            low=df['low_price'],
-        )
+        data=[
+            go.Candlestick(
+                x=df['timestamp'].dt.date,
+                open=df['open_price'],
+                close=df['close_price'],
+                high=df['high_price'],
+                low=df['low_price'],
+                showlegend=False,
+
+            ),
+            go.Scatter(
+                x=df['timestamp'].dt.date,
+                y=df['close_price'],
+                line=dict(color='darkred', width=0.5),
+                showlegend=False,
+                hoverinfo='none'
+            )
+        ]
     )
 
     fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
@@ -118,6 +130,8 @@ def update_historical_plot(active_cell, rel, isin_data, df):
 
     ymin = df.loc[df['timestamp'].between(xmin, xmax)]['low_price'].min()
     ymax = df.loc[df['timestamp'].between(xmin, xmax)]['high_price'].max()
+
+    del df
 
     fig.update_xaxes(dict(range=[xmin, xmax]))
     fig.update_yaxes(dict(range=[ymin, ymax]))
