@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from dash import Output, Input, State
+from dash import Output, Input, State, ctx
 from plotly import graph_objects as go
 from .. import styles
 from ..dash_app import dash_app as app
@@ -82,16 +82,20 @@ def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_in
 
 
 @app.callback(Output("historical_plot", "figure"),
-              Output("loading-spinner-output3", "children"),
+              Output("historic_data_store", "data"),
               Input('isin_selector_table', 'active_cell'),
               Input('historical_plot', 'relayoutData'),
-              State('isin_selector_table', 'data'))
-def update_historical_plot(active_cell, rel, isin_data):
+              State('isin_selector_table', 'data'),
+              State('historic_data_store', 'data'))
+def update_historical_plot(active_cell, rel, isin_data, df):
     if not isin_data or active_cell is None:
         return go.Figure(layout=styles.HISTORICAL_GRAPH_STYLE), ''
 
     isin = isin_data[active_cell['row']]['isin']
-    df = query_db(sql="select * from ohlc_pricez where isin = :isin", params={"isin": isin})
+    if ctx.triggered_id == 'isin_selector_table' or not df:
+        df = query_db(sql="select * from ohlc_pricez where isin = :isin", params={"isin": isin})
+    else:
+        df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
 
     fig = go.Figure(
@@ -120,7 +124,7 @@ def update_historical_plot(active_cell, rel, isin_data):
 
     logging.info(f'Updated historical plot figure with isin = {isin}')
 
-    return fig, ''
+    return fig, df.to_dict('records')
 
 
 """
