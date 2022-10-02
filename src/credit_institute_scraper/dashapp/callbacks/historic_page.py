@@ -83,13 +83,14 @@ def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_in
 
 @app.callback(Output("historical_plot", "figure"),
               Output("historic_data_store", "data"),
+              Output("loading-spinner-output3", "children"),
               Input('isin_selector_table', 'active_cell'),
               Input('historical_plot', 'relayoutData'),
               State('isin_selector_table', 'data'),
               State('historic_data_store', 'data'))
 def update_historical_plot(active_cell, rel, isin_data, df):
     if not isin_data or active_cell is None:
-        return go.Figure(layout=styles.HISTORICAL_GRAPH_STYLE), ''
+        return go.Figure(layout=styles.HISTORICAL_GRAPH_STYLE), None, ''
 
     isin = isin_data[active_cell['row']]['isin']
     if ctx.triggered_id == 'isin_selector_table' or not df:
@@ -136,7 +137,7 @@ def update_historical_plot(active_cell, rel, isin_data, df):
 
     logging.info(f'Updated historical plot figure with isin = {isin}')
 
-    return fig, df.to_dict('records')
+    return fig, df.to_dict('records'), ''
 
 
 """
