@@ -23,6 +23,7 @@ def _data_table_arg(dropdown_args):
 
 def historical_plot_page(dropdown_args):
     return dbc.Container([
+        dcc.Loading(type="default", children=html.Div(id="loading-spinner-output3"), className='spinner'),
         dcc.Store(id='master_data_historic', data=query_db(sql="select * from master_data").to_dict('records')),
         dbc.Card(
             [
