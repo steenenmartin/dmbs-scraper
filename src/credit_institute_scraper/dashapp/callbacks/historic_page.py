@@ -109,7 +109,7 @@ def update_historical_plot(active_cell, rel, isin_data, df):
                 high=df['high_price'],
                 low=df['low_price'],
                 showlegend=False,
-
+                hoverlabel=dict(namelength=0),
             ),
             go.Scatter(
                 x=df['timestamp'].dt.date,
