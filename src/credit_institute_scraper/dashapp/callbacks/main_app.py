@@ -9,14 +9,17 @@ from ...database.postgres_conn import query_db
 from ...utils.date_helper import get_active_time_range
 
 
-@app.callback(Output("page-content", "children"), Input("url", "href"))
-def render_page_content(href):
+@app.callback(Output("page-content", "children"),
+              Input("url", "href"),
+              Input('date_range_div', 'children'),
+              )
+def render_page_content(href, date_range):
     o = list(urllib.parse.urlparse(href))
     q = dict(urllib.parse.parse_qsl(o[4]))
     pathname = o[2]
 
     if pathname == "/":
-        return home.home_page()
+        return home.home_page(date_range)
     elif pathname == "/daily":
         return daily_plots.daily_plot_page(dropdown_args=q)
     elif pathname == "/historical":
