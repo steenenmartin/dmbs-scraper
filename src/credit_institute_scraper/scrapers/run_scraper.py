@@ -29,7 +29,9 @@ def scrape(conn_module):
     ]
 
     fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
-    prices_result_handler.export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
+
+    if not (now.hour >= 15 and now.minute > 0):
+        prices_result_handler.export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
 
     DatabaseResultHandler(conn_module, "master_data", now).export_result(fixed_rate_bond_data.to_master_data_frame(), if_exists="replace")
 
