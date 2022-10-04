@@ -18,13 +18,12 @@ def calculate_open_high_low_close_prices(today: dt.datetime, query_func: Callabl
         ohlc_price.loc[0] = [
             today,
             isin,
-            isin_prices[isin_prices.timestamp == isin_prices.iloc[0].timestamp],
-            isin_prices[isin_prices.spot_price == isin_prices.spot_price.max()].iloc[[0]],
-            isin_prices[isin_prices.spot_price == isin_prices.spot_price.min()].iloc[[0]],
-            isin_prices[isin_prices.timestamp == isin_prices.iloc[-1].timestamp]
+            isin_prices[isin_prices.timestamp == isin_prices.iloc[0].timestamp].spot_price.iloc[0],
+            isin_prices[isin_prices.spot_price == isin_prices.spot_price.max()].spot_price.iloc[0],
+            isin_prices[isin_prices.spot_price == isin_prices.spot_price.min()].spot_price.iloc[0],
+            isin_prices[isin_prices.timestamp == isin_prices.iloc[-1].timestamp].spot_price.iloc[0]
         ]
 
         ohlc_prices = pd.concat([ohlc_prices, ohlc_price])
 
-    ohlc_prices = ohlc_prices.assign(timestamp=today)
     return ohlc_prices
