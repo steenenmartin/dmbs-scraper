@@ -30,9 +30,10 @@ def scrape(conn_module):
 
     if not (now.hour >= 15 and now.minute > 0):
         DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
-        # master_data = conn_module.query_db("select * from master_data")
-        # master_data = pd.merge(fixed_rate_bond_data.to_master_data_frame(), master_data, on="isin")
-        DatabaseResultHandler(conn_module, "master_data", now).export_result(fixed_rate_bond_data.to_master_data_frame(), if_exists="replace")
+
+        master_data_db = conn_module.query_db("select * from master_data")
+        master_data = pd.merge(fixed_rate_bond_data.to_master_data_frame(), master_data_db, on="isin")
+        DatabaseResultHandler(conn_module, "master_data", now).export_result(master_data, if_exists="replace")
 
     if now.hour == 7 and now.minute == 0:
         offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_pricez", now)
