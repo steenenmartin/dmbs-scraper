@@ -1,7 +1,6 @@
 import pandas as pd
-from dash import Output, Input, dash_table, State
+from dash import Output, Input, dash_table
 from ..dash_app import dash_app as app
-from ...database.postgres_conn import query_db
 from .utils import data_bars_diverging, table_type
 
 
@@ -17,7 +16,9 @@ def load_home_page_table(spot_prices, master_data):
         'isin': 'ISIN'
     }
 
-    spot_prices = pd.DataFrame(spot_prices).merge(pd.DataFrame(master_data), on='isin')
+    spot_prices = pd.DataFrame(spot_prices)
+    master_data = pd.DataFrame(master_data)
+    spot_prices = pd.merge(spot_prices, master_data, on="isin")
 
     spot_prices = spot_prices.dropna()\
         .groupby(['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin'])['spot_price']\
@@ -43,24 +44,3 @@ def load_home_page_table(spot_prices, master_data):
                                 page_size=20,
                                 filter_action='native',
                                 )
-
-
-# @app.callback(Output('offer_prices_table_div', 'children'),
-#               Input('master_data', 'data'),
-#               State('date_range_riv', 'children')
-#               )
-# def offer_price_table(master_data, date_range):
-#     offers = query_db("select * from offer_pricez").merge(pd.DataFrame(master_data), on='isin')
-#
-#     return dash_table.DataTable(id='offer_prices_table',
-#                                 data=offers.to_dict('records'),
-#                                 columns=[{'name': i, 'id': i} for i in offers.columns],
-#                                 style_cell={
-#                                     'width': '2rem',
-#                                     'minWidth': '2rem',
-#                                     'maxWidth': '2rem',
-#                                     'overflow': 'hidden',
-#                                     'textOverflow': 'ellipsis',
-#                                 },
-#                                 page_size=20,
-#                                 filter_action='native')
