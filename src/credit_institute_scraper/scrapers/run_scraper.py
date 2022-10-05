@@ -1,8 +1,8 @@
+import pandas as pd
 from datetime import datetime
 
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..result_handlers.database_result_handler import DatabaseResultHandler
-from ..result_handlers.result_handler import ResultHandler
 from ..scrapers.scraper import Scraper
 from ..scrapers.scraper_orchestrator import ScraperOrchestrator
 from ..scrapers.jyske_scraper import JyskeScraper
@@ -30,9 +30,9 @@ def scrape(conn_module):
 
     if not (now.hour >= 15 and now.minute > 0):
         DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
-
-        master_data = conn_module.query_db("select * from master_data").merge(fixed_rate_bond_data.to_master_data_frame(), on='isin')
-        DatabaseResultHandler(conn_module, "master_data", now).export_result(master_data, if_exists="replace")
+        # master_data = conn_module.query_db("select * from master_data")
+        # master_data = pd.merge(fixed_rate_bond_data.to_master_data_frame(), master_data, on="isin")
+        DatabaseResultHandler(conn_module, "master_data", now).export_result(fixed_rate_bond_data.to_master_data_frame(), if_exists="replace")
 
     if now.hour == 7 and now.minute == 0:
         offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_pricez", now)
