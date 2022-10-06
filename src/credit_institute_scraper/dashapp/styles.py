@@ -58,7 +58,7 @@ def __graph_style(x_axis_title):
             "showgrid": True,
             "gridcolor": "#676565",
             "minor_griddash": "dot",
-            "nticks": 8,
+            "nticks": 9,
             # "showspikes": True
         },
         yaxis={
