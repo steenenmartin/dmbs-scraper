@@ -4,7 +4,7 @@ from dash import Output, Input, State, ctx
 from dash.exceptions import PreventUpdate
 from .. import styles
 from ..dash_app import dash_app as app
-from ..pages import page_not_found, home, daily_plots, historical_plots, about
+from ..pages import page_not_found, home_page, daily_page, historical_page, about_page
 from ...database.postgres_conn import query_db
 from ...utils.date_helper import get_active_time_range
 
@@ -16,13 +16,13 @@ def render_page_content(href):
     pathname = o[2]
 
     if pathname == "/":
-        return home.home_page()
+        return home_page.home_page()
     elif pathname == "/daily":
-        return daily_plots.daily_plot_page(dropdown_args=q)
+        return daily_page.daily_plot_page(dropdown_args=q)
     elif pathname == "/historical":
-        return historical_plots.historical_plot_page(dropdown_args=q)
+        return historical_page.historical_plot_page(dropdown_args=q)
     elif pathname == "/about":
-        return about.about_page()
+        return about_page.about_page()
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
