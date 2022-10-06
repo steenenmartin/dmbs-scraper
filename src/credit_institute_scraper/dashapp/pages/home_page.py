@@ -26,6 +26,6 @@ def home_page():
                             )
                         ]
                     )
-                ], style={'width': '55rem'}),
+                ], style={'width': '60rem'}),
         ]
     )

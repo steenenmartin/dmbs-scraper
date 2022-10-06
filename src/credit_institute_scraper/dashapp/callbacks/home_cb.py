@@ -21,10 +21,11 @@ def load_home_page_table(spot_prices, master_data):
     spot_prices = pd.merge(spot_prices, master_data, on="isin")
 
     spot_prices = spot_prices.dropna()\
-        .groupby(['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin'])['spot_price']\
-        .agg(lambda x: x.iat[-1] - x.iat[0])\
-        .round(3)\
-        .reset_index(name='Δ Price')
+        .groupby(['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin'])\
+        .agg(Price=('spot_price', lambda x: x.iat[-1]), p_ch=('spot_price', lambda x: x.iat[-1] - x.iat[0]))\
+        .round(2)\
+        .reset_index()\
+        .rename(columns={'p_ch': 'Δ Price'})
     ascending = True if spot_prices['Δ Price'].mean() < 0 else False
     spot_prices = spot_prices.sort_values(by='Δ Price', ascending=ascending)
     return dash_table.DataTable(id='home_page_table',
