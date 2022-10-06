@@ -54,7 +54,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         g, tmp_df = grp
         g = listify(g)
 
-        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
+        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_localize('UTC').tz_convert('Europe/Copenhagen')
         # tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Time: %{x}<br>Price: %{y:.2f}'

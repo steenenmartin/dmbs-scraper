@@ -75,5 +75,5 @@ def __graph_style(x_axis_title):
     )
 
 
-DAILY_GRAPH_STYLE = __graph_style(x_axis_title="Time (UTC)")
+DAILY_GRAPH_STYLE = __graph_style(x_axis_title="Time (Europe/Copenhagen)")
 HISTORICAL_GRAPH_STYLE = __graph_style(x_axis_title="Date")
