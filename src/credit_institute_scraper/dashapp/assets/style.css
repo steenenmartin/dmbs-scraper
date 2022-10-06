@@ -47,6 +47,13 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     font-family: "Segoe UI", sans-serif;
 }
 
+.table__header {
+    display: flex;
+    justify-content: center;
+    font-family: "Segoe UI", sans-serif;
+    margin-bottom: 0.1rem;
+}
+
 .nav-pills .nav-link.active, .nav-pills .show > .nav-link {
     color: #fff;
     background-color: #292929;
