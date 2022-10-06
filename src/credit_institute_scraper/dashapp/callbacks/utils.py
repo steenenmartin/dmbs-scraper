@@ -71,18 +71,13 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
     if zero_mid:
         col_max = df[column].abs().max()
         col_min = -col_max
+        midpoint = 0
     else:
         col_max = df[column].max()
         col_min = df[column].min()
-    ranges = [
-        ((col_max - col_min) * i) + col_min
-        for i in bounds
-    ]
-    if zero_mid:
-        midpoint = 0
-    else:
-        midpoint = (col_max + col_min) / 2.
+        midpoint = (col_max + col_min) / 2
 
+    ranges = [((col_max - col_min) * i) + col_min for i in bounds]
     styles = []
     for i in range(1, len(bounds)):
         min_bound = ranges[i - 1]
@@ -104,7 +99,7 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
         }
         if max_bound > midpoint:
             background = (
-                """
+                f"""
                     linear-gradient(90deg,
                     white 0%,
                     white 50%,
@@ -112,14 +107,11 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
                     {color_above} {max_bound_percentage}%,
                     white {max_bound_percentage}%,
                     white 100%)
-                """.format(
-                    max_bound_percentage=max_bound_percentage,
-                    color_above=color_above
-                )
+                """
             )
         else:
             background = (
-                """
+                f"""
                     linear-gradient(90deg,
                     white 0%,
                     white {min_bound_percentage}%,
@@ -127,10 +119,7 @@ def data_bars_diverging(df, column, color_above='#3D9970', color_below='#FF4136'
                     {color_below} 50%,
                     white 50%,
                     white 100%)
-                """.format(
-                    min_bound_percentage=min_bound_percentage,
-                    color_below=color_below
-                )
+                """
             )
         style['background'] = background
         styles.append(style)
