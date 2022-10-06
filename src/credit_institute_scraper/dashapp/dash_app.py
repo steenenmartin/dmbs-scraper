@@ -10,30 +10,6 @@ dash_app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 
-# dash_app.title = 'Bond stats'
-
-
-# dash_app.clientside_callback(
-#     """
-#     function(url) {
-#         function getQueryVariable(variable) {
-#             var query = window.location.search.substring(1);
-#             var vars = query.split('&');
-#             for (var i = 0; i < vars.length; i++) {
-#                 var pair = vars[i].split('=');
-#                 if (decodeURIComponent(pair[0]) == variable) {
-#                     return decodeURIComponent(pair[1]);
-#                 }
-#             }
-#             console.log('Query variable %s not found', variable);
-#         }
-#             document.title = 'test'
-#     }
-#     """,
-#     Output('page-title-output', 'children'),
-#     Input('url', 'search')
-# )
-
 dash_app.clientside_callback(
     """
     function(tab_value) {
