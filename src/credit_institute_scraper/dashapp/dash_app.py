@@ -10,6 +10,8 @@ dash_app = dash.Dash(
     suppress_callback_exceptions=True,
 )
 
+dash_app.title = 'Bond stats'
+
 dash_app.clientside_callback(
     """
     function(tab_value) {
