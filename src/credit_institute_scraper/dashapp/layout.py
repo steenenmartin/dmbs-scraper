@@ -30,6 +30,8 @@ sidebar = html.Div(
 content = html.Div(id="page-content", style=styles.CONTENT_STYLE)
 layout = html.Div(
     [
+        dcc.Location(id="url", refresh=False),
+        html.Div(id='page-title-output'),
         html.Div(id='dummy1', style={'display': 'none'}),
         html.Div(id='dummy2', style={'display': 'none'}),
         dcc.Store(id='daily_store', data=None),
@@ -38,7 +40,6 @@ layout = html.Div(
         html.Div(id='date_range_div', style={'display': 'none'}),
         dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
         dcc.Store(id='side_click'),
-        dcc.Location(id="url", refresh=False),
         dbc.Button("Hide", outline=True, id="btn_sidebar", className='sidebar-btn'),
         sidebar,
         content
