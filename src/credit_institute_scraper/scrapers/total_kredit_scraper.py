@@ -12,7 +12,7 @@ class TotalKreditScraper(Scraper):
                 self.institute.name,
                 int(float(product["lifetime"].split(" ")[0])),
                 float(product["spotPriceRatePayment"].replace(",", ".")),
-                float(product["priceRate"].replace(",", ".")),
+                float('nan') if product["priceRate"] is None else float(product["priceRate"].replace(",", ".")),
                 0.0 if product["name"].endswith("med afdrag") else float(product["name"].split(" ")[5]),
                 float(product["name"].split(" ")[0].strip("%").replace(",", ".")),
                 build_isin_code("DK", product["fondCode"])
