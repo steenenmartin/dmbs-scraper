@@ -27,5 +27,19 @@ def home_page():
                         ]
                     )
                 ], style={'width': '60rem'}),
+            html.Div(
+                [
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.H3("Status", className='header__card'),
+                                    html.Div(children=html.Small("The table below shows the data flow status for each credit institute")),
+                                    html.Div(id='status_table_div', style={'margin-top': '1rem'})
+                                ]
+                            )
+                        ]
+                    )
+                ], style={'width': '60rem'}),
         ]
     )
