@@ -32,7 +32,7 @@ class Scraper:
         def wrapper(self):
             self.tries_count += 1
 
-            data = json.loads(get_legacy_session().get(self.url).text)
+            data = json.loads(get_legacy_session().get(self.url, headers=self.headers).text)
 
             bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
@@ -56,6 +56,11 @@ class Scraper:
     def max_tries(self):
         # Can be overridden by each Scraper-child class if necessary.
         return 3
+
+    @property
+    def headers(self):
+        # Can be overridden by each Scraper-child class if necessary. See eg. jyske_scraper
+        return {}
 
 
 class CustomHttpAdapter(HTTPAdapter):
