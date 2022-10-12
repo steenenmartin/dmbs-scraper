@@ -53,12 +53,12 @@ class Scraper:
         raise NotImplementedError
 
     @property
-    def max_tries(self):
+    def max_tries(self) -> int:
         # Can be overridden by each Scraper-child class if necessary.
         return 3
 
     @property
-    def headers(self):
+    def headers(self) -> dict:
         # Can be overridden by each Scraper-child class if necessary. See eg. jyske_scraper
         return {}
 
