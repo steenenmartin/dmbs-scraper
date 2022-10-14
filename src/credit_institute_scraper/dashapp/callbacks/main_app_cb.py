@@ -80,15 +80,13 @@ def toggle_sidebar(n, nclick):
 def periodic_updater(n, pathname, df, master_data):
     start_time, end_time = get_active_time_range(force_7_15=True)
 
-    # Avoid periodic updates while on home page
-    if pathname != '/daily' and ctx.triggered_id == 'interval-component' and df is not None:
-        raise PreventUpdate
+    logging.info(f'Updated data by "{ctx.triggered_id}" at interval {n}. '
+                 f'Start time: {start_time.isoformat()}, '
+                 f'end time: {end_time.isoformat()}')
 
-    logging.info(
-        f'Updated data by "{ctx.triggered_id}" at interval {n}. Start time: {start_time.isoformat()}, end time: {end_time.isoformat()}')
-
-    # Only update data if interval-component is changed or dataframe hasn't been populated
-    if ctx.triggered_id == 'interval-component' or df is None:
+    # Only update data if we are on the daily page and interval-component is changed or if data hasn't been populated
+    if (ctx.triggered_id == 'interval-component' and pathname == '/daily') or df is None or master_data is None:
+        logging.info('Updated daily data store and master data store')
         df = query_db(sql="select * from spot_prices where timestamp between :start_time and :end_time",
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
         master_data = query_db(sql="select * from master_data").to_dict("records")
@@ -96,5 +94,3 @@ def periodic_updater(n, pathname, df, master_data):
     status = query_db("select * from status")
 
     return df, master_data, (start_time, end_time), '', make_indicator(status)
-
-
