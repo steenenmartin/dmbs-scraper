@@ -154,13 +154,13 @@ def make_indicator(status):
     layout = []
     for i, row in status.iterrows():
         cur_id = f'{row["institute"]}-status-indicator'
-        layout.append(
+        layout.extend([
             Indicator(
                 label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
                 color=color_map.get(row['status'], 'grey'),
                 className='uptime_indicator',
                 id=cur_id,
-            )
-        )
-        layout.append(dbc.Tooltip(f'Last updated at {row["last_data_time"]}', target=cur_id))
+            ),
+            dbc.Tooltip(f'Last updated at {row["last_data_time"]}', target=cur_id, style={'font-size': '1.3rem'})
+        ])
     return layout
