@@ -162,6 +162,6 @@ def make_indicator(status):
                 className='uptime_indicator',
                 id=cur_id,
             ),
-            dbc.Tooltip(f'Last updated at {last_update}', target=cur_id, style={'font-size': '1.3rem'})
+            dbc.Tooltip(f'Last updated at \n {last_update}', target=cur_id, style={'font-size': '1.3rem'})
         ])
     return layout

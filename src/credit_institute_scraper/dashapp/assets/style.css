@@ -16,6 +16,10 @@ h1, h2, h3, h4, h5, h6, p, .form-label {
     margin-bottom: 2rem;
 }
 
+.tooltip-inner {
+    white-space: pre-wrap;
+}
+
 .app__container {
     margin: 3% 5%;
 }
