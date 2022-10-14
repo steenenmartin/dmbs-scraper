@@ -84,7 +84,7 @@ def periodic_updater(n, pathname, df, master_data):
                  f'end time: {end_time.isoformat()}')
 
     # Only update data if we are on the daily page and interval-component is changed or if data hasn't been populated
-    if (ctx.triggered_id == 'interval-component' and pathname ==  '/daily') or df is None or master_data is None:
+    if (ctx.triggered_id == 'interval-component' and pathname == '/daily') or df is None or master_data is None:
         logging.info('Updated daily data store and master data store')
         df = query_db(sql="select * from spot_prices where timestamp between :start_time and :end_time",
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
