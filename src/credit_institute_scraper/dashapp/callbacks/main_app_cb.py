@@ -1,7 +1,6 @@
 import logging
 import urllib.parse
 from dash import Output, Input, State, ctx
-from dash.exceptions import PreventUpdate
 from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
