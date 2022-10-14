@@ -154,6 +154,7 @@ def make_indicator(status):
     layout = []
     for i, row in status.iterrows():
         cur_id = f'{row["institute"]}-status-indicator'
+        last_update = row['last_data_time'].tz_localize('UTC').tz_convert('Europe/Copenhagen').strftime('%Y-%m-%d %H:%M:%S')
         layout.extend([
             Indicator(
                 label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
@@ -161,6 +162,6 @@ def make_indicator(status):
                 className='uptime_indicator',
                 id=cur_id,
             ),
-            dbc.Tooltip(f'Last updated at {row["last_data_time"]}', target=cur_id, style={'font-size': '1.3rem'})
+            dbc.Tooltip(f'Last updated at {last_update}', target=cur_id, style={'font-size': '1.3rem'})
         ])
     return layout
