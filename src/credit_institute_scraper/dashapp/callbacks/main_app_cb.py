@@ -1,5 +1,6 @@
 import logging
 import urllib.parse
+from dash_daq.Indicator import Indicator
 from dash import Output, Input, State, ctx
 from dash.exceptions import PreventUpdate
 from .. import styles
@@ -71,11 +72,12 @@ def toggle_sidebar(n, nclick):
               Output('master_data', 'data'),
               Output('date_range_div', 'children'),
               Output("loading-spinner-output1", "children"),
+              Output('uptime_status', 'children'),
               Input('interval-component', 'n_intervals'),
               Input('url', 'pathname'),
               State('daily_store', 'data'),
               State('master_data', 'data'))
-def periodic_update_daily_df(n, pathname, df, master_data):
+def periodic_updater(n, pathname, df, master_data):
     start_time, end_time = get_active_time_range(force_7_15=True)
 
     # Avoid periodic updates while on home page
@@ -91,5 +93,21 @@ def periodic_update_daily_df(n, pathname, df, master_data):
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
         master_data = query_db(sql="select * from master_data").to_dict("records")
 
+    status = query_db("select * from status")
 
-    return df, master_data, (start_time, end_time), ''
+    return df, master_data, (start_time, end_time), '', make_indicator(status)
+
+
+def make_indicator(status):
+    color_map = {'OK': 'green', 'Not OK': 'red'}
+
+    layout = []
+    for i, row in status.iterrows():
+        layout.append(
+            Indicator(
+                label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
+                color=color_map.get(row['status'], 'grey'),
+                className='uptime_indicator'
+            )
+        )
+    return layout
