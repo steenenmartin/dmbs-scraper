@@ -21,6 +21,8 @@ sidebar = html.Div(
             vertical=True,
             pills=True,
         ),
+        html.Hr(),
+        html.Div(id='uptime_status', style={'margin-top': '2rem'}),
     ],
     id='sidebar',
     style=styles.SIDEBAR_STYLE,
