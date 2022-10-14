@@ -1,6 +1,8 @@
 import logging
 import urllib.parse
+import dash_bootstrap_components as dbc
 import pandas as pd
+from dash_daq.Indicator import Indicator
 
 
 def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
@@ -144,3 +146,21 @@ def table_type(df_column):
         return 'numeric'
     else:
         return 'any'
+
+
+def make_indicator(status):
+    color_map = {'OK': 'green', 'Not OK': 'red', 'Exchange closed': 'grey'}
+
+    layout = []
+    for i, row in status.iterrows():
+        cur_id = f'{row["institute"]}-status-indicator'
+        layout.append(
+            Indicator(
+                label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
+                color=color_map.get(row['status'], 'grey'),
+                className='uptime_indicator',
+                id=cur_id,
+            )
+        )
+        layout.append(dbc.Tooltip(f'Last updated at {row["last_data_time"]}', target=cur_id))
+    return layout
