@@ -23,7 +23,6 @@ sidebar = html.Div(
         ),
         html.Hr(),
         html.Div(id='uptime_status', style={'margin-top': '2rem'}),
-        html.Div(className='arrow-right'),
     ],
     id='sidebar',
     style=styles.SIDEBAR_STYLE,
