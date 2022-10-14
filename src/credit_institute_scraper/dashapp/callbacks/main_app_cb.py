@@ -1,9 +1,8 @@
 import logging
 import urllib.parse
-from dash_daq.Indicator import Indicator
-import dash_bootstrap_components as dbc
 from dash import Output, Input, State, ctx
 from dash.exceptions import PreventUpdate
+from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
 from ..pages import page_not_found, home_page, daily_page, historical_page, about_page
@@ -99,19 +98,3 @@ def periodic_updater(n, pathname, df, master_data):
     return df, master_data, (start_time, end_time), '', make_indicator(status)
 
 
-def make_indicator(status):
-    color_map = {'OK': 'green', 'Not OK': 'red', 'Exchange closed': 'grey'}
-
-    layout = []
-    for i, row in status.iterrows():
-        cur_id = f'{row["institute"]}-status-indicator'
-        layout.append(
-            Indicator(
-                label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
-                color=color_map.get(row['status'], 'grey'),
-                className='uptime_indicator',
-                id=cur_id,
-            )
-        )
-        layout.append(dbc.Tooltip(f'Last updated at {row["last_data_time"]}', target=cur_id))
-    return layout
