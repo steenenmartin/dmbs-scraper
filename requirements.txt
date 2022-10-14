@@ -12,3 +12,4 @@ psycopg2
 sqlalchemy
 cryptography==36.0.2
 flask-caching
+dash_daq==0.5.0
