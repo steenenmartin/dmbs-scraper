@@ -1,6 +1,7 @@
 import logging
 import urllib.parse
-from dash import Output, Input, State, ctx
+import os
+from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
@@ -44,25 +45,18 @@ def update_search_bar(search_daily, search_historic):
               Input("btn_sidebar", "n_clicks"),
               State("side_click", "data"))
 def toggle_sidebar(n, nclick):
-    if n:
-        if nclick == "SHOW":
-            sidebar_style = styles.SIDEBAR_HIDDEN
-            content_style = styles.CONTENT_STYLE1
-            cur_nclick = "HIDDEN"
-            btn_txt = "SHOW"
-            btn_style = {'margin-left': '0rem', "transition": "all 0.5s", }
-        else:
-            sidebar_style = styles.SIDEBAR_STYLE
-            content_style = styles.CONTENT_STYLE
-            cur_nclick = "SHOW"
-            btn_txt = "HIDE"
-            btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s", }
+    if n and nclick:
+        sidebar_style = styles.SIDEBAR_HIDDEN
+        content_style = styles.CONTENT_STYLE_NO_SIDEBAR
+        cur_nclick = 0
+        btn_txt = html.Img(src='assets/arrow-right.png', style={'max-width': '100%', 'max-height': '100%'})
+        btn_style = {'margin-left': '0rem', "transition": "all 0.5s"}
     else:
         sidebar_style = styles.SIDEBAR_STYLE
         content_style = styles.CONTENT_STYLE
-        cur_nclick = 'SHOW'
-        btn_txt = "HIDE"
-        btn_style = {'margin-left': '13.5rem', "transition": "all 0.5s", }
+        cur_nclick = 1
+        btn_txt = html.Img(src='assets/arrow-left.png', style={'max-width': '100%', 'max-height': '100%'})
+        btn_style = {'margin-left': '14.45rem', "transition": "all 0.5s"}
 
     return sidebar_style, content_style, cur_nclick, btn_style, btn_txt
 
