@@ -26,7 +26,7 @@ CONTENT_STYLE = {
     "padding": "2rem 1rem"
 }
 
-CONTENT_STYLE1 = {
+CONTENT_STYLE_NO_SIDEBAR = {
     **CONTENT_STYLE,
     "margin-left": "0rem",
 }

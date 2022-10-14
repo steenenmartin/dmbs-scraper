@@ -7,7 +7,6 @@ dash_app = dash.Dash(
     __name__,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=0.6"}],
     external_stylesheets=[dbc.themes.BOOTSTRAP],
-    suppress_callback_exceptions=True,
 )
 
 dash_app.title = 'Bond stats'
