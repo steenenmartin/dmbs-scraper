@@ -25,3 +25,11 @@ class JyskeScraper(Scraper):
     @property
     def institute(self) -> CreditInstitute:
         return CreditInstitute.Jyske
+
+    @property
+    def headers(self) -> dict:
+        return {
+            "Host": "jyskeberegner-api.jyskebank.dk",
+            "Origin": "https://www.jyskebank.dk",
+            "Referer": "https://www.jyskebank.dk/",
+        }
