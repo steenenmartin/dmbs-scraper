@@ -13,10 +13,14 @@ from ..scrapers.dlr_kredit_scraper import DlrKreditScraper
 from ..database import load_data
 
 
-def scrape(conn_module):
+def scrape(conn_module, debug=False):
     now = datetime.utcnow()
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
     today = datetime(now.year, now.month, now.day)
+
+    if not debug:
+        if now.hour < 7 or (now.hour >= 15 and now.minute > 0):
+            return
 
     scrapers: list[Scraper] = [
         JyskeScraper(),
@@ -27,13 +31,11 @@ def scrape(conn_module):
     ]
 
     fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
+    DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
 
-    if not (now.hour >= 15 and now.minute > 0):
-        DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
-
-        master_data_db = conn_module.query_db("select * from master_data")
-        master_data = pd.concat([master_data_db, fixed_rate_bond_data.to_master_data_frame()]).drop_duplicates()
-        DatabaseResultHandler(conn_module, "master_data", now).export_result(master_data, if_exists="replace")
+    master_data_db = conn_module.query_db("select * from master_data")
+    master_data = pd.concat([master_data_db, fixed_rate_bond_data.to_master_data_frame()]).drop_duplicates()
+    DatabaseResultHandler(conn_module, "master_data", now).export_result(master_data, if_exists="replace")
 
     if now.hour == 7 and now.minute == 0:
         offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_prices", now)
