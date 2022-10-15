@@ -13,6 +13,7 @@ from ..scrapers.total_kredit_scraper import TotalKreditScraper
 from ..scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
 from ..scrapers.dlr_kredit_scraper import DlrKreditScraper
 from ..database import load_data
+from ..utils.date_helper import is_holiday
 
 
 def scrape(conn_module, debug=False):
@@ -25,6 +26,9 @@ def scrape(conn_module, debug=False):
 
     if not debug:
         if now.hour < 7 or (now.hour >= 15 and now.minute > 0):
+            return
+
+        if is_holiday(today):
             return
 
     scrapers: list[Scraper] = [
