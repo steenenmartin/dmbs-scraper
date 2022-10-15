@@ -50,6 +50,7 @@ def load_home_page_table(spot_prices, master_data):
                 },
                 page_size=20,
                 filter_action='native',
+                filter_options={'case': 'insensitive'}
             )
         ]
     )
