@@ -7,7 +7,7 @@ sched = BlockingScheduler()
 
 @sched.scheduled_job('cron', minute="*/1")
 def scheduled_job():
-    scrape(sqlite_conn)
+    scrape(sqlite_conn, debug=True)
 
 
 sched.start()
