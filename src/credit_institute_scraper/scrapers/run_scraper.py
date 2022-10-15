@@ -1,5 +1,7 @@
+import time
 import pandas as pd
 from datetime import datetime
+
 from ..enums.credit_insitute import CreditInstitute
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..result_handlers.database_result_handler import DatabaseResultHandler
@@ -17,6 +19,9 @@ def scrape(conn_module, debug=False):
     now = datetime.utcnow()
     now = datetime(now.year, now.month, now.day, now.hour, now.minute)
     today = datetime(now.year, now.month, now.day)
+
+    if now.hour == 7 and now.minute == 0:
+        time.sleep(120)
 
     if not debug:
         if now.hour < 7 or (now.hour >= 15 and now.minute > 0):
