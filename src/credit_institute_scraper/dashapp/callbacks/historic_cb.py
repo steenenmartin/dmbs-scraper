@@ -94,7 +94,7 @@ def update_historical_plot(active_cell, rel, isin_data, df):
 
     isin = isin_data[active_cell['row']]['isin']
     if ctx.triggered_id == 'isin_selector_table' or not df:
-        df = query_db(sql="select * from ohlc_pricez where isin = :isin", params={"isin": isin})
+        df = query_db(sql="select * from ohlc_prices where isin = :isin", params={"isin": isin})
     else:
         df = pd.DataFrame(df)
     df['timestamp'] = pd.to_datetime(df['timestamp'])
