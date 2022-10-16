@@ -4,6 +4,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash_daq.Indicator import Indicator
 
+from credit_institute_scraper.enums.Status import Status
+
 
 def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
     args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
@@ -149,7 +151,7 @@ def table_type(df_column):
 
 
 def make_indicator(status):
-    color_map = {'OK': 'green', 'Not OK': 'red', 'Exchange closed': 'grey'}
+    color_map = {Status.Ok.name: 'green', Status.NotOk.name: 'red', Status.ExchangeClosed.name: 'grey'}
 
     layout = []
     for i, row in status.iterrows():

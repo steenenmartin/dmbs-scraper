@@ -2,6 +2,7 @@ import time
 import pandas as pd
 from datetime import datetime
 
+from ..enums.Status import Status
 from ..enums.credit_insitute import CreditInstitute
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..result_handlers.database_result_handler import DatabaseResultHandler
@@ -59,15 +60,15 @@ def scrape(conn_module, debug=False):
     status_data_frame = pd.DataFrame(columns=status_cols)
     for institute in CreditInstitute:
         if len([bond for bond in fixed_rate_bond_data.fixed_rate_bond_data_entries if bond.institute == institute.name]) > 0:
-            status = "OK"
+            status = Status.Ok
         else:
-            status = "Not OK"
+            status = Status.NotOk
 
-        if status == "OK" and now.hour == 15:
-            status = "Exchange closed"
+        if status == Status.Ok and now.hour == 15:
+            status = Status.ExchangeClosed
 
         institute_status = pd.DataFrame(columns=status_cols)
-        institute_status.loc[0] = [institute.name, now, status]
+        institute_status.loc[0] = [institute.name, now, status.name]
         status_data_frame = pd.concat([status_data_frame, institute_status])
 
     DatabaseResultHandler(conn_module, "status", now).export_result(status_data_frame, if_exists="replace")
