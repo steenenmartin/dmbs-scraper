@@ -2,6 +2,6 @@ from enum import Enum
 
 
 class Status(Enum):
-    Ok = 0
-    NotOk = 1
+    OK = 0
+    NotOK = 1
     ExchangeClosed = 2

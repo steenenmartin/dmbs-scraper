@@ -151,7 +151,7 @@ def table_type(df_column):
 
 
 def make_indicator(status):
-    color_map = {Status.Ok.name: 'green', Status.NotOk.name: 'red', Status.ExchangeClosed.name: 'grey'}
+    color_map = {Status.OK.name: 'green', Status.NotOK.name: 'red', Status.ExchangeClosed.name: 'grey'}
 
     layout = []
     for i, row in status.iterrows():
