@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash_daq.Indicator import Indicator
 
-from credit_institute_scraper.enums.Status import Status
+from ...enums.Status import Status
 
 
 def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
