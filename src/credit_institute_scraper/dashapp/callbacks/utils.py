@@ -4,7 +4,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash_daq.Indicator import Indicator
 
-from ...enums.Status import Status
+from ...enums.status import Status
 
 
 def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search):
@@ -151,8 +151,6 @@ def table_type(df_column):
 
 
 def make_indicator(status):
-    color_map = {Status.OK.name: 'green', Status.NotOK.name: 'red', Status.ExchangeClosed.name: 'grey'}
-
     layout = []
     for i, row in status.iterrows():
         cur_id = f'{row["institute"]}-status-indicator'
@@ -160,7 +158,7 @@ def make_indicator(status):
         layout.extend([
             Indicator(
                 label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
-                color=color_map.get(row['status'], 'grey'),
+                color=getattr(Status, row['status'], Status.ExchangeClosed).value,
                 className='uptime_indicator',
                 id=cur_id,
             ),
