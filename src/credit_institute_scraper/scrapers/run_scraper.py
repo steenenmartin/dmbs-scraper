@@ -2,7 +2,7 @@ import time
 import pandas as pd
 from datetime import datetime
 
-from ..enums.Status import Status
+from ..enums.status import Status
 from ..enums.credit_insitute import CreditInstitute
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..result_handlers.database_result_handler import DatabaseResultHandler

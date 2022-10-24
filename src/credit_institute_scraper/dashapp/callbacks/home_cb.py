@@ -27,8 +27,7 @@ def load_home_page_table(spot_prices, master_data):
         .round(2) \
         .reset_index() \
         .rename(columns={'p_ch': 'Δ Price'})
-    ascending = True if spot_prices['Δ Price'].mean() < 0 else False
-    spot_prices = spot_prices.sort_values(by='Δ Price', ascending=ascending)
+    spot_prices = spot_prices.sort_values(by='Δ Price', key=lambda x: abs(x), ascending=False)
     return html.Div(
         [
             html.Label(active_date, className='table__header'),
