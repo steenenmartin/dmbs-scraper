@@ -37,9 +37,7 @@ def load_home_page_table(spot_prices, master_data):
                 sort_action='native',
                 columns=[{'name': col_name_map.get(i, i), 'id': i, 'type': table_type(spot_prices[i])} for i in
                          spot_prices.columns],
-                style_data_conditional=(
-                    data_bars_diverging(spot_prices, 'Δ Price', zero_mid=True)
-                ),
+                style_data_conditional=data_bars_diverging(spot_prices, 'Δ Price', zero_mid=True),
                 style_cell={
                     'width': '2rem',
                     'minWidth': '2rem',
