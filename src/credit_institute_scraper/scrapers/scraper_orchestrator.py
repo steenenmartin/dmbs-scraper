@@ -10,7 +10,8 @@ class ScraperOrchestrator:
 
     def scrape(self) -> FixedRateBondData:
         fixed_rate_bond_data_entries: list[FixedRateBondDataEntry] = []
-        while True:
+
+        while not all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
             for scraper in self.scrapers:
                 if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
                     try:
@@ -18,9 +19,6 @@ class ScraperOrchestrator:
                         logging.info(f"Scraping '{scraper.institute.name}' succeeded")
                     except Exception as e:
                         logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
-
-            if all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
-                break
 
         return FixedRateBondData(fixed_rate_bond_data_entries)
 
