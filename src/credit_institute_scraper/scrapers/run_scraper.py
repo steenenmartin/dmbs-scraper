@@ -41,7 +41,8 @@ def scrape(conn_module, debug=False):
     ]
 
     fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
-    DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data.to_spot_prices_data_frame(now))
+    fixed_rate_bond_data_df = fixed_rate_bond_data.to_spot_prices_data_frame(now).drop_duplicates()
+    DatabaseResultHandler(conn_module, "spot_prices", now).export_result(fixed_rate_bond_data_df)
 
     master_data_db = conn_module.query_db("select * from master_data")
     master_data = pd.concat([master_data_db, fixed_rate_bond_data.to_master_data_frame()]).drop_duplicates()
