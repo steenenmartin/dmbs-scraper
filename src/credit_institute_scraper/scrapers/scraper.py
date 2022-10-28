@@ -32,7 +32,7 @@ class Scraper:
         def wrapper(self):
             self.tries_count += 1
 
-            data = json.loads(get_legacy_session().get(self.url, headers=self.headers).text)
+            data = json.loads(get_legacy_session().get(self.url, headers=self.headers, timeout=10).text)
 
             bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
 
