@@ -41,8 +41,8 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         master_data = master_data.query(' and '.join(filters))
 
     spot_prices = pd.DataFrame(spot_prices)
-    spot_prices['timestamp'] = pd.to_datetime(spot_prices['timestamp'])
-    full_idx = pd.date_range(date_range[0], date_range[1], freq='5T')
+    spot_prices['timestamp'] = pd.to_datetime(spot_prices['timestamp']).dt.tz_localize('UTC')
+    full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
     spot_prices = spot_prices[spot_prices["isin"].isin(master_data["isin"].unique())]
 
     merged_df = pd.merge(spot_prices, master_data, on="isin")
@@ -54,7 +54,7 @@ def update_daily_plot(institute, coupon_rate, years_to_maturity, max_interest_on
         g, tmp_df = grp
         g = listify(g)
 
-        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_localize('UTC').tz_convert('Europe/Copenhagen')
+        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_convert('Europe/Copenhagen')
         # tmp_df.index = [x.strftime('%H:%M') for x in tmp_df.index]
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Time: %{x}<br>Price: %{y:.2f}'
