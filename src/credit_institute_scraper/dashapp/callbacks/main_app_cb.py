@@ -1,6 +1,6 @@
 import logging
 import urllib.parse
-import os
+
 from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
@@ -71,11 +71,11 @@ def toggle_sidebar(n, nclick):
               State('daily_store', 'data'),
               State('master_data', 'data'))
 def periodic_updater(n, pathname, df, master_data):
-    start_time, end_time = get_active_time_range(force_7_15=True)
+    start_time, end_time = get_active_time_range(force_9_17=True)
 
     logging.info(f'Updated data by "{ctx.triggered_id}" at interval {n}. '
-                 f'Start time: {start_time.isoformat()}, '
-                 f'end time: {end_time.isoformat()}')
+                 f'Start time ({start_time.tzname()}): {start_time.strftime("%Y-%m-%d %H:%M")}, '
+                 f'end time ({end_time.tzname()}): {end_time.strftime("%Y-%m-%d %H:%M")}')
 
     # Only update data if we are on the daily page and interval-component is changed or if data hasn't been populated
     if (ctx.triggered_id == 'interval-component' and pathname == '/daily') or df is None or master_data is None:
