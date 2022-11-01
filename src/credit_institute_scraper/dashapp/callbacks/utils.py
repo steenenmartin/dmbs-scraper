@@ -154,7 +154,7 @@ def make_indicator(status):
     layout = []
     for i, row in status.iterrows():
         cur_id = f'{row["institute"]}-status-indicator'
-        last_update = row['last_data_time'].tz_convert('Europe/Copenhagen').strftime('%Y-%m-%d %H:%M')
+        last_update = row['last_data_time'].tz_localize("UTC").tz_convert('Europe/Copenhagen').strftime('%Y-%m-%d %H:%M')
         layout.extend([
             Indicator(
                 label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
