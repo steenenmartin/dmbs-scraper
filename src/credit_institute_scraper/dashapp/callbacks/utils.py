@@ -1,5 +1,6 @@
 import logging
 import urllib.parse
+import re
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash_daq.Indicator import Indicator
@@ -150,11 +151,15 @@ def table_type(df_column):
         return 'any'
 
 
+def get_split_camelcase_string(string: str) -> str:
+    return str.join(" ", re.findall(r"[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))", string))
+
+
 def make_indicator(status):
     layout = []
     for i, row in status.iterrows():
         cur_id = f'{row["institute"]}-status-indicator'
-        last_update = row['last_data_time'].tz_localize("UTC").tz_convert('Europe/Copenhagen').strftime('%Y-%m-%d %H:%M')
+        last_update = row['last_data_time'].tz_localize("UTC").tz_convert('Europe/Copenhagen')
         layout.extend([
             Indicator(
                 label={'label': row['institute'], 'style': {'font-size': '1.25rem'}},
@@ -162,6 +167,10 @@ def make_indicator(status):
                 className='uptime_indicator',
                 id=cur_id,
             ),
-            dbc.Tooltip(f'Status: {row["status"]} \n Last updated at \n {last_update}', target=cur_id, style={'font-size': '1.3rem'})
+            dbc.Tooltip(
+                f'Status: {get_split_camelcase_string(row["status"])} \n Last updated at \n {last_update.strftime("%Y-%m-%d %H:%M")} {last_update.tzname()}',
+                target=cur_id,
+                style={'font-size': '1.3rem'}
+            )
         ])
     return layout

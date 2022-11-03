@@ -1,3 +1,6 @@
+from datetime import datetime
+import pytz
+
 # the style arguments for the sidebar. We use position:fixed and a fixed width
 SIDEBAR_STYLE = {
     "position": "fixed",
@@ -75,5 +78,7 @@ def __graph_style(x_axis_title):
     )
 
 
-DAILY_GRAPH_STYLE = __graph_style(x_axis_title="Time (Europe/Copenhagen)")
+tz_name = pytz.utc.localize(datetime.utcnow()).astimezone(pytz.timezone('Europe/Copenhagen')).tzname()
+
+DAILY_GRAPH_STYLE = __graph_style(x_axis_title=f"Time ({tz_name})")
 HISTORICAL_GRAPH_STYLE = __graph_style(x_axis_title="Date")
