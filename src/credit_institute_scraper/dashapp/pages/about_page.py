@@ -21,7 +21,7 @@ def about_page():
                             
                             The website is developed by Oskar August Rosendal and Martin Steen Andersen Ehlers
                             
-                            Reach us at <bondstats.dk@gmail.com>
+                            Reach us at <info@bondstats.dk>
                         
                             **Disclaimer**
                             
