@@ -5,7 +5,7 @@ from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
-from ..pages import page_not_found, home_page, daily_page, historical_page, about_page
+from ..pages import page_not_found, home_page, daily_page, historical_page, about_page, export_page
 from ...database.postgres_conn import query_db
 from ...utils.date_helper import get_active_time_range
 
@@ -24,6 +24,8 @@ def render_page_content(href):
         return historical_page.historical_plot_page(dropdown_args=q)
     elif pathname == "/about":
         return about_page.about_page()
+    elif pathname == "/export":
+        return export_page.export_page(args=q)
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(pathname)
