@@ -10,7 +10,7 @@ def query_func(args):
     if not args:
         return
 
-    if "table" not in args:
+    if "table" not in args or args["table"] not in ("spot_prices", "offer_prices", "ohlc_prices"):
         return
 
     master_data = query_db(sql="select * from master_data")
