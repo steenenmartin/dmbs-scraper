@@ -18,6 +18,9 @@ class NordeaScraper(Scraper):
                 product["isinCode"]
             )
 
+            if product["rate"].startswith("*&nbsp;"):
+                self.missing_observations = True
+
             if entry.isin in ("DK0002056134", "DK0002054436", "DK0002053545", "DK0002051176", "DK0002050285") and entry.years_to_maturity == 15.0:
                 continue
 

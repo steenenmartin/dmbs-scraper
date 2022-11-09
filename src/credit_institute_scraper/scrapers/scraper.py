@@ -20,6 +20,7 @@ class Scraper:
     def __init__(self):
         self.scrape_success = False
         self.tries_count = 0
+        self.missing_observations = False
 
     @classmethod
     def scraper(cls, parse_bond_data_func):
