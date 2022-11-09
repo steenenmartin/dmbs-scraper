@@ -66,7 +66,9 @@ def scrape(conn_module, debug=False):
         status_cols = ["institute", "last_data_time", "status"]
         status_data_frame = pd.DataFrame(columns=status_cols)
         for institute in CreditInstitute:
-            if len([bond for bond in fixed_rate_bond_data.fixed_rate_bond_data_entries if bond.institute == institute.name]) > 0:
+            if any(scraper.missing_observations for scraper in scrapers if scraper.institute == institute):
+                status = Status.SomeDataMissing
+            elif len([bond for bond in fixed_rate_bond_data.fixed_rate_bond_data_entries if bond.institute == institute.name]) > 0:
                 status = Status.OK
             else:
                 status = Status.NotOK

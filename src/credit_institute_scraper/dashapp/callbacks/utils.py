@@ -152,7 +152,9 @@ def table_type(df_column):
 
 
 def get_split_camelcase_string(string: str) -> str:
-    return str.join(" ", re.findall(r"[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))", string))
+    words = re.findall(r"[A-Z](?:[a-z]+|[A-Z]*(?=[A-Z]|$))", string)
+    words = [words[i].lower() if i != 0 else words[i] for i in range(len(words))]
+    return str.join(" ", words)
 
 
 def make_indicator(status):
@@ -168,7 +170,7 @@ def make_indicator(status):
                 id=cur_id,
             ),
             dbc.Tooltip(
-                f'Status: {get_split_camelcase_string(row["status"])} \n Last updated at \n {last_update.strftime("%Y-%m-%d %H:%M")} {last_update.tzname()}',
+                f'Status: {get_split_camelcase_string(row["status"])} \n Last updated at: \n {last_update.strftime("%Y-%m-%d %H:%M")} {last_update.tzname()}',
                 target=cur_id,
                 style={'font-size': '1.3rem'}
             )
