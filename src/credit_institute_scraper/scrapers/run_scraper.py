@@ -63,9 +63,10 @@ def scrape(conn_module, debug=False):
             ohlc_prices = load_data.calculate_open_high_low_close_prices(today, conn_module.query_db)
             ohlc_prices_result_handler.export_result(ohlc_prices)
 
-        current_status = conn_module.query_db("select * from status").set_index("institute")
-        status_cols = ["institute", "last_data_time", "status"]
-        status_data_frame = pd.DataFrame(columns=status_cols)
+        current_status = conn_module.query_db("select * from status")
+        status_columns = list(conn_module.query_db("select * from status").columns.values)
+        status_data_frame = pd.DataFrame(columns=status_columns)
+        current_status.set_index("institute", inplace=True)
         for institute in CreditInstitute:
             if any(scraper.missing_observations for scraper in scrapers if scraper.institute == institute):
                 status = Status.SomeDataMissing
@@ -80,7 +81,7 @@ def scrape(conn_module, debug=False):
             if now.hour == 17:
                 status = Status.ExchangeClosed
 
-            institute_status = pd.DataFrame(columns=status_cols)
+            institute_status = pd.DataFrame(columns=status_columns)
             institute_status.loc[0] = [institute.name, utc_now, status.name]
             status_data_frame = pd.concat([status_data_frame, institute_status])
 
