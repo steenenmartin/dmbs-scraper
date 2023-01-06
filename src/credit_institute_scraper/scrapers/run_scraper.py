@@ -63,17 +63,21 @@ def scrape(conn_module, debug=False):
             ohlc_prices = load_data.calculate_open_high_low_close_prices(today, conn_module.query_db)
             ohlc_prices_result_handler.export_result(ohlc_prices)
 
+        current_status = conn_module.query_db("select * from status").set_index("institute")
         status_cols = ["institute", "last_data_time", "status"]
         status_data_frame = pd.DataFrame(columns=status_cols)
         for institute in CreditInstitute:
             if any(scraper.missing_observations for scraper in scrapers if scraper.institute == institute):
                 status = Status.SomeDataMissing
             elif len([bond for bond in fixed_rate_bond_data.fixed_rate_bond_data_entries if bond.institute == institute.name]) > 0:
-                status = Status.OK
+                if current_status.loc[institute.name]["status"] in ([Status.NotOK.name, Status.SomeDataMissing.name]):
+                    status = Status.SomeDataMissing
+                else:
+                    status = Status.OK
             else:
                 status = Status.NotOK
 
-            if status == Status.OK and now.hour == 17:
+            if now.hour == 17:
                 status = Status.ExchangeClosed
 
             institute_status = pd.DataFrame(columns=status_cols)
