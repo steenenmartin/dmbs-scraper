@@ -32,7 +32,7 @@ def scrape(conn_module, debug=False):
             time.sleep(120)
 
         if not debug:
-            if now.hour < 9 or (now.hour >= 17 and now.minute > 0):
+            if now.hour < 9 or (now.hour >= 17 and now.minute > 0) or now.hour >= 18:
                 return
 
             if is_holiday(today):
