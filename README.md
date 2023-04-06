@@ -14,8 +14,8 @@ To set up the repository locally, clone the repository and create a virtual envi
 Unfortunately, we cannot grant unrestricted access to the underlying PostgreSQL we use to store the data, but you can change the functions in the repository to use a local SQLite database with a few modifications:
 Change the line `from ...database.postgres_conn import query_db` to `from ...database.sqlite_conn import query_db` in the following files
 * `src/credit_institute_scraper_database/dashapp/callbacks/main_app.py`
-* `src/credit_institute_scraper_database/dashapp/callbacks/historic_page.py`
-* `src/credit_institute_scraper_database/dashapp/pages/historical_plots.py`
+* `src/credit_institute_scraper_database/dashapp/callbacks/ohlc_page.py`
+* `src/credit_institute_scraper_database/dashapp/pages/ohlc_plots.py`
 
 To run the server locally, execute `src/credit_institute_scraper/dashapp/local_server.py`
 

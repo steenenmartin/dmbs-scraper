@@ -1,4 +1,4 @@
 from .main_app_cb import *
 from .home_cb import *
-from .daily_cb import *
-from .historic_cb import *
+from .spot_prices_cb import *
+from .ohlc_cb import *

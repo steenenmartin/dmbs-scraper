@@ -47,7 +47,7 @@ DROPDOWN_STYLE = {
 app_color = {"graph_bg": "#f2f2f2", "graph_line": "#FFFFFF"}
 
 
-def __graph_style(x_axis_title):
+def __graph_style(x_axis_title, show_historic=False):
     return dict(
         plot_bgcolor=app_color["graph_bg"],
         paper_bgcolor="#FFFFFF",
@@ -63,6 +63,27 @@ def __graph_style(x_axis_title):
             "minor_griddash": "dot",
             "nticks": 9,
             # "showspikes": True
+            "rangeselector": dict(
+                buttons=list([
+                    dict(count=1,
+                         label="1m",
+                         step="month",
+                         stepmode="backward"),
+                    dict(count=6,
+                         label="6m",
+                         step="month",
+                         stepmode="backward"),
+                    dict(count=1,
+                         label="YTD",
+                         step="year",
+                         stepmode="todate"),
+                    dict(count=1,
+                         label="1y",
+                         step="year",
+                         stepmode="backward"),
+                    dict(step="all")
+                ]) if show_historic else None
+            ),
         },
         yaxis={
             "showgrid": True,
@@ -70,7 +91,8 @@ def __graph_style(x_axis_title):
             # "fixedrange": True,
             "zeroline": False,
             "gridcolor": "#676565",
-            "minor_griddash": "dot"
+            "minor_griddash": "dot",
+            "fixedrange": show_historic,
         },
         legend={
             "font": {"size": 10}
@@ -78,7 +100,9 @@ def __graph_style(x_axis_title):
     )
 
 
-tz_name = pytz.utc.localize(datetime.utcnow()).astimezone(pytz.timezone('Europe/Copenhagen')).tzname()
+def get_tz_name():
+    return pytz.utc.localize(datetime.utcnow()).astimezone(pytz.timezone('Europe/Copenhagen')).tzname()
 
-DAILY_GRAPH_STYLE = __graph_style(x_axis_title=f"Time ({tz_name})")
-HISTORICAL_GRAPH_STYLE = __graph_style(x_axis_title="Date")
+
+DAILY_GRAPH_STYLE = __graph_style(" ")
+HISTORICAL_GRAPH_STYLE = __graph_style(" ")

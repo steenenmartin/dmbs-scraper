@@ -14,9 +14,8 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Daily changes", href="/daily", active="exact"),
-                dbc.NavLink("Historical changes", href="/historical", active="exact"),
-                dbc.NavLink("About", href="/about", active="exact")
+                dbc.NavLink("Spot prices", href="/prices", active="exact"),
+                dbc.NavLink("OHLC prices", href="/ohlc", active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -35,7 +34,7 @@ stores = [
     html.Div(id='dummy1', style={'display': 'none'}),
     html.Div(id='dummy2', style={'display': 'none'}),
     html.Div(id='date_range_div', style={'display': 'none'}),
-    dcc.Store(id='daily_store', data=None),
+    dcc.Store(id='spot_prices_store', data=None),
     dcc.Store(id='master_data', data=None),
     dcc.Store(id='side_click'),
     dcc.Interval(id='interval-component', interval=60000, n_intervals=0),

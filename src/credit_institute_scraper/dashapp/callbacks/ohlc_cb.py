@@ -12,42 +12,42 @@ from ...database.postgres_conn import query_db
 
 @app.callback(
     Output('dummy2', 'value'),
-    Input('select_institute_historical_plot', 'value'),
-    Input('select_coupon_historical_plot', 'value'),
-    Input("select_ytm_historical_plot", "value"),
-    Input("select_max_io_historical_plot", "value"),
+    Input('select_institute_ohlc_plot', 'value'),
+    Input('select_coupon_ohlc_plot', 'value'),
+    Input("select_ytm_ohlc_plot", "value"),
+    Input("select_max_io_ohlc_plot", "value"),
     Input('isin_selector_table', 'active_cell'),
     State('url', 'search'),
     State('isin_selector_table', 'data'))
-def update_search_bar_historic(institute, coupon_rate, years_to_maturity, max_interest_only_period, active_cell, search, isin_data):
+def update_search_bar_ohlc(institute, coupon_rate, years_to_maturity, max_interest_only_period, active_cell, search, isin_data):
     try:
         isin = None if not isin_data or active_cell is None else isin_data[active_cell['row']]['isin']
     except Exception as e:
         print(e)
         print(isin_data)
         print(active_cell)
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, search)
+    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, None, search)
 
 
 @app.callback([
-    Output('select_institute_historical_plot', 'options'),
-    Output('select_coupon_historical_plot', 'options'),
-    Output('select_ytm_historical_plot', 'options'),
-    Output('select_max_io_historical_plot', 'options'),
-], Input('master_data_historic', 'data'))
-def update_dropdowns_historical_plot(master_data):
-    inst, coup, ytm, max_io, _ = update_dropdowns(master_data=master_data, log_text='Updated dropdown labels for historical plot')
+    Output('select_institute_ohlc_plot', 'options'),
+    Output('select_coupon_ohlc_plot', 'options'),
+    Output('select_ytm_ohlc_plot', 'options'),
+    Output('select_max_io_ohlc_plot', 'options'),
+], Input('master_data_ohlc', 'data'))
+def update_dropdowns_ohlc_plot(master_data):
+    inst, coup, ytm, max_io, _ = update_dropdowns(master_data=master_data, log_text='Updated dropdown labels for ohlc plot')
     return inst, coup, ytm, max_io
 
 
 @app.callback(Output("isin_selector_table", "data"),
               Output("isin_selector_table", "active_cell"),
               Output("isin_selector_table", "tooltip_data"),
-              [Input('select_institute_historical_plot', 'value'),
-               Input('select_coupon_historical_plot', 'value'),
-               Input("select_ytm_historical_plot", "value"),
-               Input("select_max_io_historical_plot", "value")],
-              State('master_data_historic', 'data'),
+              [Input('select_institute_ohlc_plot', 'value'),
+               Input('select_coupon_ohlc_plot', 'value'),
+               Input("select_ytm_ohlc_plot", "value"),
+               Input("select_max_io_ohlc_plot", "value")],
+              State('master_data_ohlc', 'data'),
               State('url', 'search'),
               State('isin_selector_table', 'active_cell'))
 def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_interest_only_period, master_data, search, active_cell):
@@ -81,14 +81,14 @@ def update_isin_selector_table(institute, coupon_rate, years_to_maturity, max_in
     return out, active_cell, tooltip_data
 
 
-@app.callback(Output("historical_plot", "figure"),
-              Output("historic_data_store", "data"),
+@app.callback(Output("ohlc_plot", "figure"),
+              Output("ohlc_data_store", "data"),
               Output("loading-spinner-output3", "children"),
               Input('isin_selector_table', 'active_cell'),
-              Input('historical_plot', 'relayoutData'),
+              Input('ohlc_plot', 'relayoutData'),
               State('isin_selector_table', 'data'),
-              State('historic_data_store', 'data'))
-def update_historical_plot(active_cell, rel, isin_data, df):
+              State('ohlc_data_store', 'data'))
+def update_ohlc_plot(active_cell, rel, isin_data, df):
     if not isin_data or active_cell is None:
         return go.Figure(layout=styles.HISTORICAL_GRAPH_STYLE), None, ''
 
@@ -135,7 +135,7 @@ def update_historical_plot(active_cell, rel, isin_data, df):
     fig.update_xaxes(dict(range=[xmin, xmax]))
     fig.update_yaxes(dict(range=[ymin, ymax]))
 
-    logging.info(f'Updated historical plot figure with isin = {isin}')
+    logging.info(f'Updated ohlc plot figure with isin = {isin}')
 
     return fig, df.to_dict('records'), ''
 
