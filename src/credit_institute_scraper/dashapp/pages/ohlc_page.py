@@ -21,21 +21,21 @@ def _data_table_arg(dropdown_args):
     return out
 
 
-def historical_plot_page(dropdown_args):
+def ohlc_plot_page(dropdown_args):
     return dbc.Container([
         dcc.Loading(type="default", children=html.Div(id="loading-spinner-output3"), className='spinner'),
-        dcc.Store(id='master_data_historic', data=query_db(sql="select * from master_data").to_dict('records')),
-        dcc.Store(id='historic_data_store'),
+        dcc.Store(id='master_data_ohlc', data=query_db(sql="select * from master_data").to_dict('records')),
+        dcc.Store(id='ohlc_data_store'),
         dbc.Card(
             [
                 dbc.Row(
                     [
-                        html.H4(f'Historical prices', className='header__graph'),
+                        html.H4(f'Open-High-Low-Close prices', className='header__graph'),
                         dbc.Col(
                             [
                                 html.H6("Filter ISIN list"),
                                 dbc.Label('Institute', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_institute_historical_plot',
+                                dcc.Dropdown(id='select_institute_ohlc_plot',
                                              options=_extract_var(dropdown_args, 'institute', True),
                                              value=_extract_var(dropdown_args, 'institute', False),
                                              multi=False,
@@ -43,7 +43,7 @@ def historical_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Coupon', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_coupon_historical_plot',
+                                dcc.Dropdown(id='select_coupon_ohlc_plot',
                                              options=_extract_var(dropdown_args, 'coupon_rate', True, float),
                                              value=_extract_var(dropdown_args, 'coupon_rate', False, float),
                                              multi=False,
@@ -51,7 +51,7 @@ def historical_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Years to maturity', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_ytm_historical_plot',
+                                dcc.Dropdown(id='select_ytm_ohlc_plot',
                                              options=_extract_var(dropdown_args, 'years_to_maturity', True, int),
                                              value=_extract_var(dropdown_args, 'years_to_maturity', False, int),
                                              multi=False,
@@ -59,7 +59,7 @@ def historical_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Max interest-only period', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_max_io_historical_plot',
+                                dcc.Dropdown(id='select_max_io_ohlc_plot',
                                              options=_extract_var(dropdown_args, 'max_interest_only_period', True,
                                                                   float),
                                              value=_extract_var(dropdown_args, 'max_interest_only_period', False,
@@ -87,7 +87,7 @@ def historical_plot_page(dropdown_args):
                             md=2
                         ),
                         dbc.Col(
-                            dcc.Graph(id='historical_plot',
+                            dcc.Graph(id='ohlc_plot',
                                       figure=dict(layout=styles.HISTORICAL_GRAPH_STYLE),
                                       style={'height': '92vh'},
                                       config={'displayModeBar': False}),

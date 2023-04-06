@@ -1,4 +1,6 @@
 import dash_bootstrap_components as dbc
+import dash_daq as daq
+
 from dash import dcc, html
 from .. import styles
 
@@ -10,18 +12,25 @@ def _extract_dropdown(arg_dict, arg, cast=None):
     return arglst
 
 
-def daily_plot_page(dropdown_args):
+def spot_prices_plot_page(dropdown_args):
     return dbc.Container([
         dbc.Card(
             [
+                dcc.Store(id='historic_data_store'),
                 dcc.Loading(type="default", children=html.Div(id="loading-spinner-output2"), className='spinner'),
                 dbc.Row(
                     [
-                        html.H4('Daily change in spot prices', className='header__graph'),
                         dbc.Col(
                             [
+                                daq.BooleanSwitch(
+                                    label="Show historic prices",
+                                    on=_extract_dropdown(dropdown_args, 'show_historic') == ['True'],
+                                    color='green',
+                                    id="show_historic"
+                                ),
+                                html.Br(),
                                 dbc.Label('Institute', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_institute_daily_plot',
+                                dcc.Dropdown(id='select_institute_spot_prices_plot',
                                              options=_extract_dropdown(dropdown_args, 'institute'),
                                              value=_extract_dropdown(dropdown_args, 'institute'),
                                              multi=True,
@@ -29,7 +38,7 @@ def daily_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Coupon', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_coupon_daily_plot',
+                                dcc.Dropdown(id='select_coupon_spot_prices_plot',
                                              options=_extract_dropdown(dropdown_args, 'coupon_rate', float),
                                              value=_extract_dropdown(dropdown_args, 'coupon_rate', float),
                                              multi=True,
@@ -37,7 +46,7 @@ def daily_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Years to maturity', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_ytm_daily_plot',
+                                dcc.Dropdown(id='select_ytm_spot_prices_plot',
                                              options=_extract_dropdown(dropdown_args, 'years_to_maturity', int),
                                              value=_extract_dropdown(dropdown_args, 'years_to_maturity', int),
                                              multi=True,
@@ -45,7 +54,7 @@ def daily_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label('Max interest-only period', className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_max_io_daily_plot',
+                                dcc.Dropdown(id='select_max_io_spot_prices_plot',
                                              options=_extract_dropdown(dropdown_args, 'max_interest_only_period', float),
                                              value=_extract_dropdown(dropdown_args, 'max_interest_only_period', float),
                                              multi=True,
@@ -53,7 +62,7 @@ def daily_plot_page(dropdown_args):
                                              className='graph-dropdown'),
                                 html.Br(),
                                 dbc.Label("Isin", className='graph-downdown-label'),
-                                dcc.Dropdown(id='select_isin_daily_plot',
+                                dcc.Dropdown(id='select_isin_spot_prices_plot',
                                              options=_extract_dropdown(dropdown_args, 'isin'),
                                              value=_extract_dropdown(dropdown_args, 'isin'),
                                              multi=True,
@@ -63,7 +72,7 @@ def daily_plot_page(dropdown_args):
                             md=2
                         ),
                         dbc.Col(
-                            dcc.Graph(id='daily_plot',
+                            dcc.Graph(id='spot_prices_plot',
                                       figure=dict(layout=styles.DAILY_GRAPH_STYLE),
                                       style={'height': '92vh'},
                                       config={'displayModeBar': False}),
