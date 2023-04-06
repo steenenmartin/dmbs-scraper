@@ -26,6 +26,7 @@ def get_active_date():
 def is_holiday(date):
     if date.date() in [
         dt.date(2022, 12, 26),
+        dt.date(2023, 4, 6),
         dt.date(2023, 4, 7),
         dt.date(2023, 4, 10),
         dt.date(2023, 5, 5),
