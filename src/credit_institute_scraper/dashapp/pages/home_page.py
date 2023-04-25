@@ -11,12 +11,24 @@ def home_page():
                 [
                     dbc.Col(
                     [
-                        html.H3("Welcome to Bondstats"),
+                        html.H1("Welcome to Bondstats", className='header__card'),
+                        html.H3("Cumulative daily changes", className='header__card'),
+                        html.Div(children=[html.Small("To filter numerical columns, prepend with either "),
+                                           html.Code('=', className='code-container'),
+                                           html.Small(', '),
+                                           html.Code('>', className='code-container'),
+                                           html.Small(' or '),
+                                           html.Code('<', className='code-container'),
+                                           html.Small(
+                                               " - e.g. you could filter the Coupon column by writing "),
+                                           html.Code('>0.5', className='code-container')], style={'textAlign': 'center'}),
+                        html.Div(id='data_table_div', style={'margin-top': '1rem'}),
                         html.H4("General information"),
                         html.P("Bondstats is the only page which features intra-day live updated fixed rate Danish Mortgage Backed Securities (DMBS) spot prices."),
                         html.P("Prices are collected every 5 minutes during the exchange opening hours (9-17 Copenhagen time) from each of the four Danish credit institutes Nordea Kredit, Jyske Realkredit, Realkredit Danmark and Totalkredit."),
                         html.P("Prices are featured only for bonds open for loan payment. Closed bonds (e.g. bonds opened more than three years ago) are currently not featured."),
                         html.P("The featured prices are identical to the spot prices ('Aktuel kurs') which can be found for each credit insitute here:"),
+                        html.Br(),
                         html.Ul(
                             children=[
                                 html.A(
@@ -37,6 +49,7 @@ def home_page():
                                 )
                             ]
                         ),
+                        html.Br(),
                         html.P("Bondstats is developed by Oskar August Rosendal and Martin Steen Andersen Ehlers"),
                         html.P("Reach us at info@bondstats.dk"),
                         html.Br(),
@@ -46,6 +59,7 @@ def home_page():
                         html.H6("Spot prices"),
                         html.P("Click the 'Spot prices' tab in the sidebar and select your bond features in the dropdowns."),
                         html.P("Your choices are stored in the url. Save your favorite choices as bookmarks in your browser. For inspiration, follow the links below:"),
+                        html.Br(),
                         html.Ul(
                             children=[
                                 html.A(
@@ -66,6 +80,7 @@ def home_page():
                                 ),
                             ]
                         ),
+                        html.Br(),
                         html.P("Hover over the graph to see details on time, price, institute and ISIN."),
                         html.P("Historic prices can be enabled by toggling 'Show historic prices' for your given selection of bonds."),
                         # html.Br(),
