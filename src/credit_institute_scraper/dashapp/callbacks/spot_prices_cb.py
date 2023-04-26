@@ -29,7 +29,7 @@ from ...utils.object_helper import listify
               State('historic_data_store', 'data')
               )
 def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, spot_prices, master_data, rel, date_range, historic_prices):
-    price_column_name = "close_price" if show_historic else "spot_price"
+    price_column_name = "spot_price"
     groupers, filters = [], []
     args = [
         ('institute', institute),
