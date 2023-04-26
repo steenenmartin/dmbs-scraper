@@ -9,7 +9,7 @@ def page_not_found(href: str):
         [
             html.H2("404: Not found", className="text-danger"),
             html.Hr(),
-            html.P("Bondstats was recently updated, please use" if show_help else f'The url "{href}" was not recognised...'),
+            html.H5("Bondstats was recently updated, please use" if show_help else f'The url "{href}" was not recognised...'),
             html.A(
                 href=updated_href,
                 children=html.Big(updated_href) if show_help else None
