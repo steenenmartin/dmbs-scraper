@@ -63,7 +63,7 @@ def home_page():
                         html.Ul(
                             children=[
                                 html.A(
-                                    href="https://www.bondstats.dk/prices?show_historic=False&coupon_rate=3&years_to_maturity=30&max_interest_only_period=0",
+                                    href="https://www.bondstats.dk/prices?show_historic=False&coupon_rate=1&years_to_maturity=30&max_interest_only_period=0",
                                     children=html.P(" - All 30 year 1% bonds with 0 years interest-only period")
                                 ),
                                 html.A(
