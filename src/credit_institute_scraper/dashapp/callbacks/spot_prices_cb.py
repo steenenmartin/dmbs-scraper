@@ -29,7 +29,6 @@ from ...utils.object_helper import listify
               State('historic_data_store', 'data')
               )
 def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, spot_prices, master_data, rel, date_range, historic_prices):
-    price_column_name = "spot_price"
     groupers, filters = [], []
     args = [
         ('institute', institute),
@@ -49,10 +48,14 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     if filters:
         master_data = master_data.query(' and '.join(filters))
 
+    if historic_prices is not None:
+        historic_prices = pd.DataFrame(historic_prices)
+
     if show_historic:
         if historic_prices is None:
             historic_prices = query_db(sql="select * from closing_prices")
-        historic_prices = pd.DataFrame(historic_prices)
+            historic_prices = pd.DataFrame(historic_prices)
+
         prices = historic_prices
     else:
         prices = pd.DataFrame(spot_prices)
@@ -67,7 +70,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
 
     lines = []
-    groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1][price_column_name].mean(), reverse=True) if groupers else [('', merged_df)]
+    groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]["spot_price"].mean(), reverse=True) if groupers else [('', merged_df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
@@ -83,7 +86,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         hover = 'Date: %{x}<br>Price: %{y:.2f}' if show_historic else 'Time: %{x}<br>Price: %{y:.2f}'
         lines.append(go.Scatter(
             x=tmp_df.index,
-            y=tmp_df[price_column_name],
+            y=tmp_df["spot_price"],
             line=dict(width=3, shape=None if show_historic else 'hv'),
             name=lgnd,
             hovertemplate=hover,
@@ -97,7 +100,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     if show_historic and x_range_specified:
         xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]']).date(), datetime.fromisoformat(rel['xaxis.range[1]']).date()
 
-        temp_df = merged_df.loc[merged_df['timestamp'].between(xmin, xmax)][price_column_name]
+        temp_df = merged_df.loc[merged_df['timestamp'].between(xmin, xmax)]["spot_price"]
         ymin, ymax = temp_df.min(), temp_df.max()
         margin = (ymax - ymin) * 0.05
 
@@ -105,7 +108,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         fig['layout']['yaxis']['range'] = [ymin - margin, ymax + margin]
 
     logging.info(f'Updated spot prices plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
-    return fig, '', historic_prices.to_dict('records') if show_historic else None
+    return fig, '', historic_prices.to_dict('records') if historic_prices is not None else None
 
 
 @app.callback(
