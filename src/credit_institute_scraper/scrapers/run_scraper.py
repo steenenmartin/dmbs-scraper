@@ -71,7 +71,7 @@ def scrape(conn_module, debug=False):
             ohlc_prices_result_handler.export_result(ohlc_prices)
 
         # Update today's closing prices with latest scraped data. Replace if exists to ensure one row per day.
-        DatabaseResultHandler(conn_module, "closing_prices", today).export_result(fixed_rate_bond_data_df, if_exists="replace")
+        DatabaseResultHandler(conn_module, "closing_prices", today).export_result(fixed_rate_bond_data_df, if_exists="append")
 
         # Update status table
         update_status_table(conn_module, fixed_rate_bond_data, now, scrapers, utc_now)
