@@ -65,6 +65,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
 
     if show_historic:
         merged_df['timestamp'] = pd.to_datetime(merged_df['timestamp']).dt.date
+        full_idx = pd.date_range(merged_df['timestamp'].min(), merged_df['timestamp'].max())
     else:
         merged_df['timestamp'] = pd.to_datetime(merged_df['timestamp']).dt.tz_localize('UTC')
         full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
@@ -77,8 +78,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         g = listify(g)
 
         if show_historic:
-            tmp_df = tmp_df.set_index('timestamp')
-            tmp_df.sort_values("timestamp", inplace=True)
+            tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
         else:
             tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_convert('Europe/Copenhagen')
 
@@ -92,6 +92,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
             hovertemplate=hover,
             showlegend=False,
             marker={'color': c.get_hex()},
+            connectgaps=show_historic
         ))
     fig = go.Figure(lines)
     fig.update_layout(**__graph_style(x_axis_title="Date" if show_historic else f"Time ({get_tz_name()})", show_historic=show_historic))
