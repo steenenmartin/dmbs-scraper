@@ -57,7 +57,7 @@ def __graph_style(x_axis_title, show_historic=False):
             "title": x_axis_title,
             "showline": True,
             "zeroline": False,
-            "fixedrange": True,
+            "fixedrange": not show_historic,
             "showgrid": True,
             "gridcolor": "#676565",
             "minor_griddash": "dot",
