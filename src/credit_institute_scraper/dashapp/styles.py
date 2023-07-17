@@ -92,7 +92,7 @@ def __graph_style(x_axis_title, show_historic=False):
             "zeroline": False,
             "gridcolor": "#676565",
             "minor_griddash": "dot",
-            "fixedrange": True,
+            "fixedrange": show_historic,
         },
         legend={
             "font": {"size": 10}

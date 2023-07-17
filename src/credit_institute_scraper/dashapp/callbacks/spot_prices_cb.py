@@ -108,6 +108,10 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         fig['layout']['xaxis']['range'] = [xmin, xmax]
         fig['layout']['yaxis']['range'] = [ymin - margin, ymax + margin]
 
+    y_range_specified = rel is not None and "yaxis.range[0]" in rel.keys() and "yaxis.range[1]" in rel.keys()
+    if y_range_specified and not show_historic:
+        fig['layout']['yaxis']['range'] = [rel['yaxis.range[0]'], rel['yaxis.range[1]']]
+
     logging.info(f'Updated spot prices plot figure with args {", ".join(f"{k}={v}" for k, v in args)}')
     return fig, '', historic_prices.to_dict('records') if historic_prices is not None else None
 
