@@ -99,7 +99,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
 
     x_range_specified = rel is not None and "xaxis.range[0]" in rel.keys() and "xaxis.range[1]" in rel.keys()
     if show_historic and x_range_specified:
-        xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]']).date(), datetime.fromisoformat(rel['xaxis.range[1]']).date()
+        xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]'].split(" ")[0]).date(), datetime.fromisoformat(rel['xaxis.range[1]'].split(" ")[0]).date()
 
         temp_df = merged_df.loc[merged_df['timestamp'].between(xmin, xmax)]["spot_price"]
         ymin, ymax = temp_df.min(), temp_df.max()
