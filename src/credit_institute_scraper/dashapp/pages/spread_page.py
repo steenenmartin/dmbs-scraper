@@ -3,10 +3,14 @@ import dash_bootstrap_components as dbc
 from .. import styles
 
 
-def _extract_dropdown(arg_dict, arg, cast=None):
-    arglst = arg_dict[arg].split(',') if arg in arg_dict else []
-    if cast:
-        arglst = list(map(cast, arglst))
+def _extract_dropdown(arg_dict, arg, as_str=False):
+    default = '' if as_str else []
+    if arg in arg_dict:
+        arglst = arg_dict[arg].split(',')
+        if as_str:
+            arglst = arglst[0]
+    else:
+        arglst = default
     return arglst
 
 
@@ -18,7 +22,7 @@ def spread_plot_page(dropdown_args):
                     dbc.Label('Base ISIN', className='graph-dropdown-label'),
                     dcc.Dropdown(id='base_isin_spread',
                                  options=_extract_dropdown(dropdown_args, 'base_isin'),
-                                 value=_extract_dropdown(dropdown_args, 'base_isin')[0],
+                                 value=_extract_dropdown(dropdown_args, 'base_isin', as_str=True),
                                  multi=False,
                                  searchable=True,
                                  className='graph-dropdown'),

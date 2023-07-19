@@ -3,6 +3,7 @@ from dash.exceptions import PreventUpdate
 from .utils import update_dropdowns, update_search_bar_template
 from ..dash_app import dash_app as app
 from .. import styles
+from ...database.postgres_conn import query_db
 from colour import Color
 import pandas as pd
 import plotly.graph_objects as go
@@ -21,28 +22,31 @@ def update_dropdowns_spreads_plot(master_data):
     Output('rate_spreads_plot', 'figure'),
     Input('base_isin_spread', 'value'),
     Input('compare_isins_spread', 'value'),
-    Input('spot_prices_store', 'data'),
 )
-def update_spreads_plot(base_isin, compare_isins, data):
-    if not base_isin or not compare_isins or data is None:
+def update_spreads_plot(base_isin, compare_isins):
+    if not base_isin or not compare_isins:
         raise PreventUpdate
+
+    isin_str = "', '".join([base_isin, *compare_isins])
+    data = query_db(sql=f"select * from closing_prices where isin in ('{isin_str}')")
     df = pd.DataFrame(data)
 
     lines = []
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(compare_isins))
-    base = df[df['isin'] == base_isin].sort_values(by='timestamp')
+    base = df[df['isin'] == base_isin].set_index('timestamp').sort_index()
     for gd, c in zip(df[df['isin'].isin(compare_isins)].groupby('isin'), colors):
         group, dat = gd
-        dat = dat.sort_values(by='timestamp')
+        dat = dat.set_index('timestamp').sort_index()
         lines.append(
             go.Scatter(
-                x=dat['timestamp'],
-                y=dat['spot_price'].values - base['spot_price'].values,
+                x=dat.index,
+                y=dat['spot_price'] - base['spot_price'],
                 line=dict(width=3, shape='hv'),
                 name=group,
                 hovertemplate='Date: %{x}<br>Spread: %{y:.2f}',
                 showlegend=False,
                 marker={'color': c.get_hex()},
+                connectgaps=True
             )
         )
     fig = go.Figure(lines)

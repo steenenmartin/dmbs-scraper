@@ -1,6 +1,5 @@
 import logging
 import urllib.parse
-
 from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
@@ -79,11 +78,11 @@ def periodic_updater(n, pathname, spot_prices, master_data):
                  f'Start time ({start_time.tzname()}): {start_time.strftime("%Y-%m-%d %H:%M")}, '
                  f'end time ({end_time.tzname()}): {end_time.strftime("%Y-%m-%d %H:%M")}')
 
-    # Only update data if we are on the spot prices page and interval-component is changed or if data hasn't been populated
+    # Only update data if we are on spot prices page and interval-component is changed or if data hasn't been populated
     if (ctx.triggered_id == 'interval-component' and pathname == '/prices') or spot_prices is None or master_data is None:
         logging.info('Updated spot prices data store and master data store')
         spot_prices = query_db(sql="select * from spot_prices where timestamp between :start_time and :end_time",
-                      params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
+                               params={'start_time': start_time, 'end_time': end_time}).to_dict("records")
         master_data = query_db(sql="select * from master_data").to_dict("records")
 
     status = query_db("select * from status")
