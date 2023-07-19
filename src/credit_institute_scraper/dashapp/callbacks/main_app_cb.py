@@ -23,18 +23,20 @@ def render_page_content(href):
     elif pathname == "/ohlc":
         return ohlc_page.ohlc_plot_page(dropdown_args=q)
     elif pathname == "/spreads":
-        return spread_page.spread_plot_page()
+        return spread_page.spread_plot_page(dropdown_args=q)
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(href)
 
 
-@app.callback(Output('url', 'search'), Input('dummy1', 'value'), Input('dummy2', 'value'))
-def update_search_bar(search_spot_prices, search_ohlc):
+@app.callback(Output('url', 'search'), Input('dummy1', 'value'), Input('dummy2', 'value'), Input('dummy3', 'value'))
+def update_search_bar(search_spot_prices, search_ohlc, search_spreads):
     if ctx.triggered_id == 'dummy1':
         return search_spot_prices
-    else:
+    elif ctx.triggered_id == 'dummy2':
         return search_ohlc
+    else:
+        return search_spreads
 
 
 @app.callback(Output("sidebar", "style"),

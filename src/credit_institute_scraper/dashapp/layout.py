@@ -34,6 +34,7 @@ stores = [
     html.Div(id='page-title-output'),
     html.Div(id='dummy1', style={'display': 'none'}),
     html.Div(id='dummy2', style={'display': 'none'}),
+    html.Div(id='dummy3', style={'display': 'none'}),
     html.Div(id='date_range_div', style={'display': 'none'}),
     dcc.Store(id='spot_prices_store', data=None),
     dcc.Store(id='master_data', data=None),

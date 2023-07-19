@@ -126,7 +126,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     State('spot_prices_plot', 'figure')
 )
 def download_daily_data(n, fig):
-    if n is None:
+    if n is None or 'data' not in fig:
         raise PreventUpdate
     df = pd.DataFrame([
         {
@@ -155,8 +155,13 @@ def download_daily_data(n, fig):
     State('url', 'search'))
 def update_search_bar_spot_prices(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin,
                                   show_historic, search):
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin,
-                                      show_historic, search)
+    return update_search_bar_template(search=search,
+                                      institute=institute,
+                                      coupon_rate=coupon_rate,
+                                      years_to_maturity=years_to_maturity,
+                                      max_interest_only_period=max_interest_only_period,
+                                      isin=isin,
+                                      show_historic=show_historic)
 
 
 @app.callback([

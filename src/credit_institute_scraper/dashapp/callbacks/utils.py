@@ -8,12 +8,9 @@ from dash_daq.Indicator import Indicator
 from ...enums.status import Status
 
 
-def update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, search):
-    args = [('institute', institute), ('coupon_rate', coupon_rate), ('years_to_maturity', years_to_maturity),
-            ('max_interest_only_period', max_interest_only_period), ('isin', isin), ('show_historic', show_historic)]
-
+def update_search_bar_template(search, **kwargs):
     q = dict(urllib.parse.parse_qsl(search[1:]))  # [1:] to remove the leading `?`
-    for k, v in args:
+    for k, v in kwargs.items():
         if v or v == 0:
             q[k] = ','.join(map(str, v)) if isinstance(v, (list, tuple)) else str(v)
         else:

@@ -26,7 +26,12 @@ def update_search_bar_ohlc(institute, coupon_rate, years_to_maturity, max_intere
         print(e)
         print(isin_data)
         print(active_cell)
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, None, search)
+    return update_search_bar_template(search=search,
+                                      institute=institute,
+                                      coupon_rate=coupon_rate,
+                                      years_to_maturity=years_to_maturity,
+                                      max_interest_only_period=max_interest_only_period,
+                                      isin=isin)
 
 
 @app.callback([
