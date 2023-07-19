@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime
-
+import datetime as dt
 import pandas as pd
 from colour import Color
-from dash import Output, Input, State
+from dash import Output, Input, State, dcc
 from plotly import graph_objects as go
+from dash.exceptions import PreventUpdate
 from ..dash_app import dash_app as app
 from .utils import update_search_bar_template, update_dropdowns
 from ..styles import __graph_style, get_tz_name
@@ -28,7 +29,8 @@ from ...utils.object_helper import listify
               State("date_range_div", "children"),
               State('historic_data_store', 'data')
               )
-def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, spot_prices, master_data, rel, date_range, historic_prices):
+def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic,
+                            spot_prices, master_data, rel, date_range, historic_prices):
     groupers, filters = [], []
     args = [
         ('institute', institute),
@@ -41,8 +43,8 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         if v:
             v_str = f'"{v}"' if isinstance(v, str) else v
             filters.append(f"{k} == {v_str}")
-        if not v or len(v) > 1:
-            groupers.append(k)
+        # if not v or len(v) > 1:
+        groupers.append(k)
 
     master_data = pd.DataFrame(master_data)
     if filters:
@@ -71,16 +73,16 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
 
     lines = []
-    groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]["spot_price"].mean(), reverse=True) if groupers else [('', merged_df)]
+    groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]["spot_price"].mean(),
+                    reverse=True) if groupers else [('', merged_df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
         g = listify(g)
 
-        if show_historic:
-            tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
-        else:
-            tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_convert('Europe/Copenhagen')
+        tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
+        if not show_historic:
+            tmp_df = tmp_df.tz_convert('Europe/Copenhagen')
 
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Date: %{x}<br>Price: %{y:.2f}' if show_historic else 'Time: %{x}<br>Price: %{y:.2f}'
@@ -95,11 +97,13 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
             connectgaps=show_historic
         ))
     fig = go.Figure(lines)
-    fig.update_layout(**__graph_style(x_axis_title="Date" if show_historic else f"Time ({get_tz_name()})", show_historic=show_historic))
+    fig.update_layout(**__graph_style(x_axis_title="Date" if show_historic else f"Time ({get_tz_name()})",
+                                      show_historic=show_historic))
 
     x_range_specified = rel is not None and "xaxis.range[0]" in rel.keys() and "xaxis.range[1]" in rel.keys()
     if show_historic and x_range_specified:
-        xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]'].split(" ")[0]).date(), datetime.fromisoformat(rel['xaxis.range[1]'].split(" ")[0]).date()
+        xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]'].split(" ")[0]).date(), datetime.fromisoformat(
+            rel['xaxis.range[1]'].split(" ")[0]).date()
 
         temp_df = merged_df.loc[merged_df['timestamp'].between(xmin, xmax)]["spot_price"]
         ymin, ymax = temp_df.min(), temp_df.max()
@@ -117,6 +121,30 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
 
 
 @app.callback(
+    Output("export_data", "data"),
+    Input('download_daily', 'n_clicks'),
+    State('spot_prices_plot', 'figure')
+)
+def download_daily_data(n, fig):
+    if n is None:
+        raise PreventUpdate
+    df = pd.DataFrame([
+        {
+            'Datetime': x,
+            'Price': y,
+            **dict([k.split(': ') for k in f['name'].split('<br>')])
+        }
+        for f in fig['data']
+        for x, y in zip(f['x'], f['y'])
+    ])
+    return dcc.send_data_frame(
+        writer=pd.DataFrame(df).to_csv,
+        filename=f"bondstats_spotprices_{dt.datetime.utcnow().isoformat(timespec='minutes')}.csv",
+        index=False
+    )
+
+
+@app.callback(
     Output('dummy1', 'value'),
     Input('select_institute_spot_prices_plot', 'value'),
     Input('select_coupon_spot_prices_plot', 'value'),
@@ -125,8 +153,10 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     Input("select_isin_spot_prices_plot", "value"),
     Input("show_historic", "on"),
     State('url', 'search'))
-def update_search_bar_spot_prices(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, search):
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, search)
+def update_search_bar_spot_prices(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin,
+                                  show_historic, search):
+    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin,
+                                      show_historic, search)
 
 
 @app.callback([

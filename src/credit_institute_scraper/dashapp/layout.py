@@ -16,6 +16,7 @@ sidebar = html.Div(
                 dbc.NavLink("Home", href="/", active="exact"),
                 dbc.NavLink("Spot prices", href="/prices", active="exact"),
                 dbc.NavLink("OHLC prices", href="/ohlc", active="exact"),
+                dbc.NavLink("Rate spreads", href="/spreads", active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -37,6 +38,7 @@ stores = [
     dcc.Store(id='spot_prices_store', data=None),
     dcc.Store(id='master_data', data=None),
     dcc.Store(id='side_click'),
+    dcc.Download(id="export_data"),
     dcc.Interval(id='interval-component', interval=60000, n_intervals=0),
     dcc.Loading(type="default", children=html.Div(id="loading-spinner-output1"), className='spinner'),
 ]

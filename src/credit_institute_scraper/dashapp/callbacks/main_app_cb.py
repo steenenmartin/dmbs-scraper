@@ -5,7 +5,7 @@ from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
-from ..pages import page_not_found, home_page, spot_prices_page, ohlc_page
+from ..pages import page_not_found, home_page, spot_prices_page, ohlc_page, spread_page
 from ...database.postgres_conn import query_db
 from ...utils.date_helper import get_active_time_range
 
@@ -22,6 +22,8 @@ def render_page_content(href):
         return spot_prices_page.spot_prices_plot_page(dropdown_args=q)
     elif pathname == "/ohlc":
         return ohlc_page.ohlc_plot_page(dropdown_args=q)
+    elif pathname == "/spreads":
+        return spread_page.spread_plot_page()
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(href)

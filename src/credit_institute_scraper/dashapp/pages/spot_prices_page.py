@@ -67,7 +67,9 @@ def spot_prices_plot_page(dropdown_args):
                                              value=_extract_dropdown(dropdown_args, 'isin'),
                                              multi=True,
                                              searchable=True,
-                                             className='graph-dropdown')
+                                             className='graph-dropdown'),
+                                html.Br(),
+                                dbc.Button('Download', id='download_daily', outline=True, color='primary', style={'position': 'absolute', 'bottom': '0px', 'right': '0px', 'z-index': '10'}),
                             ],
                             md=2
                         ),
