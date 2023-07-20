@@ -4,7 +4,7 @@ from ..scrapers.scraper import Scraper
 from ..utils.isin_helper import build_isin_code
 
 
-class TotalKreditScraper(Scraper):
+class TotalKreditFixedScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
         return [

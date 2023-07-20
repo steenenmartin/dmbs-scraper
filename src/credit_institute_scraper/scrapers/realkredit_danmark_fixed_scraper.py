@@ -3,7 +3,7 @@ from ..enums.credit_insitute import CreditInstitute
 from ..scrapers.scraper import Scraper
 
 
-class RealKreditDanmarkScraper(Scraper):
+class RealKreditDanmarkFixedScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
         bonds: list[FixedRateBondDataEntry] = []

@@ -5,6 +5,7 @@ import urllib3
 import ssl
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
 
 
@@ -25,7 +26,7 @@ class Scraper:
     @classmethod
     def scraper(cls, parse_bond_data_func):
         """
-        This method is designed to be a decorator for the parse_fixed_rate_bonds-methods in child-Scraper classes.
+        This method is designed to be a decorator for the parsing methods in Scraper child classes.
         Sending the request and loading the .json data is done here in the super-class decorator, and then the child-specific data parsing is executed.
 
         :param parse_bond_data_func: The parsing function from child Scraper-class
@@ -35,7 +36,7 @@ class Scraper:
 
             data = json.loads(get_legacy_session().get(self.url, headers=self.headers, timeout=10).text)
 
-            bonds: list[FixedRateBondDataEntry] = parse_bond_data_func(self, data)
+            bonds = parse_bond_data_func(self, data)
 
             self.scrape_success = True
             return bonds
@@ -43,6 +44,9 @@ class Scraper:
         return wrapper
 
     def parse_fixed_rate_bonds(self) -> list[FixedRateBondDataEntry]:
+        raise NotImplementedError
+
+    def parse_floating_rate_bonds(self) -> list[FloatingRateBondDataEntry]:
         raise NotImplementedError
 
     @property

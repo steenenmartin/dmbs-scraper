@@ -4,6 +4,9 @@ import pandas as pd
 import pytz
 from datetime import datetime
 
+from .realkredit_danmark_floating_scraper import RealKreditDanmarkFloatingScraper
+from .total_kredit_floating_scraper import TotalKreditFloatingScraper
+from ..bond_data.floating_rate_bond_data import FloatingRateBondData
 from ..enums.status import Status
 from ..enums.credit_insitute import CreditInstitute
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
@@ -12,8 +15,8 @@ from ..scrapers.scraper import Scraper
 from ..scrapers.scraper_orchestrator import ScraperOrchestrator
 from ..scrapers.jyske_scraper import JyskeScraper
 from ..scrapers.nordea_scraper import NordeaScraper
-from ..scrapers.total_kredit_scraper import TotalKreditScraper
-from ..scrapers.realkredit_danmark_scraper import RealKreditDanmarkScraper
+from ..scrapers.total_kredit_fixed_scraper import TotalKreditFixedScraper
+from ..scrapers.realkredit_danmark_fixed_scraper import RealKreditDanmarkFixedScraper
 from ..scrapers.dlr_kredit_scraper import DlrKreditScraper
 from ..database import load_data
 from ..utils.date_helper import is_holiday
@@ -41,16 +44,24 @@ def scrape(conn_module, debug=False):
             if is_holiday(today):
                 return
 
-        scrapers: list[Scraper] = [
+        fixed_scrapers: list[Scraper] = [
             JyskeScraper(),
-            RealKreditDanmarkScraper(),
+            RealKreditDanmarkFixedScraper(),
             NordeaScraper(),
-            TotalKreditScraper(),
+            TotalKreditFixedScraper(),
+            # DlrKreditScraper()
+        ]
+
+        floating_scrapers: list[Scraper] = [
+            JyskeScraper(),
+            RealKreditDanmarkFloatingScraper(),
+            # NordeaScraper(),
+            TotalKreditFloatingScraper(),
             # DlrKreditScraper()
         ]
 
         # Scrape and upload spot prices
-        fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(scrapers).scrape()
+        fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(fixed_scrapers).scrape_fixed_rate_bonds()
         fixed_rate_bond_data_df = fixed_rate_bond_data.to_spot_prices_data_frame(utc_now).drop_duplicates()
         DatabaseResultHandler(conn_module, "spot_prices", utc_now).export_result(fixed_rate_bond_data_df)
 
@@ -59,10 +70,13 @@ def scrape(conn_module, debug=False):
         master_data = pd.concat([master_data_db, fixed_rate_bond_data.to_master_data_frame()]).drop_duplicates()
         DatabaseResultHandler(conn_module, "master_data", utc_now).export_result(master_data, if_exists="replace")
 
-        # Update today's offer prices at exchange open
+        # Update today's offer prices and floating rates at exchange open
         if now.hour == 9 and now.minute == 0:
             offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_prices", utc_now)
             offer_prices_result_handler.export_result(fixed_rate_bond_data.to_offer_prices_data_frame(today))
+
+            floating_rate_bond_data: FloatingRateBondData = ScraperOrchestrator(floating_scrapers).scrape_floating_rate_bonds()
+            DatabaseResultHandler(conn_module, "rates", today).export_result(floating_rate_bond_data.to_data_frame(today))
 
         # Calculate and update OHLC prices table at exchange close.
         if now.hour == 17 and now.minute == 0:
@@ -74,7 +88,7 @@ def scrape(conn_module, debug=False):
             DatabaseResultHandler(conn_module, "closing_prices", today).export_result(fixed_rate_bond_data_df)
 
         # Update status table
-        update_status_table(conn_module, fixed_rate_bond_data, now, scrapers, utc_now)
+        update_status_table(conn_module, fixed_rate_bond_data, now, fixed_scrapers, utc_now)
     except Exception as e:
         DatabaseResultHandler(conn_module, "scrape_logs", datetime.utcnow()).export_result(pd.DataFrame(columns=["time", "error"], data=[[datetime.utcnow(), e]]))
 
