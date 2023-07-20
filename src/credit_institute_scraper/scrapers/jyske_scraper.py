@@ -1,4 +1,5 @@
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
+from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
 from ..scrapers.scraper import Scraper
 
@@ -16,6 +17,17 @@ class JyskeScraper(Scraper):
                 float(product["kuponrenteProcent"]),
                 product["isin"]
             ) for product in data["fastRenteProdukter"]
+        ]
+
+    @Scraper.scraper
+    def parse_floating_rate_bonds(self, data) -> list[FloatingRateBondDataEntry]:
+        return [
+            FloatingRateBondDataEntry(
+                self.institute.name,
+                int(product["fastrenteperiode"]),
+                0,
+                float(product["vaegtetTilbudskursProcent"]),
+            ) for product in data["variabelRenteProdukter"]
         ]
 
     @property
