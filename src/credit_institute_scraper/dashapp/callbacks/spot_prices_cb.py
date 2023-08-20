@@ -77,10 +77,13 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         g, tmp_df = grp
         g = listify(g)
 
+        tmp_df = tmp_df.set_index('timestamp')
+        tmp_df = tmp_df.loc[~tmp_df.index.duplicated()]
+
         if show_historic:
-            tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan'))
+            tmp_df = tmp_df.reindex(full_idx, fill_value=float('nan'))
         else:
-            tmp_df = tmp_df.set_index('timestamp').reindex(full_idx, fill_value=float('nan')).tz_convert('Europe/Copenhagen')
+            tmp_df = tmp_df.reindex(full_idx, fill_value=float('nan')).tz_convert('Europe/Copenhagen')
 
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Date: %{x}<br>Price: %{y:.2f}' if show_historic else 'Time: %{x}<br>Price: %{y:.2f}'
