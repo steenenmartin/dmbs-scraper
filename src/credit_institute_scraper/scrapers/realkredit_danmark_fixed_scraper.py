@@ -20,10 +20,15 @@ class RealKreditDanmarkFixedScraper(Scraper):
 
             max_io_years = max_io_terms * 3.0 / 12.0
 
+            price = float(product["prices"][0]["price"].replace(",", "."))
+            if price <= 0.0:
+                price = float('nan')
+                self.missing_observations = True
+
             bond = FixedRateBondDataEntry(
                 self.institute.name,
                 years_to_maturity,
-                float(product["prices"][0]["price"].replace(",", ".")),
+                price,
                 float(product["offerprice"]),
                 max_io_years,
                 float(product["nominelInterestRate"]),
