@@ -22,11 +22,13 @@ class RealKreditDanmarkFixedScraper(Scraper):
 
             price = float(product["prices"][0]["price"].replace(",", "."))
             offer_price = float(product["offerprice"])
-            if price <= 0.0 or offer_price <= 0:
-                price = float('nan')
-                # Wtf?
-                if years_to_maturity not in (10, 15, 20, 30):
+            if years_to_maturity in (10, 15, 20, 30):
+                if price <= 0.0:
+                    price = float('nan')
                     self.missing_observations = True
+            else:
+                # Wtf are these?
+                continue
 
             bond = FixedRateBondDataEntry(
                 self.institute.name,
