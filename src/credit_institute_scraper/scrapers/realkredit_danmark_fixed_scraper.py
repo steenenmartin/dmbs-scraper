@@ -11,6 +11,12 @@ class RealKreditDanmarkFixedScraper(Scraper):
             years_to_maturity = int(float(product["termToMaturityYears"]))
             isin = product["isinCode"]
 
+            loan_type_code = product["loanTypeCode"]
+
+            if loan_type_code != "01":
+                # wtf are these
+                continue
+
             if isin == "DK0004618733" and years_to_maturity == 0:
                 years_to_maturity = 30
 
@@ -21,20 +27,15 @@ class RealKreditDanmarkFixedScraper(Scraper):
             max_io_years = max_io_terms * 3.0 / 12.0
 
             price = float(product["prices"][0]["price"].replace(",", "."))
-            offer_price = float(product["offerprice"])
-            if years_to_maturity in (10, 15, 20, 30):
-                if price <= 0.0:
-                    price = float('nan')
-                    self.missing_observations = True
-            else:
-                # Wtf are these?
-                continue
+            if price <= 0.0:
+                price = float('nan')
+                self.missing_observations = True
 
             bond = FixedRateBondDataEntry(
                 self.institute.name,
                 years_to_maturity,
                 price,
-                offer_price,
+                float(product["offerprice"]),
                 max_io_years,
                 float(product["nominelInterestRate"]),
                 isin
