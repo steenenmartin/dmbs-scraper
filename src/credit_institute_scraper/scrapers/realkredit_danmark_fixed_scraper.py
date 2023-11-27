@@ -13,7 +13,7 @@ class RealKreditDanmarkFixedScraper(Scraper):
 
             loan_type_code = product["loanTypeCode"]
 
-            if loan_type_code != "01":
+            if loan_type_code != "01" and loan_type_code != "16":
                 # wtf are these
                 continue
 
