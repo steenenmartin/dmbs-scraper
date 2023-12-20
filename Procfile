@@ -1,2 +1,2 @@
-web: gunicorn app:server --preload --workers 2 --max-requests 25
+web: gunicorn app:server --preload --worker-class gevent --workers 1 --max-requests 100
 scrape: python scraper.py
