@@ -72,11 +72,16 @@ def scrape(conn_module, debug=False):
 
         # Update today's offer prices and floating rates at exchange open
         if now.hour == 9 and now.minute == 0:
-            offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_prices", utc_now)
-            offer_prices_result_handler.export_result(fixed_rate_bond_data.to_offer_prices_data_frame(today))
-
             floating_rate_bond_data: FloatingRateBondData = ScraperOrchestrator(floating_scrapers).scrape_floating_rate_bonds()
             DatabaseResultHandler(conn_module, "rates", today).export_result(floating_rate_bond_data.to_data_frame(today))
+
+            # Update floating master data for each scrape, adding new bonds if not in database.
+            master_data_float_db = conn_module.query_db("select * from master_data_float")
+            master_data_float = pd.concat([master_data_float_db, floating_rate_bond_data.to_master_data_frame()]).drop_duplicates()
+            DatabaseResultHandler(conn_module, "master_data_float", utc_now).export_result(master_data_float, if_exists="replace")
+
+            offer_prices_result_handler = DatabaseResultHandler(conn_module, "offer_prices", utc_now)
+            offer_prices_result_handler.export_result(fixed_rate_bond_data.to_offer_prices_data_frame(today))
 
         # Calculate and update OHLC prices table at exchange close.
         if now.hour == 17 and now.minute == 0:
@@ -101,7 +106,7 @@ def update_status_table(conn_module, fixed_rate_bond_data, now, scrapers, utc_no
     for institute in CreditInstitute:
         if any(scraper.missing_observations for scraper in scrapers if scraper.institute == institute):
             status = Status.SomeDataMissing
-        elif len([bond for bond in fixed_rate_bond_data.fixed_rate_bond_data_entries if bond.institute == institute.name]) > 0:
+        elif len([bond for bond in fixed_rate_bond_data.entries if bond.institute == institute.name]) > 0:
             if current_status.loc[institute.name]["status"] in ([Status.NotOK.name, Status.SomeDataMissing.name]):
                 status = Status.SomeDataMissing
             else:

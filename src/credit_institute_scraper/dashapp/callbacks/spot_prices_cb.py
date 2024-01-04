@@ -129,7 +129,15 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     Input("show_historic", "on"),
     State('url', 'search'))
 def update_search_bar_spot_prices(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, search):
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, show_historic, search)
+    args = [
+        ('institute', institute),
+        ('coupon_rate', coupon_rate),
+        ('years_to_maturity', years_to_maturity),
+        ('max_interest_only_period', max_interest_only_period),
+        ('isin', isin),
+        ('show_historic', show_historic)
+    ]
+    return update_search_bar_template(args, search)
 
 
 @app.callback([

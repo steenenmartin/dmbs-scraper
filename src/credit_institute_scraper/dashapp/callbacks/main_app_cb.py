@@ -5,7 +5,7 @@ from dash import Output, Input, State, ctx, html
 from .utils import make_indicator
 from .. import styles
 from ..dash_app import dash_app as app
-from ..pages import page_not_found, home_page, spot_prices_page, ohlc_page
+from ..pages import page_not_found, home_page, spot_prices_page, ohlc_page, spot_rates_page
 from ...database.postgres_conn import query_db
 from ...utils.date_helper import get_active_time_range
 
@@ -18,21 +18,27 @@ def render_page_content(href):
 
     if pathname == "/":
         return home_page.home_page()
-    elif pathname == "/prices":
+    elif pathname in ["/daily", "/prices"]:
         return spot_prices_page.spot_prices_plot_page(dropdown_args=q)
-    elif pathname == "/ohlc":
+    elif pathname == "/rates":
+        return spot_rates_page.spot_rates_plot_page(dropdown_args=q)
+    elif pathname in ["/historical", "/ohlc"]:
         return ohlc_page.ohlc_plot_page(dropdown_args=q)
 
     # If the user tries to reach a different page, return a 404 message
     return page_not_found.page_not_found(href)
 
 
-@app.callback(Output('url', 'search'), Input('dummy1', 'value'), Input('dummy2', 'value'))
-def update_search_bar(search_spot_prices, search_ohlc):
+@app.callback(Output('url', 'search'), Input('dummy1', 'value'), Input('dummy2', 'value'), Input('dummy3', 'value'))
+def update_search_bar(search_spot_prices, search_ohlc, search_rates):
     if ctx.triggered_id == 'dummy1':
         return search_spot_prices
-    else:
+    elif ctx.triggered_id == 'dummy2':
         return search_ohlc
+    elif ctx.triggered_id == 'dummy3':
+        return search_rates
+    else:
+        raise NotImplementedError()
 
 
 @app.callback(Output("sidebar", "style"),
@@ -76,7 +82,7 @@ def periodic_updater(n, pathname, spot_prices, master_data):
                  f'end time ({end_time.tzname()}): {end_time.strftime("%Y-%m-%d %H:%M")}')
 
     # Only update data if we are on the spot prices page and interval-component is changed or if data hasn't been populated
-    if (ctx.triggered_id == 'interval-component' and pathname == '/prices') or spot_prices is None or master_data is None:
+    if (ctx.triggered_id == 'interval-component' and pathname in ['/daily', '/prices']) or spot_prices is None or master_data is None:
         logging.info('Updated spot prices data store and master data store')
         spot_prices = query_db(sql="select * from spot_prices where timestamp between :start_time and :end_time",
                       params={'start_time': start_time, 'end_time': end_time}).to_dict("records")

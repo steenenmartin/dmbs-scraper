@@ -14,7 +14,8 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Spot prices", href="/prices", active="exact"),
+                dbc.NavLink("Fixed loan prices", href="/prices", active="exact"),
+                dbc.NavLink("Flex loan rates", href="/rates", active="exact"),
                 dbc.NavLink("OHLC prices", href="/ohlc", active="exact"),
             ],
             vertical=True,
@@ -33,6 +34,7 @@ stores = [
     html.Div(id='page-title-output'),
     html.Div(id='dummy1', style={'display': 'none'}),
     html.Div(id='dummy2', style={'display': 'none'}),
+    html.Div(id='dummy3', style={'display': 'none'}),
     html.Div(id='date_range_div', style={'display': 'none'}),
     dcc.Store(id='spot_prices_store', data=None),
     dcc.Store(id='master_data', data=None),
