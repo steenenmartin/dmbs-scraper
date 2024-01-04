@@ -2,7 +2,7 @@ import dash_bootstrap_components as dbc
 
 from dash import dcc, html
 from .. import styles
-from ...database.sqlite_conn import query_db
+from ...database.postgres_conn import query_db
 
 
 def _extract_dropdown(arg_dict, arg, cast=None):
