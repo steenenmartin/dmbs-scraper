@@ -15,11 +15,12 @@ from ...utils.object_helper import listify
 
 @app.callback([Output("spot_rates_plot", "figure"),
                Output("loading-spinner-output-spot-rates", "children")],
-              [Input("select_institute_spot_rates_plot", "value"),
+              [Input("spot_rates_store", "data"),
+               Input("select_institute_spot_rates_plot", "value"),
                Input("select_fixed_rate_period_spot_rates_plot", "value"),
                Input("select_max_io_spot_rates_plot", "value"),
                Input('spot_rates_plot', 'relayoutData')])
-def update_spot_rates_plot(institute, fixed_rate_period, max_interest_only_period, rel):
+def update_spot_rates_plot(spot_rates, institute, fixed_rate_period, max_interest_only_period, rel):
     groupers, filters = [], []
     args = [
         ('institute', institute),
@@ -33,7 +34,7 @@ def update_spot_rates_plot(institute, fixed_rate_period, max_interest_only_perio
         if not v or len(v) > 1:
             groupers.append(k)
 
-    spot_rates = query_db(sql="select * from rates")
+    spot_rates = pd.DataFrame(spot_rates)
     if filters:
         spot_rates = spot_rates.query(' and '.join(filters))
 
