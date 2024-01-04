@@ -16,6 +16,7 @@ def spot_rates_plot_page(dropdown_args):
     return dbc.Container([
         dcc.Loading(type="default", children=html.Div(id="loading-spinner-output-spot-rates"), className='spinner'),
         dcc.Store(id='master_data_float', data=query_db(sql="select * from master_data_float").to_dict('records')),
+        dcc.Store(id='spot_rates_store', data=query_db(sql="select * from rates").to_dict('records')),
         dbc.Card(
             [
                 dbc.Row(
