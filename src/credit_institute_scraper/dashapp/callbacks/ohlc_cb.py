@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+
 import pandas as pd
 from dash import Output, Input, State, ctx
 from plotly import graph_objects as go
@@ -7,6 +9,7 @@ from ..dash_app import dash_app as app
 from .utils import update_search_bar_template, update_dropdowns
 import urllib.parse
 
+from ..styles import __graph_style
 from ...database.postgres_conn import query_db
 
 
@@ -26,7 +29,17 @@ def update_search_bar_ohlc(institute, coupon_rate, years_to_maturity, max_intere
         print(e)
         print(isin_data)
         print(active_cell)
-    return update_search_bar_template(institute, coupon_rate, years_to_maturity, max_interest_only_period, isin, None, search)
+
+    args = [
+        ('institute', institute),
+        ('coupon_rate', coupon_rate),
+        ('years_to_maturity', years_to_maturity),
+        ('max_interest_only_period', max_interest_only_period),
+        ('isin', isin),
+        ('show_historic', None)
+    ]
+
+    return update_search_bar_template(args, search)
 
 
 @app.callback([
@@ -121,37 +134,26 @@ def update_ohlc_plot(active_cell, rel, isin_data, df):
         ]
     )
 
-    fig.update_layout(**styles.HISTORICAL_GRAPH_STYLE)
+    fig.update_layout(**__graph_style(x_axis_title="Date", show_historic=True))
+    fig.update_xaxes(rangeslider_visible=False)
 
-    x_range_specified = rel is not None and "xaxis.range" in rel.keys()
+    x_range_specified = rel is not None and "xaxis.range[0]" in rel.keys() and "xaxis.range[1]" in rel.keys()
     if x_range_specified:
-        xmin, xmax = rel['xaxis.range'][0], rel['xaxis.range'][1]
-    else:
-        xmin, xmax = df['timestamp'].min(), df['timestamp'].max()
+        xmin, xmax = datetime.fromisoformat(rel['xaxis.range[0]'].split(" ")[0]), datetime.fromisoformat(rel['xaxis.range[1]'].split(" ")[0])
 
-    ymin = df.loc[df['timestamp'].between(xmin, xmax)]['low_price'].min()
-    ymax = df.loc[df['timestamp'].between(xmin, xmax)]['high_price'].max()
+        temp_df = df.loc[df['timestamp'].between(xmin, xmax)]
+        ymin = temp_df["low_price"].min()
+        ymax = temp_df["high_price"].max()
+        margin = (ymax - ymin) * 0.05
 
-    fig.update_xaxes(dict(range=[xmin, xmax]))
-    fig.update_yaxes(dict(range=[ymin, ymax]))
+        fig['layout']['xaxis']['range'] = [xmin, xmax]
+        fig['layout']['yaxis']['range'] = [ymin - margin, ymax + margin]
+
+    y_range_specified = rel is not None and "yaxis.range[0]" in rel.keys() and "yaxis.range[1]" in rel.keys()
+    if y_range_specified:
+        fig['layout']['yaxis']['range'] = [rel['yaxis.range[0]'], rel['yaxis.range[1]']]
 
     logging.info(f'Updated ohlc plot figure with isin = {isin}')
 
     return fig, df.to_dict('records'), ''
 
-
-"""
-import plotly.express as px
-import pandas as pd
-df = pd.read_csv('https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv')
-
-fig = px.scatter(df, x='Date', y='AAPL.High', range_x=['2015-12-01', '2016-01-15'],
-                 title="Hide Gaps with rangebreaks")
-fig.update_xaxes(
-    rangebreaks=[
-        dict(bounds=["sat", "mon"]), #hide weekends
-        dict(values=["2015-12-25", "2016-01-01"])  # hide Christmas and New Year's
-    ]
-)
-fig.show()
-"""
