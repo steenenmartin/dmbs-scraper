@@ -10,6 +10,7 @@ from .utils import update_search_bar_template, update_dropdowns
 from ..styles import __graph_style, get_tz_name
 from ...database.postgres_conn import query_db
 from ...utils.object_helper import listify
+from plotly_resampler import FigureResampler
 
 
 @app.callback([Output("spot_prices_plot", "figure"),
@@ -97,7 +98,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
             marker={'color': c.get_hex()},
             connectgaps=show_historic
         ))
-    fig = go.Figure(lines)
+    fig = FigureResampler(go.Figure(lines))
     fig.update_layout(**__graph_style(x_axis_title="Date" if show_historic else f"Time ({get_tz_name()})", show_historic=show_historic))
 
     x_range_specified = rel is not None and "xaxis.range[0]" in rel.keys() and "xaxis.range[1]" in rel.keys()
