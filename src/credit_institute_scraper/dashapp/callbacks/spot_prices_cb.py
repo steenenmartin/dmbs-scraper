@@ -55,7 +55,6 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
     if show_historic:
         if historic_prices is None:
             historic_prices = query_db(sql="select * from closing_prices")
-            historic_prices = pd.DataFrame(historic_prices)
 
         prices = historic_prices
     else:
@@ -71,9 +70,9 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         merged_df['timestamp'] = pd.to_datetime(merged_df['timestamp']).dt.tz_localize('UTC')
         full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
 
-    lines = []
     groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]["spot_price"].mean(), reverse=True) if groupers else [('', merged_df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
+    fig = FigureResampler(go.Figure())
     for grp, c in zip(groups, colors):
         g, tmp_df = grp
         g = listify(g)
@@ -88,17 +87,18 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
 
         lgnd = '<br>'.join(f'{f.capitalize().replace("_", " ")}: {v}' for f, v in zip(groupers, g))
         hover = 'Date: %{x}<br>Price: %{y:.2f}' if show_historic else 'Time: %{x}<br>Price: %{y:.2f}'
-        lines.append(go.Scatter(
-            x=tmp_df.index,
-            y=tmp_df["spot_price"],
-            line=dict(width=3, shape=None if show_historic else 'hv'),
-            name=lgnd,
-            hovertemplate=hover,
-            showlegend=False,
-            marker={'color': c.get_hex()},
-            connectgaps=show_historic
-        ))
-    fig = FigureResampler(go.Figure(lines))
+        fig.add_trace(
+            go.Scattergl(
+                line=dict(width=3, shape=None if show_historic else 'hv'),
+                name=lgnd,
+                hovertemplate=hover,
+                showlegend=False,
+                marker={'color': c.get_hex()},
+                connectgaps=show_historic
+            ),
+            hf_x=tmp_df.index,
+            hf_y=tmp_df["spot_price"]
+        )
     fig.update_layout(**__graph_style(x_axis_title="Date" if show_historic else f"Time ({get_tz_name()})", show_historic=show_historic))
 
     x_range_specified = rel is not None and "xaxis.range[0]" in rel.keys() and "xaxis.range[1]" in rel.keys()
