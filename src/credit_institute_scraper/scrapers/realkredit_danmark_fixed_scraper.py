@@ -29,7 +29,6 @@ class RealKreditDanmarkFixedScraper(Scraper):
             price = float(product["prices"][0]["price"].replace(",", "."))
             if price <= 0.0:
                 price = float('nan')
-                self.missing_observations = True
 
             bond = FixedRateBondDataEntry(
                 self.institute.name,
