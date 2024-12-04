@@ -60,10 +60,18 @@ def scrape(conn_module, debug=False):
             # DlrKreditScraper()
         ]
 
-        # Scrape and upload spot prices
+        # Scrape spot prices
         fixed_rate_bond_data: FixedRateBondData = ScraperOrchestrator(fixed_scrapers).scrape_fixed_rate_bonds()
         fixed_rate_bond_data_df = fixed_rate_bond_data.to_spot_prices_data_frame(utc_now).drop_duplicates()
-        DatabaseResultHandler(conn_module, "spot_prices", utc_now).export_result(fixed_rate_bond_data_df)
+
+        # Fix strange RD prices
+        filtered_fixed_rate_bond_data = FixedRateBondData(
+            [e for e in fixed_rate_bond_data.entries if not (e.institute == CreditInstitute.RealKreditDanmark.name and e.offer_price == -1)]
+        )
+        filtered_fixed_rate_bond_data_df = filtered_fixed_rate_bond_data.to_spot_prices_data_frame(utc_now).drop_duplicates()
+
+        # Upload spot prices
+        DatabaseResultHandler(conn_module, "spot_prices", utc_now).export_result(filtered_fixed_rate_bond_data_df)
 
         # Update master data for each scrape, adding new bonds if not in database.
         master_data_db = conn_module.query_db("select * from master_data")
