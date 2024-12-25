@@ -25,12 +25,20 @@ def get_active_date():
 
 def is_holiday(date):
     return date.date() in [
-        dt.date(2024, 5, 20),
-        dt.date(2024, 6, 5),
-        dt.date(2024, 12, 24),
-        dt.date(2024, 12, 25),
         dt.date(2024, 12, 26),
         dt.date(2024, 12, 31),
+        dt.date(2025, 1, 1),
+        dt.date(2025, 4, 17),
+        dt.date(2025, 4, 18),
+        dt.date(2025, 4, 21),
+        dt.date(2025, 5, 29),
+        dt.date(2025, 5, 30),
+        dt.date(2025, 6, 5),
+        dt.date(2025, 6, 9),
+        dt.date(2025, 12, 24),
+        dt.date(2025, 12, 25),
+        dt.date(2025, 12, 26),
+        dt.date(2025, 12, 31),
     ]
 
 def skip_holidays(date):
