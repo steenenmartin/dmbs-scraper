@@ -42,6 +42,8 @@ class JyskeScraper(Scraper):
         return CreditInstitute.Jyske
 
     def get_data(self):
+        API = "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
+        HOME = "https://www.jyskebank.dk/"
         with sync_playwright() as p:
             executable_path = os.getenv("CHROMIUM_EXECUTABLE_PATH", None)
     
