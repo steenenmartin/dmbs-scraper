@@ -34,7 +34,7 @@ class Scraper:
         def wrapper(self):
             self.tries_count += 1
 
-            data = json.loads(get_legacy_session().get(self.url, headers=self.headers, timeout=10).text)
+            data = self.get_data()
 
             bonds = parse_bond_data_func(self, data)
 
@@ -66,6 +66,9 @@ class Scraper:
     def headers(self) -> dict:
         # Can be overridden by each Scraper-child class if necessary. See eg. jyske_scraper
         return {}
+
+    def get_data(self):
+        return json.loads(get_legacy_session().get(self.url, headers=self.headers, timeout=10).text)
 
 
 class CustomHttpAdapter(HTTPAdapter):
