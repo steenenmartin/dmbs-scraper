@@ -51,7 +51,7 @@ def home_page():
                         ),
                         html.Br(),
                         html.P("Bondstats is developed by Oskar August Rosendal and Martin Steen Andersen Ehlers"),
-                        html.P("Reach us at info@bondstats.dk"),
+                        html.P("Contact: martinsteenandersen@gmail.com"),
                         html.Br(),
                         html.H4("User guide"),
                         html.P("Mobile users: Use horizontal orientation mode for best user experience."),
