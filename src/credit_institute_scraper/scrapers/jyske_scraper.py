@@ -42,46 +42,50 @@ class JyskeScraper(Scraper):
         return CreditInstitute.Jyske
 
     def get_data(self):
-        API = "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
-        HOME = "https://www.jyskebank.dk/"
+        API  = "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
+        ORIGIN = "https://www.jyskebank.dk/"
+        PAGE   = "https://www.jyskebank.dk/bolig/realkreditkurser"
         with sync_playwright() as p:
-            executable_path = os.getenv("CHROMIUM_EXECUTABLE_PATH", None)
+            browser = p.firefox.launch(headless=True)
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
     
-            launch_kwargs = {
-                "headless": True,
-                "args": [
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-gpu",
-                    "--no-zygote",
-                ],
-            }
-            if executable_path:
-                launch_kwargs["executable_path"] = executable_path
+            ctx = browser.new_context(locale="da-DK", user_agent=ua)
     
-            browser = p.chromium.launch(**launch_kwargs)
-            ctx = browser.new_context(
-                locale="da-DK",
-                user_agent=("Mozilla/5.0 (Windows NT 10.0; Win64; x64) " "AppleWebKit/537.36 (KHTML, like Gecko) " "Chrome/120.0.0.0 Safari/537.36"),
-            )
+            # Light stealth: remove webdriver flag etc.
+            ctx.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                try { window.chrome = window.chrome || { runtime: {} }; } catch (e) {}
+                Object.defineProperty(navigator, 'languages', { get: () => ['da-DK','da','en-US','en'] });
+                Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+            """)
+    
             page = ctx.new_page()
+            page.goto(PAGE, wait_until="domcontentloaded")
     
-            page.goto(HOME, wait_until="networkidle")
+            page.wait_for_load_state("networkidle")
             time.sleep(1.0)
     
-            data = page.evaluate(
-                """async (url) => {
-                    const r = await fetch(url, {
-                        headers: { "accept": "application/json" },
-                        credentials: "include"
-                    });
-                    if (!r.ok) {
-                        return { ok: false, status: r.status, text: await r.text() };
+            fetch_script = """
+                async ({ url, ref }) => {
+                    const doFetch = async () => {
+                        const r = await fetch(url, {
+                            headers: { "accept": "application/json" },
+                            credentials: "include",
+                            referrer: ref,
+                            referrerPolicy: "strict-origin"
+                        });
+                        if (!r.ok) return { ok:false, status:r.status, text: await r.text() };
+                        return { ok:true, json: await r.json() };
+                    };
+                    let lastErr = null;
+                    for (let i = 0; i < 3; i++) {
+                        try { return await doFetch(); }
+                        catch (e) { lastErr = String(e); await new Promise(r => setTimeout(r, 800)); }
                     }
-                    return { ok: true, json: await r.json() };
-                }""",
-                API
-            )
+                    return { ok:false, error:lastErr || "unknown error" };
+                }
+            """
+            res = page.evaluate(fetch_script, {"url": API, "ref": ORIGIN})
             browser.close()
-        return data["json"]
+                
+        return res["json"]
