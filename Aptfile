@@ -1,2 +1,65 @@
+# Headless Firefox + Playwright deps on Ubuntu 22 (heroku-22)
+
+# audio (needed by Firefox even headless sometimes)
 libasound2
+libpulse0
+libasyncns0
+libflac8
+libsndfile1
+
+# X11 / GTK / Wayland stack bits
+libx11-xcb1
+libxrandr2
+libxcomposite1
+libxcursor1
+libxdamage1
+libxfixes3
+libxi6
+libxinerama1
+libxkbcommon0
+libxt6
+libsm6
+libice6
+libvpx7
+
+# GTK3 + related
+libgtk-3-0
+libgtk-3-bin
+libgtk-3-common
+libgdk-pixbuf2.0-0
+libepoxy0
+
+# a11y / atk
+libatk1.0-0
+libatk1.0-data
+libatk-bridge2.0-0
+libatspi2.0-0
+at-spi2-core
+
+# dbus / systemd bits frequently required by GTK stack in containers
+dbus
+dbus-user-session
+libdconf1
+dconf-service
+dconf-gsettings-backend
+gsettings-desktop-schemas
+libnss-systemd
+libpam-systemd
+systemd-sysv
+xkb-data
+
+# icons/themes (GTK complains without them)
+adwaita-icon-theme
+humanity-icon-theme
+ubuntu-mono
+gtk-update-icon-cache
+
+# Wayland shims (safe even if X11 is used)
+libwayland-client0
+libwayland-cursor0
+libwayland-egl1
+
+# misc
+libusb-1.0-0
+libcolord2
 libdbus-glib-1-2
