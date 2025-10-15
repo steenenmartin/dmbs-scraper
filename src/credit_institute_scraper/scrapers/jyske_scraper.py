@@ -46,7 +46,11 @@ class JyskeScraper(Scraper):
         ORIGIN = "https://www.jyskebank.dk/"
         PAGE   = "https://www.jyskebank.dk/bolig/realkreditkurser"
         with sync_playwright() as p:
-            browser = p.firefox.launch(headless=True)
+            browser = p.firefox.launch(
+                executable_path=os.getenv("FIREFOX_EXECUTABLE_PATH"),
+                headless=headless,
+                args=["-headless"],   # safe in containers
+            )
             ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
     
             ctx = browser.new_context(locale="da-DK", user_agent=ua)
