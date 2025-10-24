@@ -1,4 +1,4 @@
-import os, json, time
+import os, time
 from playwright.sync_api import sync_playwright
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
@@ -58,6 +58,11 @@ class JyskeScraper(Scraper):
             )
             try:
                 ctx = browser.new_context(locale="da-DK", user_agent=UA)
+
+                ctx.route("**/*", lambda route, req: (
+                    route.abort() if req.resource_type in {"image", "media", "font", "stylesheet"} else route.continue_()
+                ))
+
                 # light stealth
                 ctx.add_init_script("""
                     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -98,7 +103,7 @@ class JyskeScraper(Scraper):
                     except Exception:
                         pass
     
-                deadline = time.time() + (25000 / 1000.0)
+                deadline = time.time() + (60000 / 1000.0)
                 while captured["data"] is None and time.time() < deadline:
                     page.wait_for_timeout(250)
     
