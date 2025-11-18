@@ -1,5 +1,4 @@
-import os, time
-from playwright.sync_api import sync_playwright
+import logging
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
@@ -41,7 +40,7 @@ class JyskeScraper(Scraper):
     def institute(self) -> CreditInstitute:
         return CreditInstitute.Jyske
 
-    _data_cache: dict | None = None  # add this
+    _data_cache: dict | None = None
 
     def get_data(self):
         # 1) Reuse cached payload for both parse_* calls
@@ -49,17 +48,20 @@ class JyskeScraper(Scraper):
             return self._data_cache
 
         import os, time
-        from playwright.sync_api import sync_playwright
-
+        from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+        
         API = "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
         PAGE = "https://www.jyskebank.dk/bolig/realkreditkurser"
         ORIGIN = "https://www.jyskebank.dk/"
-        UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
-        exe = os.getenv("FIREFOX_EXECUTABLE_PATH")  # set on Heroku
+        UA = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) "
+            "Gecko/20100101 Firefox/131.0"
+        )
+        exe = os.getenv("FIREFOX_EXECUTABLE_PATH")
 
         with sync_playwright() as p:
             browser = p.firefox.launch(
-                executable_path=exe if exe else None,
+                executable_path=exe or None,
                 headless=True,
                 args=["-headless"],
             )
@@ -81,7 +83,7 @@ class JyskeScraper(Scraper):
                 BLOCK_HOSTS = (
                     "doubleclick.net", "google-analytics.com", "googletagmanager.com",
                     "facebook.com", "facebook.net", "hotjar.com", "azure.com",
-                    "optimizely.com", "cdn.segment.com"
+                    "optimizely.com", "cdn.segment.com",
                 )
 
                 def _route(route, req):
@@ -94,18 +96,19 @@ class JyskeScraper(Scraper):
 
                 page = ctx.new_page()
 
-                # ---- Strategy 1: capture the page's own XHR (cheapest) ----
-                captured = {"data": None}
+                # ---- Strategy 1: hook the page's own XHR ----
+                captured: dict[str, dict | None] = {"data": None}
 
                 def on_resp(r):
                     if r.url == API and r.status == 200:
                         try:
                             captured["data"] = r.json()
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            logging.warning("Jyske: failed to parse JSON from XHR: %s", e)
 
                 ctx.on("response", on_resp)
 
+                logging.debug("Jyske: navigating to kursliste page")
                 page.goto(PAGE, wait_until="domcontentloaded")
 
                 # Accept cookies if present (best-effort)
@@ -114,60 +117,65 @@ class JyskeScraper(Scraper):
                             "[data-testid='uc-accept-all']"):
                     try:
                         page.locator(sel).first.click(timeout=350)
+                        logging.debug("Jyske: clicked cookie button %s", sel)
                         break
                     except Exception:
                         pass
 
-                page.wait_for_load_state("networkidle")
-                # Nudge some SPAs to refetch once
+                # Let the page settle a bit
+                try:
+                    page.wait_for_load_state("networkidle", timeout=30000)
+                except PWTimeout:
+                    logging.debug("Jyske: networkidle timeout, continue anyway")
+
+                # Small nudge
                 try:
                     page.evaluate("window.scrollTo(0, 600)")
                     page.evaluate("window.scrollTo(0, 0)")
                 except Exception:
                     pass
 
-                # Wait up to ~60s (rare slow CF); check every 250ms
+                # Wait up to 60s for XHR to show up
                 end = time.time() + 60
                 while captured["data"] is None and time.time() < end:
                     page.wait_for_timeout(250)
 
                 if captured["data"] is not None:
+                    logging.info("Jyske: got data from page XHR")
                     self._data_cache = captured["data"]
                     return self._data_cache
 
-                # ---- Strategy 2: fallback in-page fetch with proper referrer ----
-                fetch_script = """
-                    async ({ url, ref }) => {
-                        const go = async () => {
-                            const r = await fetch(url, {
-                                headers: { "accept": "application/json" },
-                                credentials: "include",
-                                referrer: ref,
-                                referrerPolicy: "strict-origin"
-                            });
-                            if (!r.ok) return { ok:false, status:r.status, text: await r.text() };
-                            return { ok:true, json: await r.json() };
-                        };
-                        for (let i=0;i<2;i++){    // fewer retries; we already waited above
-                            try { return await go(); }
-                            catch { await new Promise(r=>setTimeout(r, 600)); }
-                        }
-                        return { ok:false, status:null, text:"fetch failed" };
-                    }
-                """
-                res = page.evaluate(fetch_script, {"url": API, "ref": ORIGIN})
-                if res.get("ok"):
-                    self._data_cache = res["json"]
+                logging.warning("Jyske: XHR did not appear within 60s, using direct API fallback")
+
+                # ---- Strategy 2: context.request.get (shares cookies with ctx) ----
+                resp = ctx.request.get(
+                    API,
+                    headers={"accept": "application/json"},
+                    max_redirects=3,
+                    timeout=45000,
+                )
+                if resp.ok:
+                    logging.info("Jyske: got data via APIRequestContext (%s)", resp.status)
+                    self._data_cache = resp.json()
                     return self._data_cache
 
-                raise RuntimeError(f"Jyske kursliste blocked: {res.get('status')} {str(res.get('text'))[:180]}")
+                # Non-2xx HTTP response
+                text_snippet = resp.text()[:180]
+                raise RuntimeError(
+                    f"Jyske kursliste HTTP error: {resp.status} {text_snippet}"
+                )
 
+            except Exception as e:
+                # This is what your decorator will log as "Scraping 'Jyske' failed ..."
+                logging.exception("Jyske: unrecoverable error in get_data: %s", e)
+                raise
             finally:
-                # 4) Close aggressively to free RAM
                 try:
-                    if page: page.close()
+                    if page:
+                        page.close()
                 finally:
                     try:
-                        if ctx: ctx.close()
+                        if ctx:
+                            ctx.close()
                     finally:
                         browser.close()
