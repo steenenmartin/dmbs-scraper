@@ -1,4 +1,5 @@
 import logging
+import json
 
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
@@ -47,7 +48,7 @@ class JyskeScraper(Scraper):
         if self._data_cache is not None:
             return self._data_cache
 
-        import os, time
+        import os
         from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
         
         API = "https://jyskeberegner-api.jyskebank.dk/api/privat/kursliste"
@@ -60,15 +61,36 @@ class JyskeScraper(Scraper):
         exe = os.getenv("FIREFOX_EXECUTABLE_PATH")
 
         with sync_playwright() as p:
-            browser = p.firefox.launch(
-                executable_path=exe or None,
-                headless=True,
-                args=["-headless"],
-            )
-            ctx = None
-            page = None
             try:
-                # 2) Create context
+                # 2) Try lightweight API context first (no browser process)
+                req_ctx = p.request.new_context(
+                    user_agent=UA,
+                    extra_http_headers={
+                        "accept": "application/json, text/plain, */*",
+                        "origin": ORIGIN.rstrip("/"),
+                        "referer": PAGE,
+                    },
+                )
+                try:
+                    resp = req_ctx.get(API, max_redirects=3, timeout=30000)
+                    if resp.ok:
+                        logging.info("Jyske: got data via lightweight APIRequestContext (%s)", resp.status)
+                        self._data_cache = resp.json()
+                        return self._data_cache
+                    logging.warning("Jyske: lightweight APIRequestContext returned HTTP %s", resp.status)
+                finally:
+                    req_ctx.dispose()
+
+                # 3) Fallback: run real browser session and fetch from page context
+                browser = p.firefox.launch(
+                    executable_path=exe or None,
+                    headless=True,
+                    args=["-headless"],
+                )
+                ctx = None
+                page = None
+
+                # 4) Create context
                 ctx = browser.new_context(locale="da-DK", user_agent=UA)
 
                 # Light stealth
@@ -78,7 +100,7 @@ class JyskeScraper(Scraper):
                     Object.defineProperty(navigator, 'platform',  { get: () => 'Win32' });
                 """)
 
-                # 3) Block heavy/3rd-party requests up front
+                # 5) Block heavy/3rd-party requests up front
                 BLOCK_TYPES = {"image", "media", "font", "stylesheet"}
                 BLOCK_HOSTS = (
                     "doubleclick.net", "google-analytics.com", "googletagmanager.com",
@@ -95,18 +117,6 @@ class JyskeScraper(Scraper):
                 ctx.route("**/*", _route)
 
                 page = ctx.new_page()
-
-                # ---- Strategy 1: hook the page's own XHR ----
-                captured: dict[str, dict | None] = {"data": None}
-
-                def on_resp(r):
-                    if r.url == API and r.status == 200:
-                        try:
-                            captured["data"] = r.json()
-                        except Exception as e:
-                            logging.warning("Jyske: failed to parse JSON from XHR: %s", e)
-
-                ctx.on("response", on_resp)
 
                 logging.debug("Jyske: navigating to kursliste page")
                 page.goto(PAGE, wait_until="domcontentloaded")
@@ -135,22 +145,36 @@ class JyskeScraper(Scraper):
                 except Exception:
                     pass
 
-                # Wait up to 60s for XHR to show up
-                end = time.time() + 60
-                while captured["data"] is None and time.time() < end:
-                    page.wait_for_timeout(250)
-
-                if captured["data"] is not None:
-                    logging.info("Jyske: got data from page XHR")
-                    self._data_cache = captured["data"]
+                # Fetch from page JS context (avoids Firefox response-body protocol errors)
+                raw = page.evaluate(
+                    """
+                    async (apiUrl) => {
+                        const resp = await fetch(apiUrl, {
+                            method: 'GET',
+                            credentials: 'include',
+                            headers: { 'accept': 'application/json, text/plain, */*' }
+                        });
+                        const text = await resp.text();
+                        return { ok: resp.ok, status: resp.status, text };
+                    }
+                    """,
+                    API,
+                )
+                if raw.get("ok"):
+                    self._data_cache = json.loads(raw["text"])
+                    logging.info("Jyske: got data from in-page fetch")
                     return self._data_cache
 
-                logging.warning("Jyske: XHR did not appear within 60s, using direct API fallback")
+                logging.warning("Jyske: in-page fetch returned HTTP %s, trying context.request fallback", raw.get("status"))
 
-                # ---- Strategy 2: context.request.get (shares cookies with ctx) ----
+                # 6) Context-request fallback (shares browser context cookies)
                 resp = ctx.request.get(
                     API,
-                    headers={"accept": "application/json"},
+                    headers={
+                        "accept": "application/json, text/plain, */*",
+                        "origin": ORIGIN.rstrip("/"),
+                        "referer": PAGE,
+                    },
                     max_redirects=3,
                     timeout=45000,
                 )
@@ -170,12 +194,9 @@ class JyskeScraper(Scraper):
                 logging.exception("Jyske: unrecoverable error in get_data: %s", e)
                 raise
             finally:
-                try:
-                    if page:
-                        page.close()
-                finally:
-                    try:
-                        if ctx:
-                            ctx.close()
-                    finally:
-                        browser.close()
+                if "page" in locals() and page:
+                    page.close()
+                if "ctx" in locals() and ctx:
+                    ctx.close()
+                if "browser" in locals() and browser:
+                    browser.close()
