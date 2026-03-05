@@ -68,7 +68,7 @@ def update_spot_prices_plot(institute, coupon_rate, years_to_maturity, max_inter
         full_idx = pd.date_range(merged_df['timestamp'].min(), merged_df['timestamp'].max())
     else:
         merged_df['timestamp'] = pd.to_datetime(merged_df['timestamp']).dt.tz_localize('UTC')
-        full_idx = pd.date_range(date_range[0], date_range[1], freq='5T').tz_convert('Europe/Copenhagen')
+        full_idx = pd.date_range(date_range[0], date_range[1], freq='5min').tz_convert('Europe/Copenhagen')
 
     groups = sorted(merged_df.groupby(groupers), key=lambda x: x[1]["spot_price"].mean(), reverse=True) if groupers else [('', merged_df)]
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
