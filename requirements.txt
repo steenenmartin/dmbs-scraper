@@ -16,3 +16,4 @@ flask-caching
 dash_daq==0.5.0
 plotly-resampler
 playwright
+pytz
