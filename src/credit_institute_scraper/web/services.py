@@ -7,6 +7,9 @@ from typing import Any
 import pandas as pd
 import plotly.graph_objects as go
 from colour import Color
+import pytz
+
+from ..utils.date_helper import get_active_time_range
 
 DB_PATH = Path(__file__).resolve().parents[3] / 'database.db'
 
@@ -15,8 +18,7 @@ GRAPH_STYLE = dict(
     plot_bgcolor="#f2f2f2",
     paper_bgcolor="#FFFFFF",
     font={"color": "#000000"},
-    xaxis={"showline": True, "zeroline": False, "showgrid": True, "gridcolor": "#676565"},
-    yaxis={"showline": True, "zeroline": False, "showgrid": True, "gridcolor": "#676565"},
+    margin={"l": 20, "r": 20, "b": 30, "t": 40},
 )
 
 
@@ -35,7 +37,10 @@ def get_master_data() -> pd.DataFrame:
 
 
 def options_for(df: pd.DataFrame, col: str) -> list[str]:
-    return sorted([x for x in df[col].dropna().unique().tolist()])
+    vals = sorted([x for x in df[col].dropna().unique().tolist()])
+    if pd.api.types.is_numeric_dtype(df[col]):
+        return [str(v) for v in vals]
+    return vals
 
 
 def filter_data(df: pd.DataFrame, filters: dict[str, Any]) -> pd.DataFrame:
@@ -44,6 +49,15 @@ def filter_data(df: pd.DataFrame, filters: dict[str, Any]) -> pd.DataFrame:
         if value not in (None, ""):
             out = out[out[key] == _cast_like(out, key, value)]
     return out
+
+
+def constrained_options(master_df: pd.DataFrame, filters: dict[str, Any]) -> dict[str, list[str]]:
+    response: dict[str, list[str]] = {}
+    for key in filters.keys():
+        other_filters = {k: v for k, v in filters.items() if k != key}
+        valid_subset = filter_data(master_df, other_filters)
+        response[key] = options_for(valid_subset, key)
+    return response
 
 
 def _cast_like(df: pd.DataFrame, key: str, value: str) -> Any:
@@ -58,7 +72,7 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
         fig.update_layout(title='No matching spot price data', **GRAPH_STYLE)
         return fig
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True).dt.tz_convert('Europe/Copenhagen')
     groupers = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
     groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True)
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
@@ -79,8 +93,30 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
             )
         )
 
+    start_utc, end_utc = get_active_time_range(force_9_17=True)
+    tz_cph = pytz.timezone('Europe/Copenhagen')
+    start_cet = start_utc.astimezone(tz_cph)
+    end_cet = end_utc.astimezone(tz_cph)
+
     fig = go.Figure(traces)
-    fig.update_layout(title='Fixed loan spot prices', xaxis_title='Time (Europe/Copenhagen)', **GRAPH_STYLE)
+    fig.update_layout(
+        title='Fixed loan spot prices',
+        xaxis_title='Time (CEST/CET)',
+        xaxis=dict(
+            range=[start_cet, end_cet],
+            tick0=start_cet,
+            dtick=3600000,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='#676565',
+            griddash='solid',
+            showline=True,
+            zeroline=False,
+            minor=dict(dtick=900000, showgrid=True, gridwidth=1, gridcolor='#676565', griddash='dot'),
+        ),
+        yaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'),
+        **GRAPH_STYLE,
+    )
     return fig
 
 
@@ -122,7 +158,7 @@ def make_ohlc_figure(isin: str | None) -> go.Figure:
             ),
         ]
     )
-    fig.update_layout(title=f'OHLC prices ({isin})', xaxis_title='Date', **GRAPH_STYLE)
+    fig.update_layout(title=f'OHLC prices ({isin})', xaxis_title='Date', yaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'), xaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'), **GRAPH_STYLE)
     fig.update_xaxes(rangeslider_visible=False)
     return fig
 
@@ -132,6 +168,8 @@ def make_spot_rates_figure() -> go.Figure:
     fig.update_layout(
         title='Flex loan rates',
         annotations=[dict(text='Spot-rate dataset is not present in local SQLite database.', x=0.5, y=0.5, showarrow=False)],
+        xaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'),
+        yaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'),
         **GRAPH_STYLE,
     )
     return fig

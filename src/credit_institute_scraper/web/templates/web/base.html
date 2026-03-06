@@ -8,18 +8,16 @@
   <link rel="stylesheet" href="{% static 'web/style.css' %}">
 </head>
 <body>
-<div class="layout">
-  <aside class="sidebar">
-    <h1>Bond stats</h1>
+<header class="topbar">
+  <div class="brand">Bond stats</div>
+  <nav class="topnav">
     <a href="/">Home</a>
     <a href="/prices/">Fixed loan prices</a>
     <a href="/rates/">Flex loan rates</a>
     <a href="/ohlc/">OHLC prices</a>
     <a href="/export/">Export CSV</a>
-  </aside>
-  <main class="content">
-    {% block content %}{% endblock %}
-  </main>
-</div>
+  </nav>
+</header>
+<main class="content">{% block content %}{% endblock %}</main>
 </body>
 </html>

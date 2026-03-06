@@ -31,8 +31,12 @@ WSGI_APPLICATION = 'src.credit_institute_scraper.django_project.wsgi.application
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'database.db',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'd6v4equ3b5lrg3',
+        'USER': 'ufat6r7kf9ccoe',
+        'PASSWORD': 'pab015156b9089bb6d27b8bbc4b7ec7e693b14bac792335671b78029da29a2d32',
+        'HOST': 'c35nvon35iqc30.cluster-czz5s0kz4scl.eu-west-1.rds.amazonaws.com',
+        'PORT': '5432',
     }
 }
 

@@ -1,17 +1,21 @@
+{% load web_extras %}
 {% extends 'web/base.html' %}
 {% block content %}
-<h2>{{ title }}</h2>
-<form method="get" class="filters">
+<section class="page-head">
+  <h2>{{ title }}</h2>
+</section>
+<form method="get" class="filters" id="filters-form">
   {% for key, vals in options.items %}
-    <label>{{ key|title }}</label>
-    <select name="{{ key }}">
-      <option value="">All</option>
-      {% for value in vals %}
-      <option value="{{ value }}" {% if filters.key == value %}selected{% endif %}>{{ value }}</option>
-      {% endfor %}
-    </select>
+    <div class="filter-item">
+      <label for="id_{{ key }}">{{ key|title }}</label>
+      <select id="id_{{ key }}" name="{{ key }}" {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
+        <option value="">All</option>
+        {% for value in vals %}
+        <option value="{{ value }}" {% if filters|get_item:key == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </div>
   {% endfor %}
-  {% if options %}<button type="submit">Apply</button>{% endif %}
 </form>
-<div class="plot-wrapper">{{ plot|safe }}</div>
+<div class="plot-wrapper full-height-plot">{{ plot|safe }}</div>
 {% endblock %}

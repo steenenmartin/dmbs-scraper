@@ -5,6 +5,7 @@ from django.shortcuts import render
 import plotly.io as pio
 
 from .services import (
+    constrained_options,
     filter_data,
     get_master_data,
     make_ohlc_figure,
@@ -29,16 +30,24 @@ def prices(request):
         'isin': request.GET.get('isin'),
     }
 
-    price_df = query_df('select * from prices')
+    dynamic_options = constrained_options(master_data, filters)
+
+    # Clean impossible selections when other filters constrain the option space.
+    for key, value in list(filters.items()):
+        if value and value not in dynamic_options[key]:
+            filters[key] = None
+
     filtered_master = filter_data(master_data, filters)
+    price_df = query_df('select * from prices')
     filtered_prices = price_df[price_df['isin'].isin(filtered_master['isin'].unique())]
 
     fig = make_spot_prices_figure(filtered_prices)
     context = {
         'title': 'Fixed loan prices',
-        'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn'),
+        'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}),
         'filters': filters,
-        'options': {k: options_for(master_data, k) for k in filters.keys()},
+        'options': constrained_options(master_data, filters),
+        'auto_apply': True,
     }
     return render(request, 'web/graph_page.html', context)
 
@@ -48,7 +57,7 @@ def rates(request):
     return render(
         request,
         'web/graph_page.html',
-        {'title': 'Flex loan rates', 'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn'), 'filters': {}, 'options': {}},
+        {'title': 'Flex loan rates', 'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}), 'filters': {}, 'options': {}, 'auto_apply': False},
     )
 
 
@@ -61,9 +70,10 @@ def ohlc(request):
         'web/graph_page.html',
         {
             'title': 'OHLC prices',
-            'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn'),
+            'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}),
             'filters': {'isin': isin},
             'options': {'isin': options_for(master_data, 'isin')},
+            'auto_apply': True,
         },
     )
 

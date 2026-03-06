@@ -1,11 +1,35 @@
-body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f5f7fb; color: #1f2937; }
-.layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
-.sidebar { background: linear-gradient(160deg, #1f2937, #111827); color: #fff; padding: 24px; display: flex; flex-direction: column; gap: 10px; }
-.sidebar h1 { margin: 0 0 10px 0; font-size: 1.6rem; }
-.sidebar a { color: #c7d2fe; text-decoration: none; padding: 10px 12px; border-radius: 10px; }
-.sidebar a:hover { background: rgba(255,255,255,0.08); color: white; }
-.content { padding: 24px 32px; }
-.filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-.filters select, .filters button { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: white; }
-.filters button { background: #2563eb; color: white; border: none; }
-.plot-wrapper { background: white; border-radius: 14px; padding: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --primary: #2563eb;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, Segoe UI, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+}
+.brand { font-weight: 700; letter-spacing: 0.2px; }
+.topnav { display: flex; gap: 8px; flex-wrap: wrap; }
+.topnav a {
+  color: #1e293b; text-decoration: none; padding: 8px 12px; border-radius: 10px;
+}
+.topnav a:hover { background: #eaf1ff; color: #1d4ed8; }
+.content { padding: 20px 28px; min-height: calc(100vh - 64px); }
+.hero { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.page-head h2 { margin: 0 0 12px 0; }
+.filters {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;
+  margin-bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+}
+.filter-item label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+.filter-item select { width: 100%; padding: 9px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; }
+.plot-wrapper { background: var(--panel); border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08); }
+.full-height-plot { min-height: calc(100vh - 220px); }
+.full-height-plot .plotly-graph-div, .full-height-plot .js-plotly-plot, .full-height-plot > div { height: 100% !important; min-height: calc(100vh - 240px); }
