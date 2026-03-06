@@ -1,0 +1,17 @@
+{% extends 'web/base.html' %}
+{% block content %}
+<h2>{{ title }}</h2>
+<form method="get" class="filters">
+  {% for key, vals in options.items %}
+    <label>{{ key|title }}</label>
+    <select name="{{ key }}">
+      <option value="">All</option>
+      {% for value in vals %}
+      <option value="{{ value }}" {% if filters.key == value %}selected{% endif %}>{{ value }}</option>
+      {% endfor %}
+    </select>
+  {% endfor %}
+  {% if options %}<button type="submit">Apply</button>{% endif %}
+</form>
+<div class="plot-wrapper">{{ plot|safe }}</div>
+{% endblock %}
