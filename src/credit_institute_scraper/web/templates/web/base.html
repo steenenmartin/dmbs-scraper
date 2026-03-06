@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title|default:'Bond stats' }}</title>
+  <link rel="stylesheet" href="{% static 'web/style.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">Bond stats</div>
+  <nav class="topnav">
+    <a href="/">Home</a>
+    <a href="/prices/">Fixed loan prices</a>
+    <a href="/rates/">Flex loan rates</a>
+    <a href="/ohlc/">OHLC prices</a>
+    <a href="/export/">Export CSV</a>
+  </nav>
+</header>
+<main class="content">{% block content %}{% endblock %}</main>
+</body>
+</html>

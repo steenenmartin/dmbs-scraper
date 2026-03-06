@@ -1,0 +1,99 @@
+{% extends 'web/base.html' %}
+{% load web_extras %}
+{% block content %}
+<section class="page-head page-head-row">
+  <h2>{{ title }}</h2>
+  <a class="clear-filters" href="?">Clear filters</a>
+</section>
+<form method="get" class="filters" id="filters-form">
+  {% for key, vals in options.items %}
+    <fieldset class="filter-group">
+      <legend>{{ key|title }}</legend>
+      <div class="checkbox-list">
+        {% for value in vals %}
+          <label class="check-item">
+            <input type="checkbox" name="{{ key }}" value="{{ value }}" {% if filters|get_item:key|contains:value %}checked{% endif %} {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
+            <span>{{ value }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+  {% endfor %}
+</form>
+<div class="plot-wrapper full-height-plot">{{ plot|safe }}</div>
+
+{% if is_spot_prices_page %}
+<script>
+(function () {
+  const POLL_INTERVAL_MS = 60000;
+  const pollBaseUrl = "{{ poll_url }}";
+  let since = "{{ poll_since }}";
+
+  function buildPollUrl() {
+    const current = new URL(window.location.href);
+    const poll = new URL(pollBaseUrl, window.location.origin);
+    current.searchParams.forEach((value, key) => {
+      poll.searchParams.append(key, value);
+    });
+    if (since) {
+      poll.searchParams.set("since", since);
+    }
+    return poll.toString();
+  }
+
+  function getGraphDiv() {
+    return document.querySelector('.full-height-plot .js-plotly-plot');
+  }
+
+  function appendSeries(gd, seriesList) {
+    for (const series of seriesList) {
+      if (!series.x || series.x.length === 0) {
+        continue;
+      }
+
+      const traceIndex = gd.data.findIndex((t) => t.name === series.name);
+      if (traceIndex >= 0) {
+        Plotly.extendTraces(gd, {x: [series.x], y: [series.y]}, [traceIndex]);
+      } else {
+        Plotly.addTraces(gd, [{
+          type: 'scattergl',
+          mode: 'lines',
+          name: series.name,
+          x: series.x,
+          y: series.y,
+          line: {width: 3, shape: 'hv'},
+          hovertemplate: 'Time: %{x}<br>Price: %{y:.2f}',
+          showlegend: false
+        }]);
+      }
+    }
+  }
+
+  async function poll() {
+    const gd = getGraphDiv();
+    if (!gd || typeof Plotly === 'undefined') {
+      return;
+    }
+
+    try {
+      const response = await fetch(buildPollUrl(), {headers: {'Accept': 'application/json'}});
+      if (!response.ok) {
+        return;
+      }
+      const payload = await response.json();
+      if (payload.series && payload.series.length > 0) {
+        appendSeries(gd, payload.series);
+      }
+      if (payload.latest_timestamp) {
+        since = payload.latest_timestamp;
+      }
+    } catch (error) {
+      console.debug('Spot-price polling failed', error);
+    }
+  }
+
+  window.setInterval(poll, POLL_INTERVAL_MS);
+})();
+</script>
+{% endif %}
+{% endblock %}

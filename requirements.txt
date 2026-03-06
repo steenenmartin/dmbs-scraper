@@ -17,3 +17,5 @@ dash_daq==0.5.0
 plotly-resampler
 playwright
 pytz
+
+Django>=5.0,<6.0

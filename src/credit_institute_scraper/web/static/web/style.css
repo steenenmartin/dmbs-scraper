@@ -1,0 +1,77 @@
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --primary: #2563eb;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, Segoe UI, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; border-bottom: 1px solid var(--line);
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+}
+.brand { font-weight: 700; letter-spacing: 0.2px; }
+.topnav { display: flex; gap: 8px; flex-wrap: wrap; }
+.topnav a { color: #1e293b; text-decoration: none; padding: 8px 12px; border-radius: 10px; }
+.topnav a:hover { background: #eaf1ff; color: #1d4ed8; }
+.content {
+  padding: 16px 20px;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hero { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.page-head h2 { margin: 0; }
+.page-head-row { display: flex; align-items: center; justify-content: space-between; }
+.clear-filters {
+  text-decoration: none;
+  color: #1d4ed8;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: #eef2ff;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  flex: 0 0 auto;
+}
+.filter-group { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin: 0; min-height: 90px; }
+.filter-group legend { font-size: 0.8rem; color: var(--muted); padding: 0 4px; }
+.checkbox-list { display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow: auto; }
+.check-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.check-item input { margin: 0; }
+.plot-wrapper {
+  background: var(--panel);
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.full-height-plot .plotly-graph-div,
+.full-height-plot .js-plotly-plot,
+.full-height-plot > div {
+  height: 100% !important;
+  min-height: 0 !important;
+}
