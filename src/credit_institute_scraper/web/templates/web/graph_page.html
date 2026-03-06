@@ -8,10 +8,9 @@
   {% for key, vals in options.items %}
     <div class="filter-item">
       <label for="id_{{ key }}">{{ key|title }}</label>
-      <select id="id_{{ key }}" name="{{ key }}" {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
-        <option value="">All</option>
+      <select id="id_{{ key }}" name="{{ key }}" multiple size="6" {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
         {% for value in vals %}
-        <option value="{{ value }}" {% if filters|get_item:key == value %}selected{% endif %}>{{ value }}</option>
+        <option value="{{ value }}" {% if filters|get_item:key|contains:value %}selected{% endif %}>{{ value }}</option>
         {% endfor %}
       </select>
     </div>
@@ -30,7 +29,7 @@
     const current = new URL(window.location.href);
     const poll = new URL(pollBaseUrl, window.location.origin);
     current.searchParams.forEach((value, key) => {
-      poll.searchParams.set(key, value);
+      poll.searchParams.append(key, value);
     });
     if (since) {
       poll.searchParams.set("since", since);

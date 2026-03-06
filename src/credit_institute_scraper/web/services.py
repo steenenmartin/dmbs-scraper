@@ -48,7 +48,14 @@ def options_for(df: pd.DataFrame, col: str) -> list[str]:
 def filter_data(df: pd.DataFrame, filters: dict[str, Any]) -> pd.DataFrame:
     out = df.copy()
     for key, value in filters.items():
-        if value not in (None, ""):
+        if value in (None, "", []):
+            continue
+
+        if isinstance(value, (list, tuple, set)):
+            casted = [_cast_like(out, key, v) for v in value if v not in (None, "")]
+            if casted:
+                out = out[out[key].isin(casted)]
+        else:
             out = out[out[key] == _cast_like(out, key, value)]
     return out
 
@@ -151,13 +158,16 @@ def get_filtered_prices(master_data: pd.DataFrame, filters: dict[str, Any], sinc
     if filtered_master.empty:
         return pd.DataFrame(columns=['timestamp', 'institute', 'isin', 'years_to_maturity', 'max_interest_only_period', 'coupon_rate', 'spot_price'])
 
-    in_clause = ', '.join([f"'{x}'" for x in filtered_master['isin'].unique().tolist()])
-    sql = f"select * from prices where isin in ({in_clause})"
-    params: dict[str, Any] | None = None
+    isins = filtered_master['isin'].unique().tolist()
+    placeholders = ', '.join(['?'] * len(isins))
+    sql = f"select * from prices where isin in ({placeholders})"
+    params: list[Any] = list(isins)
     if since:
-        sql += " and timestamp > :since"
-        params = {'since': since}
-    return query_df(sql, params=params)
+        sql += " and timestamp > ?"
+        params.append(since)
+
+    with sqlite3.connect(DB_PATH) as conn:
+        return pd.read_sql(sql, conn, params=params)
 
 
 def latest_timestamp(df: pd.DataFrame) -> str | None:

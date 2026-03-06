@@ -17,15 +17,27 @@ from .services import (
     query_df,
 )
 
+FILTER_KEYS = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
 
-def _spot_filters(request) -> dict[str, str | None]:
-    return {
-        'institute': request.GET.get('institute'),
-        'coupon_rate': request.GET.get('coupon_rate'),
-        'years_to_maturity': request.GET.get('years_to_maturity'),
-        'max_interest_only_period': request.GET.get('max_interest_only_period'),
-        'isin': request.GET.get('isin'),
-    }
+
+def _spot_filters(request) -> dict[str, list[str] | None]:
+    filters: dict[str, list[str] | None] = {}
+    for key in FILTER_KEYS:
+        values = [v for v in request.GET.getlist(key) if v]
+        filters[key] = values or None
+    return filters
+
+
+def _normalize_filter_values(filters: dict[str, list[str] | None], options: dict[str, list[str]]) -> dict[str, list[str] | None]:
+    clean: dict[str, list[str] | None] = {}
+    for key, values in filters.items():
+        if not values:
+            clean[key] = None
+            continue
+        allowed = set(options.get(key, []))
+        kept = [v for v in values if v in allowed]
+        clean[key] = kept or None
+    return clean
 
 
 def home(request):
@@ -37,16 +49,14 @@ def prices(request):
     filters = _spot_filters(request)
 
     dynamic_options = constrained_options(master_data, filters)
-    for key, value in list(filters.items()):
-        if value and value not in dynamic_options[key]:
-            filters[key] = None
+    filters = _normalize_filter_values(filters, dynamic_options)
 
     filtered_prices = get_filtered_prices(master_data, filters)
     fig = make_spot_prices_figure(filtered_prices)
 
     context = {
         'title': 'Fixed loan prices',
-        'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}),
+        'plot': pio.to_html(fig, full_html=False, include_plotlyjs=True, config={'responsive': True, 'displayModeBar': False}),
         'filters': filters,
         'options': constrained_options(master_data, filters),
         'auto_apply': True,
@@ -79,7 +89,7 @@ def rates(request):
     return render(
         request,
         'web/graph_page.html',
-        {'title': 'Flex loan rates', 'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}), 'filters': {}, 'options': {}, 'auto_apply': False},
+        {'title': 'Flex loan rates', 'plot': pio.to_html(fig, full_html=False, include_plotlyjs=True, config={'responsive': True, 'displayModeBar': False}), 'filters': {}, 'options': {}, 'auto_apply': False},
     )
 
 
@@ -92,8 +102,8 @@ def ohlc(request):
         'web/graph_page.html',
         {
             'title': 'OHLC prices',
-            'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}),
-            'filters': {'isin': isin},
+            'plot': pio.to_html(fig, full_html=False, include_plotlyjs=True, config={'responsive': True, 'displayModeBar': False}),
+            'filters': {'isin': [isin] if isin else None},
             'options': {'isin': options_for(master_data, 'isin')},
             'auto_apply': True,
         },
