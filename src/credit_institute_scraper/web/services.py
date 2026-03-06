@@ -21,6 +21,8 @@ GRAPH_STYLE = dict(
     margin={"l": 20, "r": 20, "b": 30, "t": 40},
 )
 
+SPOT_GROUPERS = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
+
 
 def query_df(sql: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
     with sqlite3.connect(DB_PATH) as conn:
@@ -66,28 +68,52 @@ def _cast_like(df: pd.DataFrame, key: str, value: str) -> Any:
     return value
 
 
+def _group_name(group_values: tuple[Any, ...]) -> str:
+    return '<br>'.join(f'{k.replace("_", " ").title()}: {v}' for k, v in zip(SPOT_GROUPERS, group_values))
+
+
+def build_spot_price_series(df: pd.DataFrame) -> list[dict[str, Any]]:
+    if df.empty:
+        return []
+
+    data = df.copy()
+    data['timestamp'] = pd.to_datetime(data['timestamp'], utc=True).dt.tz_convert('Europe/Copenhagen')
+
+    groups = sorted(data.groupby(SPOT_GROUPERS), key=lambda x: x[1]['spot_price'].mean(), reverse=True)
+    series: list[dict[str, Any]] = []
+    for grp, tmp_df in groups:
+        tmp_df = tmp_df.sort_values('timestamp')
+        series.append(
+            {
+                'name': _group_name(grp),
+                'x': tmp_df['timestamp'].dt.strftime('%Y-%m-%dT%H:%M:%S%z').tolist(),
+                'y': tmp_df['spot_price'].astype(float).tolist(),
+            }
+        )
+    return series
+
+
 def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
     if df.empty:
         fig = go.Figure()
         fig.update_layout(title='No matching spot price data', **GRAPH_STYLE)
         return fig
 
-    df['timestamp'] = pd.to_datetime(df['timestamp'], utc=True).dt.tz_convert('Europe/Copenhagen')
-    groupers = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
-    groups = sorted(df.groupby(groupers), key=lambda x: x[1]['spot_price'].mean(), reverse=True)
+    data = df.copy()
+    data['timestamp'] = pd.to_datetime(data['timestamp'], utc=True).dt.tz_convert('Europe/Copenhagen')
+    groups = sorted(data.groupby(SPOT_GROUPERS), key=lambda x: x[1]['spot_price'].mean(), reverse=True)
     colors = Color("darkblue").range_to(Color("#34a1fa"), len(groups))
 
     traces = []
     for (grp, tmp_df), color in zip(groups, colors):
         tmp_df = tmp_df.sort_values('timestamp')
-        name = '<br>'.join(f'{k.replace("_", " ").title()}: {v}' for k, v in zip(groupers, grp))
         traces.append(
             go.Scattergl(
                 x=tmp_df['timestamp'],
                 y=tmp_df['spot_price'],
                 mode='lines',
                 line=dict(width=3, shape='hv', color=color.get_hex()),
-                name=name,
+                name=_group_name(grp),
                 hovertemplate='Time: %{x}<br>Price: %{y:.2f}',
                 showlegend=False,
             )
@@ -118,6 +144,27 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
         **GRAPH_STYLE,
     )
     return fig
+
+
+def get_filtered_prices(master_data: pd.DataFrame, filters: dict[str, Any], since: str | None = None) -> pd.DataFrame:
+    filtered_master = filter_data(master_data, filters)
+    if filtered_master.empty:
+        return pd.DataFrame(columns=['timestamp', 'institute', 'isin', 'years_to_maturity', 'max_interest_only_period', 'coupon_rate', 'spot_price'])
+
+    in_clause = ', '.join([f"'{x}'" for x in filtered_master['isin'].unique().tolist()])
+    sql = f"select * from prices where isin in ({in_clause})"
+    params: dict[str, Any] | None = None
+    if since:
+        sql += " and timestamp > :since"
+        params = {'since': since}
+    return query_df(sql, params=params)
+
+
+def latest_timestamp(df: pd.DataFrame) -> str | None:
+    if df.empty:
+        return None
+    ts = pd.to_datetime(df['timestamp'], utc=True).max()
+    return ts.strftime('%Y-%m-%dT%H:%M:%SZ')
 
 
 def make_ohlc_figure(isin: str | None) -> go.Figure:

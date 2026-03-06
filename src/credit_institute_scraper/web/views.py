@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 import plotly.io as pio
 
 from .services import (
+    build_spot_price_series,
     constrained_options,
-    filter_data,
+    get_filtered_prices,
     get_master_data,
+    latest_timestamp,
     make_ohlc_figure,
     make_spot_prices_figure,
     make_spot_rates_figure,
@@ -16,13 +18,8 @@ from .services import (
 )
 
 
-def home(request):
-    return render(request, 'web/home.html')
-
-
-def prices(request):
-    master_data = get_master_data()
-    filters = {
+def _spot_filters(request) -> dict[str, str | None]:
+    return {
         'institute': request.GET.get('institute'),
         'coupon_rate': request.GET.get('coupon_rate'),
         'years_to_maturity': request.GET.get('years_to_maturity'),
@@ -30,26 +27,51 @@ def prices(request):
         'isin': request.GET.get('isin'),
     }
 
-    dynamic_options = constrained_options(master_data, filters)
 
-    # Clean impossible selections when other filters constrain the option space.
+def home(request):
+    return render(request, 'web/home.html')
+
+
+def prices(request):
+    master_data = get_master_data()
+    filters = _spot_filters(request)
+
+    dynamic_options = constrained_options(master_data, filters)
     for key, value in list(filters.items()):
         if value and value not in dynamic_options[key]:
             filters[key] = None
 
-    filtered_master = filter_data(master_data, filters)
-    price_df = query_df('select * from prices')
-    filtered_prices = price_df[price_df['isin'].isin(filtered_master['isin'].unique())]
-
+    filtered_prices = get_filtered_prices(master_data, filters)
     fig = make_spot_prices_figure(filtered_prices)
+
     context = {
         'title': 'Fixed loan prices',
         'plot': pio.to_html(fig, full_html=False, include_plotlyjs='cdn', config={'responsive': True, 'displayModeBar': False}),
         'filters': filters,
         'options': constrained_options(master_data, filters),
         'auto_apply': True,
+        'is_spot_prices_page': True,
+        'poll_url': '/prices/poll/',
+        'poll_since': latest_timestamp(filtered_prices) or '',
     }
     return render(request, 'web/graph_page.html', context)
+
+
+def prices_poll(request):
+    master_data = get_master_data()
+    filters = _spot_filters(request)
+    since = request.GET.get('since')
+
+    rows = get_filtered_prices(master_data, filters, since=since)
+    series = build_spot_price_series(rows)
+
+    return JsonResponse(
+        {
+            'series': series,
+            'latest_timestamp': latest_timestamp(rows),
+            'row_count': int(len(rows)),
+        }
+    )
 
 
 def rates(request):
