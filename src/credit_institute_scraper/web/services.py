@@ -23,18 +23,21 @@ GRAPH_STYLE = dict(
 SPOT_GROUPERS = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
 
 
-def query_df(sql: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
+def query_df(sql: str, params: Any = None) -> pd.DataFrame:
     with sqlite3.connect(DB_PATH) as conn:
         return pd.read_sql(sql, conn, params=params)
 
 
-def get_master_data() -> pd.DataFrame:
-    return query_df(
-        """
+def get_master_data(start_utc: Any | None = None, end_utc: Any | None = None) -> pd.DataFrame:
+    sql = """
         select distinct institute, isin, years_to_maturity, max_interest_only_period, coupon_rate
         from prices
-        """
-    )
+    """
+    params: list[Any] = []
+    if start_utc is not None and end_utc is not None:
+        sql += " where timestamp between ? and ?"
+        params.extend([start_utc, end_utc])
+    return query_df(sql, params=params if params else None)
 
 
 def options_for(df: pd.DataFrame, col: str) -> list[str]:
@@ -99,10 +102,30 @@ def build_spot_price_series(df: pd.DataFrame) -> list[dict[str, Any]]:
     return series
 
 
-def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
+def make_spot_prices_figure(df: pd.DataFrame, start_utc: Any, end_utc: Any) -> go.Figure:
+    tz_cph = pytz.timezone('Europe/Copenhagen')
+    start_cet = pd.to_datetime(start_utc, utc=True).tz_convert(tz_cph)
+    end_cet = pd.to_datetime(end_utc, utc=True).tz_convert(tz_cph)
+
     if df.empty:
         fig = go.Figure()
-        fig.update_layout(title='No matching spot price data', **GRAPH_STYLE)
+        fig.update_layout(
+            title='No matching spot price data',
+            xaxis=dict(
+                range=[start_cet, end_cet],
+                tick0=start_cet,
+                dtick=3600000,
+                showgrid=True,
+                gridwidth=1,
+                gridcolor='#676565',
+                griddash='solid',
+                showline=True,
+                zeroline=False,
+                minor=dict(dtick=900000, showgrid=True, gridwidth=1, gridcolor='#676565', griddash='dot'),
+            ),
+            yaxis=dict(showline=True, zeroline=False, showgrid=True, gridcolor='#676565'),
+            **GRAPH_STYLE,
+        )
         return fig
 
     data = df.copy()
@@ -124,12 +147,6 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
                 showlegend=False,
             )
         )
-
-    tz_cph = pytz.timezone('Europe/Copenhagen')
-    latest_ts = data['timestamp'].max()
-    anchor_date = latest_ts.date()
-    start_cet = tz_cph.localize(pd.Timestamp(anchor_date).to_pydatetime().replace(hour=9, minute=0, second=0, microsecond=0))
-    end_cet = tz_cph.localize(pd.Timestamp(anchor_date).to_pydatetime().replace(hour=17, minute=0, second=0, microsecond=0))
 
     fig = go.Figure(traces)
     fig.update_layout(
@@ -153,15 +170,15 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def get_filtered_prices(master_data: pd.DataFrame, filters: dict[str, Any], since: str | None = None) -> pd.DataFrame:
+def get_filtered_prices(master_data: pd.DataFrame, filters: dict[str, Any], start_utc: Any, end_utc: Any, since: str | None = None) -> pd.DataFrame:
     filtered_master = filter_data(master_data, filters)
     if filtered_master.empty:
         return pd.DataFrame(columns=['timestamp', 'institute', 'isin', 'years_to_maturity', 'max_interest_only_period', 'coupon_rate', 'spot_price'])
 
     isins = filtered_master['isin'].unique().tolist()
     placeholders = ', '.join(['?'] * len(isins))
-    sql = f"select * from prices where isin in ({placeholders})"
-    params: list[Any] = list(isins)
+    sql = f"select * from prices where isin in ({placeholders}) and timestamp between ? and ?"
+    params: list[Any] = list(isins) + [start_utc, end_utc]
     if since:
         sql += " and timestamp > ?"
         params.append(since)

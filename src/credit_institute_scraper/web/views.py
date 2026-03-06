@@ -4,6 +4,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 import plotly.io as pio
 
+from ..utils.date_helper import get_active_time_range
 from .services import (
     build_spot_price_series,
     constrained_options,
@@ -45,14 +46,15 @@ def home(request):
 
 
 def prices(request):
-    master_data = get_master_data()
+    start_utc, end_utc = get_active_time_range(force_9_17=True)
+    master_data = get_master_data(start_utc=start_utc, end_utc=end_utc)
     filters = _spot_filters(request)
 
     dynamic_options = constrained_options(master_data, filters)
     filters = _normalize_filter_values(filters, dynamic_options)
 
-    filtered_prices = get_filtered_prices(master_data, filters)
-    fig = make_spot_prices_figure(filtered_prices)
+    filtered_prices = get_filtered_prices(master_data, filters, start_utc=start_utc, end_utc=end_utc)
+    fig = make_spot_prices_figure(filtered_prices, start_utc=start_utc, end_utc=end_utc)
 
     context = {
         'title': 'Fixed loan prices',
@@ -68,11 +70,12 @@ def prices(request):
 
 
 def prices_poll(request):
-    master_data = get_master_data()
+    start_utc, end_utc = get_active_time_range(force_9_17=True)
+    master_data = get_master_data(start_utc=start_utc, end_utc=end_utc)
     filters = _spot_filters(request)
     since = request.GET.get('since')
 
-    rows = get_filtered_prices(master_data, filters, since=since)
+    rows = get_filtered_prices(master_data, filters, start_utc=start_utc, end_utc=end_utc, since=since)
     series = build_spot_price_series(rows)
 
     return JsonResponse(

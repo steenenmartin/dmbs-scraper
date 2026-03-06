@@ -55,15 +55,11 @@ body {
   padding: 10px;
   flex: 0 0 auto;
 }
-.filter-item label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
-.filter-item select {
-  width: 100%;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  min-height: 110px;
-}
+.filter-group { border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin: 0; min-height: 90px; }
+.filter-group legend { font-size: 0.8rem; color: var(--muted); padding: 0 4px; }
+.checkbox-list { display: flex; flex-direction: column; gap: 4px; max-height: 110px; overflow: auto; }
+.check-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.check-item input { margin: 0; }
 .plot-wrapper {
   background: var(--panel);
   border-radius: 14px;
