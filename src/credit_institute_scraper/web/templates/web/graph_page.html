@@ -1,14 +1,15 @@
 {% extends 'web/base.html' %}
 {% load web_extras %}
 {% block content %}
-<section class="page-head">
+<section class="page-head page-head-row">
   <h2>{{ title }}</h2>
+  <a class="clear-filters" href="?">Clear filters</a>
 </section>
 <form method="get" class="filters" id="filters-form">
   {% for key, vals in options.items %}
     <div class="filter-item">
       <label for="id_{{ key }}">{{ key|title }}</label>
-      <select id="id_{{ key }}" name="{{ key }}" multiple size="6" {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
+      <select id="id_{{ key }}" name="{{ key }}" multiple size="5" {% if auto_apply %}onchange="this.form.submit()"{% endif %}>
         {% for value in vals %}
         <option value="{{ value }}" {% if filters|get_item:key|contains:value %}selected{% endif %}>{{ value }}</option>
         {% endfor %}

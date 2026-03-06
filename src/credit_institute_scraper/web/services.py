@@ -9,7 +9,6 @@ import plotly.graph_objects as go
 from colour import Color
 import pytz
 
-from ..utils.date_helper import get_active_time_range
 
 DB_PATH = Path(__file__).resolve().parents[3] / 'database.db'
 
@@ -126,10 +125,11 @@ def make_spot_prices_figure(df: pd.DataFrame) -> go.Figure:
             )
         )
 
-    start_utc, end_utc = get_active_time_range(force_9_17=True)
     tz_cph = pytz.timezone('Europe/Copenhagen')
-    start_cet = start_utc.astimezone(tz_cph)
-    end_cet = end_utc.astimezone(tz_cph)
+    latest_ts = data['timestamp'].max()
+    anchor_date = latest_ts.date()
+    start_cet = tz_cph.localize(pd.Timestamp(anchor_date).to_pydatetime().replace(hour=9, minute=0, second=0, microsecond=0))
+    end_cet = tz_cph.localize(pd.Timestamp(anchor_date).to_pydatetime().replace(hour=17, minute=0, second=0, microsecond=0))
 
     fig = go.Figure(traces)
     fig.update_layout(

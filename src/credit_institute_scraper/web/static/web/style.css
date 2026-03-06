@@ -8,7 +8,14 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; font-family: Inter, Segoe UI, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, Segoe UI, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
 .topbar {
   position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
@@ -17,19 +24,58 @@ body { margin: 0; font-family: Inter, Segoe UI, system-ui, sans-serif; backgroun
 }
 .brand { font-weight: 700; letter-spacing: 0.2px; }
 .topnav { display: flex; gap: 8px; flex-wrap: wrap; }
-.topnav a {
-  color: #1e293b; text-decoration: none; padding: 8px 12px; border-radius: 10px;
-}
+.topnav a { color: #1e293b; text-decoration: none; padding: 8px 12px; border-radius: 10px; }
 .topnav a:hover { background: #eaf1ff; color: #1d4ed8; }
-.content { padding: 20px 28px; min-height: calc(100vh - 64px); }
+.content {
+  padding: 16px 20px;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .hero { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
-.page-head h2 { margin: 0 0 12px 0; }
+.page-head h2 { margin: 0; }
+.page-head-row { display: flex; align-items: center; justify-content: space-between; }
+.clear-filters {
+  text-decoration: none;
+  color: #1d4ed8;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: #eef2ff;
+}
 .filters {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;
-  margin-bottom: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  flex: 0 0 auto;
 }
 .filter-item label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
-.filter-item select { width: 100%; padding: 9px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; }
-.plot-wrapper { background: var(--panel); border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08); }
-.full-height-plot { min-height: calc(100vh - 220px); }
-.full-height-plot .plotly-graph-div, .full-height-plot .js-plotly-plot, .full-height-plot > div { height: 100% !important; min-height: calc(100vh - 240px); }
+.filter-item select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  min-height: 110px;
+}
+.plot-wrapper {
+  background: var(--panel);
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.full-height-plot .plotly-graph-div,
+.full-height-plot .js-plotly-plot,
+.full-height-plot > div {
+  height: 100% !important;
+  min-height: 0 !important;
+}

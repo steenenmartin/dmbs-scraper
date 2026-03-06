@@ -17,7 +17,7 @@ from .services import (
     query_df,
 )
 
-FILTER_KEYS = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period', 'isin']
+FILTER_KEYS = ['institute', 'coupon_rate', 'years_to_maturity', 'max_interest_only_period']
 
 
 def _spot_filters(request) -> dict[str, list[str] | None]:
