@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 
+function valueEquals(a: string | number, b: string | number): boolean {
+  return String(a) === String(b);
+}
+
 interface MultiSelectProps {
   label: string;
   options: { label: string; value: string | number }[];
@@ -37,14 +41,15 @@ export function MultiSelect({
   );
 
   const toggle = (v: string | number) => {
+    const isSelected = value.some((x) => valueEquals(x, v));
     onChange(
-      value.includes(v) ? value.filter((x) => x !== v) : [...value, v]
+      isSelected ? value.filter((x) => !valueEquals(x, v)) : [...value, v]
     );
   };
 
   const removeTag = (v: string | number, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(value.filter((x) => x !== v));
+    onChange(value.filter((x) => !valueEquals(x, v)));
   };
 
   return (
@@ -64,7 +69,7 @@ export function MultiSelect({
             key={String(v)}
             className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
           >
-            {String(options.find((o) => o.value === v)?.label ?? v)}
+            {String(options.find((o) => valueEquals(o.value, v))?.label ?? v)}
             <button
               onClick={(e) => removeTag(v, e)}
               className="ml-0.5 text-blue-400 hover:text-blue-600"
@@ -94,30 +99,34 @@ export function MultiSelect({
               No options
             </div>
           )}
-          {filtered.map((opt) => (
-            <div
-              key={String(opt.value)}
-              onClick={() => toggle(opt.value)}
-              className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-gray-50 ${
-                value.includes(opt.value) ? "bg-blue-50 text-blue-700" : "text-gray-700"
-              }`}
-            >
+          {filtered.map((opt) => {
+            const isSelected = value.some((x) => valueEquals(x, opt.value));
+
+            return (
               <div
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                  value.includes(opt.value)
-                    ? "border-blue-500 bg-blue-500"
-                    : "border-gray-300"
+                key={String(opt.value)}
+                onClick={() => toggle(opt.value)}
+                className={`flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-gray-50 ${
+                  isSelected ? "bg-blue-50 text-blue-700" : "text-gray-700"
                 }`}
               >
-                {value.includes(opt.value) && (
-                  <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+                <div
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                    isSelected
+                      ? "border-blue-500 bg-blue-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  {isSelected && (
+                    <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                {String(opt.label)}
               </div>
-              {String(opt.label)}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
