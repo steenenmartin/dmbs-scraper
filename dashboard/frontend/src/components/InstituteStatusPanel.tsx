@@ -78,24 +78,26 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
                 key={row.institute}
                 className={
                   inSidebar
-                    ? "flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-2"
-                    : "flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2"
+                    ? "rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-2"
+                    : "rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2"
                 }
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
-                    <p className={`truncate text-sm font-medium ${inSidebar ? "text-slate-200" : "text-slate-700"}`}>
-                      {row.institute}
-                    </p>
-                  </div>
-                  <p className={`mt-1 text-xs ${inSidebar ? "text-slate-400" : "text-slate-500"}`}>
-                    Updated {lastUpdate.formatted} {lastUpdate.timezone}
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
+                  <p className={`text-sm font-medium ${inSidebar ? "text-slate-200" : "text-slate-700"}`}>
+                    {row.institute}
                   </p>
                 </div>
-                <span className={`ml-2 rounded-full px-2 py-1 text-[11px] font-medium ${style.badge}`}>
-                  {style.label}
-                </span>
+                <p className={`mt-1.5 text-xs ${inSidebar ? "text-slate-400" : "text-slate-500"}`}>
+                  Updated {lastUpdate.formatted} {lastUpdate.timezone}
+                </p>
+                <div className="mt-2">
+                  <span
+                    className={`inline-flex min-h-6 items-center justify-center rounded-full px-2.5 py-1 text-center text-[11px] font-medium leading-none whitespace-nowrap ${style.badge}`}
+                  >
+                    {style.label}
+                  </span>
+                </div>
               </div>
             );
           })}
