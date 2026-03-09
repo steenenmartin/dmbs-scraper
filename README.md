@@ -20,3 +20,93 @@ Change the line `from ...database.postgres_conn import query_db` to `from ...dat
 To run the server locally, execute `src/credit_institute_scraper/dashapp/local_server.py`
 
 To run the scraper locally, execute `src/credit_institute_scraper/local_scraper.py`
+
+
+
+
+## Deploying on Heroku (single app: TypeScript dashboard + Python scraper)
+This repository runs as **one Heroku app**:
+- `web` dyno: Node/TypeScript dashboard server (serves API + built frontend)
+- `worker` dyno: Python scraper that uploads to the same PostgreSQL database
+
+### Required buildpacks (in this order)
+```bash
+heroku buildpacks:clear -a <your-app>
+heroku buildpacks:add heroku-community/apt -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
+heroku buildpacks:add heroku/python -a <your-app>
+heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+```
+
+### Required config vars
+```bash
+heroku config:set DATABASE_URL=<your-postgres-url> -a <your-app>
+```
+
+### Deploy and run
+```bash
+git push heroku main
+heroku ps:scale web=1 worker=1 -a <your-app>
+heroku logs --tail -a <your-app>
+```
+
+Notes:
+- `Procfile` defines `web: node dashboard/backend/dist/index.js` and `worker: python -u scraper.py`.
+- Root `package.json` includes `heroku-postbuild` that installs/builds the dashboard workspace during slug compilation.
+- Keep both dynos enabled in production so scraping continues while the dashboard is served.
+
+
+### Troubleshooting: `node: command not found` on `web`
+If logs show Python buildpack output and then `/bin/bash: node: command not found`, the Node runtime is not present in the slug.
+
+Run the following exactly (single-app setup):
+```bash
+heroku buildpacks:clear -a <your-app>
+heroku buildpacks:add heroku-community/apt -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
+heroku buildpacks:add heroku/python -a <your-app>
+heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+heroku buildpacks -a <your-app>
+```
+
+Then clear cache and force a fresh rebuild:
+```bash
+heroku repo:purge_cache -a <your-app>
+git commit --allow-empty -m "force heroku rebuild"
+git push heroku main
+```
+
+Finally verify dynos:
+```bash
+heroku ps:scale web=1 worker=1 -a <your-app>
+heroku logs --tail -a <your-app>
+```
+
+
+### Troubleshooting: `tsc: not found` during `heroku-postbuild`
+If Heroku logs show `sh: 1: tsc: not found`, your workspace dev dependencies (including TypeScript) were not installed.
+
+Use `npm ci --include=dev` in postbuild (already configured in root `package.json`), then redeploy:
+```bash
+heroku repo:purge_cache -a <your-app>
+git commit --allow-empty -m "force heroku rebuild after include=dev"
+git push heroku main
+```
+
+
+### Troubleshooting: `TS1470 import.meta` during Heroku build
+If Heroku still shows:
+`src/index.ts(...): error TS1470: The 'import.meta' meta-property is not allowed in files which will build into CommonJS output`,
+you are likely deploying an older commit (or cached slug) that still had `import.meta` in `dashboard/backend/src/index.ts`.
+
+Verify locally before push:
+```bash
+rg -n "import.meta" dashboard/backend/src || echo "no import.meta in backend"
+```
+
+Then force Heroku to rebuild the latest commit:
+```bash
+heroku repo:purge_cache -a <your-app>
+git push heroku main
+heroku releases -a <your-app>
+```

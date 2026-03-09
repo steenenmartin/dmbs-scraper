@@ -1,0 +1,28 @@
+{
+  "name": "dmbs-scraper",
+  "description": "DMBS scraper worker + TypeScript dashboard web app",
+  "buildpacks": [
+    {
+      "url": "heroku-community/apt"
+    },
+    {
+      "url": "heroku/nodejs"
+    },
+    {
+      "url": "heroku/python"
+    },
+    {
+      "url": "https://github.com/Thomas-Boi/heroku-playwright-python-browsers"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "standard-1x"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "standard-1x"
+    }
+  }
+}
