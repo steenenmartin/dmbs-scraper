@@ -1,2 +1,2 @@
-web: gunicorn app:server --preload --worker-class gevent --workers 1 --max-requests 500
-scrape: python scraper.py
+web: node dashboard/backend/dist/index.js
+worker: python -u scraper.py
