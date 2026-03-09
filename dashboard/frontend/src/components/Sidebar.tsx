@@ -30,9 +30,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       <aside
         className={`fixed bottom-0 left-0 top-0 z-40 flex w-64 flex-col border-r border-slate-700/40 bg-gray-800 text-white shadow-2xl transition-transform duration-300 ${collapsed ? "-translate-x-full" : "translate-x-0"}`}
       >
-        <div className="px-6 py-6">
-          <h1 className="text-lg font-semibold tracking-wide text-gray-100">DMBS Dashboard</h1>
-          <p className="mt-1 text-xs text-gray-400">Danish Mortgage Bond Prices</p>
+        <div className="flex items-center gap-3 px-6 py-6">
+          <img src="/favicon.ico" alt="Bondstats logo" className="h-9 w-9 rounded-md" />
+          <h1 className="text-lg font-semibold tracking-wide text-gray-100">Bondstats</h1>
         </div>
 
         <nav className="mt-2 space-y-1 px-3">
