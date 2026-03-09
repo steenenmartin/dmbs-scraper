@@ -238,6 +238,11 @@ export function PriceChart({
           ]
         : null;
 
+    const nonHistoricDateLabel =
+      !showHistoric && localDateRange
+        ? localDateRange[0].split("T")[0]
+        : null;
+
     const plotLayout: Partial<Plotly.Layout> = {
       plot_bgcolor: "#f2f2f2",
       paper_bgcolor: "#ffffff",
@@ -290,6 +295,28 @@ export function PriceChart({
       },
       showlegend: false,
       autosize: true,
+      ...(!showHistoric && nonHistoricDateLabel
+        ? {
+            annotations: [
+              {
+                xref: "paper",
+                yref: "paper",
+                x: 0,
+                y: 0,
+                xanchor: "left",
+                yanchor: "bottom",
+                xshift: 6,
+                yshift: 6,
+                showarrow: false,
+                text: nonHistoricDateLabel,
+                font: {
+                  size: 12,
+                  color: "#4b5563",
+                },
+              },
+            ],
+          }
+        : {}),
     };
 
     return { traces: plotTraces, layout: plotLayout };
