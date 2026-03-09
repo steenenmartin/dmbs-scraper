@@ -90,6 +90,16 @@ export default function App() {
     return () => media.removeEventListener("change", onChange);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !isDesktop) return;
+
+    const triggerResize = () => window.dispatchEvent(new Event("resize"));
+    const timeout = window.setTimeout(triggerResize, 320);
+    triggerResize();
+
+    return () => window.clearTimeout(timeout);
+  }, [isDesktop, sidebarCollapsed]);
+
   return (
     <div className="flex h-screen bg-gray-50">
       <Sidebar
