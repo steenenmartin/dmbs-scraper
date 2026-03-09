@@ -45,6 +45,44 @@ function toCopenhagenLocalTimestamp(timestamp: string): string {
   return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}:${getPart("second")}`;
 }
 
+function toCopenhagenLocalMinuteTimestamp(timestamp: string): string {
+  return toCopenhagenLocalTimestamp(timestamp).slice(0, 16);
+}
+
+function buildFiveMinuteSlots(startIso: string, endIso: string): string[] {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+    return [];
+  }
+
+  const roundedStart = new Date(start);
+  roundedStart.setUTCSeconds(0, 0);
+  const minuteOffset = roundedStart.getUTCMinutes() % 5;
+  if (minuteOffset !== 0) {
+    roundedStart.setUTCMinutes(roundedStart.getUTCMinutes() - minuteOffset);
+  }
+
+  const roundedEnd = new Date(end);
+  roundedEnd.setUTCSeconds(0, 0);
+  const endMinuteOffset = roundedEnd.getUTCMinutes() % 5;
+  if (endMinuteOffset !== 0) {
+    roundedEnd.setUTCMinutes(roundedEnd.getUTCMinutes() + (5 - endMinuteOffset));
+  }
+
+  const slots: string[] = [];
+  for (
+    let cursor = new Date(roundedStart);
+    cursor <= roundedEnd;
+    cursor = new Date(cursor.getTime() + 5 * 60 * 1000)
+  ) {
+    slots.push(cursor.toISOString());
+  }
+
+  return slots;
+}
+
 function formatGroupLabel(groupers: FilterKey[], values: (string | number)[]): string {
   return groupers
     .map((g, i) => `${g.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}: ${values[i]}`)
@@ -134,12 +172,25 @@ export function PriceChart({
           return true;
         });
 
-        const x = deduped.map((r) =>
-          showHistoric
-            ? r.timestamp.split("T")[0]
-            : toCopenhagenLocalTimestamp(r.timestamp)
-        );
-        const y = deduped.map((r) => r.spot_price);
+        const expectedSlots =
+          !showHistoric && dateRange
+            ? buildFiveMinuteSlots(dateRange[0], dateRange[1])
+            : [];
+
+        const slotPriceMap = new Map<string, number>();
+        deduped.forEach((r) => {
+          slotPriceMap.set(toCopenhagenLocalMinuteTimestamp(r.timestamp), r.spot_price);
+        });
+
+        const x = showHistoric
+          ? deduped.map((r) => r.timestamp.split("T")[0])
+          : (expectedSlots.length > 0 ? expectedSlots : deduped.map((r) => r.timestamp)).map((ts) =>
+              toCopenhagenLocalMinuteTimestamp(ts)
+            );
+
+        const y = showHistoric
+          ? deduped.map((r) => r.spot_price)
+          : x.map((timeSlot) => slotPriceMap.get(timeSlot) ?? null);
 
         const groupValues = key
           ? key.split("|").map((v, i) => {
