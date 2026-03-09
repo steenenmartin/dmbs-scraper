@@ -1,5 +1,11 @@
 {
   "name": "dmbs-dashboard",
   "private": true,
-  "workspaces": ["backend", "frontend"]
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "overrides": {
+    "tailwindcss": "3.4.19"
+  }
 }
