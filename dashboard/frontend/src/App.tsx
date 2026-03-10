@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { SpotPricesPage } from "./components/SpotPricesPage";
 import { FlexRatesPage } from "./components/FlexRatesPage";
 import { OhlcPage } from "./components/OhlcPage";
+
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Home",
+  "/prices": "Prices",
+  "/daily": "Prices",
+  "/rates": "Rates",
+  "/ohlc": "OHLC",
+};
 
 function HomePage() {
   return (
@@ -70,12 +78,25 @@ function HomePage() {
 }
 
 export default function App() {
+  const location = useLocation();
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true
   );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
     typeof window !== "undefined" ? !window.matchMedia("(min-width: 1024px)").matches : false
   );
+
+  useEffect(() => {
+    const pageName = PAGE_TITLES[location.pathname] ?? "Bondstats";
+    document.title = pageName === "Bondstats" ? "Bondstats" : `${pageName} | Bondstats`;
+
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("config", "G-V3RXS9EHBM", {
+        page_path: `${location.pathname}${location.search}`,
+        page_title: document.title,
+      });
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
