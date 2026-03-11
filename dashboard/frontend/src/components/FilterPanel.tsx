@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MultiSelect } from "./MultiSelect";
 import type { MasterData, SpotPrice, FilterState, FilterKey } from "../types";
-import { valuesMatch } from "../utils/filterValue";
+import { useFilterCascade } from "../hooks/useFilterCascade";
 
 interface FilterPanelProps {
   masterData: MasterData[];
@@ -33,40 +33,7 @@ export function FilterPanel({
 
   // Full cascade: for each dropdown, filter masterData by all OTHER selected filters
   // to determine that dropdown's available options.
-  const availableOptions = useMemo(() => {
-    function filterByOthers(excludeKey: FilterKey): MasterData[] {
-      return activeMasterData.filter((row) => {
-        for (const key of Object.keys(filters) as FilterKey[]) {
-          if (key === excludeKey) continue;
-          const selected = filters[key];
-          if (selected.length === 0) continue;
-          const rowVal = row[key] as string | number;
-          if (!valuesMatch(selected, rowVal)) return false;
-        }
-        return true;
-      });
-    }
-
-    const forInstitute = filterByOthers("institute");
-    const forCoupon = filterByOthers("coupon_rate");
-    const forYtm = filterByOthers("years_to_maturity");
-    const forMaxIo = filterByOthers("max_interest_only_period");
-    const forIsin = filterByOthers("isin");
-
-    return {
-      institute: [...new Set(forInstitute.map((r) => r.institute))].sort(),
-      coupon_rate: [...new Set(forCoupon.map((r) => r.coupon_rate))].sort(
-        (a, b) => a - b
-      ),
-      years_to_maturity: [
-        ...new Set(forYtm.map((r) => r.years_to_maturity)),
-      ].sort((a, b) => a - b),
-      max_interest_only_period: [
-        ...new Set(forMaxIo.map((r) => r.max_interest_only_period)),
-      ].sort((a, b) => a - b),
-      isin: [...new Set(forIsin.map((r) => r.isin))].sort(),
-    };
-  }, [activeMasterData, filters]);
+  const availableOptions = useFilterCascade(activeMasterData, filters);
 
   return (
     <div className="flex flex-col gap-5">

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import Plot from "react-plotly.js";
+import { Plot } from "../utils/plotly-instance";
 import { MultiSelect } from "./MultiSelect";
 import { useFlexRates } from "../hooks/useFlexRates";
 import { useMasterDataFloat } from "../hooks/useMasterDataFloat";

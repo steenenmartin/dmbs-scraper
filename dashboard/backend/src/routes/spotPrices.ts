@@ -53,9 +53,12 @@ router.get("/status", async (_req, res) => {
   }
 });
 
-router.get("/rates", async (_req, res) => {
+router.get("/rates", async (req, res) => {
   try {
-    const data = await query("SELECT * FROM rates ORDER BY timestamp DESC");
+    const since = req.query.since as string | undefined;
+    const data = since
+      ? await query("SELECT * FROM rates WHERE timestamp >= $1 ORDER BY timestamp DESC", [since])
+      : await query("SELECT * FROM rates ORDER BY timestamp DESC");
     res.json(data);
   } catch (err) {
     console.error("Error fetching rates:", err);
@@ -73,9 +76,12 @@ router.get("/master-data-float", async (_req, res) => {
   }
 });
 
-router.get("/ohlc-prices", async (_req, res) => {
+router.get("/ohlc-prices", async (req, res) => {
   try {
-    const data = await query("SELECT * FROM ohlc_prices ORDER BY timestamp DESC");
+    const since = req.query.since as string | undefined;
+    const data = since
+      ? await query("SELECT * FROM ohlc_prices WHERE timestamp >= $1 ORDER BY timestamp DESC", [since])
+      : await query("SELECT * FROM ohlc_prices ORDER BY timestamp DESC");
     res.json(data);
   } catch (err) {
     console.error("Error fetching ohlc prices:", err);
