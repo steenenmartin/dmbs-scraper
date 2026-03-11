@@ -15,12 +15,13 @@ body {
   display: none !important;
 }
 
-/* Mobile: allow vertical page scroll over Plotly charts */
+/* Mobile: allow vertical page scroll over Plotly charts.
+   !important is required to override Plotly's inline touch-action: none */
 @media (max-width: 1023px) {
   .js-plotly-plot,
   .js-plotly-plot .plotly,
   .js-plotly-plot .plotly svg {
-    touch-action: pan-y;
+    touch-action: pan-y !important;
   }
 }
 
