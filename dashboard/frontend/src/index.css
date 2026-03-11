@@ -16,11 +16,14 @@ body {
 }
 
 /* Mobile: allow vertical page scroll over Plotly charts.
-   !important is required to override Plotly's inline touch-action: none */
+   !important is required to override Plotly's inline touch-action: none.
+   The wildcard * is needed because Plotly injects many nested drag-layer
+   divs (nsewdrag, subplot, xy, etc.) that each carry touch-action: none;
+   the browser intersects touch-action along the entire hit-test path so
+   any missed descendant kills momentum scroll. */
 @media (max-width: 1023px) {
   .js-plotly-plot,
-  .js-plotly-plot .plotly,
-  .js-plotly-plot .plotly svg {
+  .js-plotly-plot * {
     touch-action: pan-y !important;
   }
 }
