@@ -1,14 +1,23 @@
 import { useEffect, useState } from "react";
 import type { OHLCPrice } from "../types";
 
+let cache: OHLCPrice[] | null = null;
+
+function getSinceParam(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 1);
+  return d.toISOString().split("T")[0];
+}
+
 export function useOHLCPrices() {
-  const [ohlcPrices, setOhlcPrices] = useState<OHLCPrice[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [ohlcPrices, setOhlcPrices] = useState<OHLCPrice[]>(cache ?? []);
+  const [loading, setLoading] = useState(cache === null);
 
   useEffect(() => {
-    fetch("/api/ohlc-prices")
+    if (cache !== null) return;
+    fetch(`/api/ohlc-prices?since=${getSinceParam()}`)
       .then((res) => res.json())
-      .then((data) => setOhlcPrices(data))
+      .then((data: OHLCPrice[]) => { cache = data; setOhlcPrices(data); })
       .catch((err) => console.error("Failed to fetch OHLC prices:", err))
       .finally(() => setLoading(false));
   }, []);

@@ -1,9 +1,16 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
-import { SpotPricesPage } from "./components/SpotPricesPage";
-import { FlexRatesPage } from "./components/FlexRatesPage";
-import { OhlcPage } from "./components/OhlcPage";
+
+const SpotPricesPage = lazy(() =>
+  import("./components/SpotPricesPage").then((m) => ({ default: m.SpotPricesPage }))
+);
+const FlexRatesPage = lazy(() =>
+  import("./components/FlexRatesPage").then((m) => ({ default: m.FlexRatesPage }))
+);
+const OhlcPage = lazy(() =>
+  import("./components/OhlcPage").then((m) => ({ default: m.OhlcPage }))
+);
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Home",
@@ -132,13 +139,15 @@ export default function App() {
         className="flex-1 overflow-auto p-3 transition-all duration-300 sm:p-4 lg:p-6"
         style={{ marginLeft: isDesktop && !sidebarCollapsed ? "16rem" : 0 }}
       >
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/prices" element={<SpotPricesPage />} />
-          <Route path="/daily" element={<SpotPricesPage />} />
-          <Route path="/rates" element={<FlexRatesPage />} />
-          <Route path="/ohlc" element={<OhlcPage />} />
-        </Routes>
+        <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-gray-400">Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/prices" element={<SpotPricesPage />} />
+            <Route path="/daily" element={<SpotPricesPage />} />
+            <Route path="/rates" element={<FlexRatesPage />} />
+            <Route path="/ohlc" element={<OhlcPage />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

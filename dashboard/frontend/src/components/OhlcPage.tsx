@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import Plot from "react-plotly.js";
+import { Plot } from "../utils/plotly-instance";
 import { MultiSelect } from "./MultiSelect";
 import { useMasterData } from "../hooks/useMasterData";
 import { useOHLCPrices } from "../hooks/useOHLCPrices";
-import { valuesMatch } from "../utils/filterValue";
+import { useFilterCascade } from "../hooks/useFilterCascade";
+import type { FilterState } from "../types";
 
 type OhlcFilters = {
   institute: string[];
@@ -42,30 +43,7 @@ export function OhlcPage() {
     setSearchParams(params, { replace: true });
   }, [filters, setSearchParams]);
 
-  const available = useMemo(() => {
-    const keys: OhlcFilterKey[] = ["institute", "coupon_rate", "years_to_maturity", "max_interest_only_period", "isin"];
-
-    function byOthers(exclude: OhlcFilterKey) {
-      return masterData.filter((row) =>
-        keys.every((key) => {
-          if (key === exclude) return true;
-          const selected = filters[key];
-          if (selected.length === 0) return true;
-          return valuesMatch(selected, row[key] as string | number);
-        })
-      );
-    }
-
-    return {
-      institute: [...new Set(byOthers("institute").map((r) => r.institute))].sort(),
-      coupon_rate: [...new Set(byOthers("coupon_rate").map((r) => r.coupon_rate))].sort((a, b) => a - b),
-      years_to_maturity: [...new Set(byOthers("years_to_maturity").map((r) => r.years_to_maturity))].sort((a, b) => a - b),
-      max_interest_only_period: [
-        ...new Set(byOthers("max_interest_only_period").map((r) => r.max_interest_only_period)),
-      ].sort((a, b) => a - b),
-      isin: [...new Set(byOthers("isin").map((r) => r.isin))].sort(),
-    };
-  }, [masterData, filters]);
+  const available = useFilterCascade(masterData, filters as FilterState);
 
   useEffect(() => {
     setFilters((prev) => {

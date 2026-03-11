@@ -28,8 +28,15 @@ function getCopenhagenOffsetMinutes(date: Date): number {
   return Math.round((copenhagenUtcMs - date.getTime()) / 60_000);
 }
 
+// Cache keyed by UTC minute — DST transitions only happen on the hour
+let tzCache: { minuteKey: number; result: "CET" | "CEST" } | null = null;
+
 export function getCopenhagenTzAbbreviation(date: Date = new Date()): "CET" | "CEST" {
-  return getCopenhagenOffsetMinutes(date) >= 120 ? "CEST" : "CET";
+  const minuteKey = Math.floor(date.getTime() / 60_000);
+  if (tzCache && tzCache.minuteKey === minuteKey) return tzCache.result;
+  const result = getCopenhagenOffsetMinutes(date) >= 120 ? "CEST" : "CET";
+  tzCache = { minuteKey, result };
+  return result;
 }
 
 export { COPENHAGEN_TIMEZONE };

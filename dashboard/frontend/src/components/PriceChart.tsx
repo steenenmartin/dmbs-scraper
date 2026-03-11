@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import Plot from "react-plotly.js";
+import { Plot } from "../utils/plotly-instance";
 import type { SpotPrice, MasterData, FilterState, FilterKey } from "../types";
 import { colorGradient } from "../utils/colors";
 import { valuesMatch } from "../utils/filterValue";
@@ -152,6 +152,12 @@ export function PriceChart({
     // Step 6: Generate color gradient
     const colors = colorGradient(sortedGroups.length);
 
+    // Build expected 5-minute slots once (same for all groups)
+    const expectedSlots =
+      !showHistoric && dateRange
+        ? buildFiveMinuteSlots(dateRange[0], dateRange[1])
+        : [];
+
     // Step 7: Build Plotly traces
     const plotTraces: Plotly.Data[] = sortedGroups.map(
       ([key, rows], idx) => {
@@ -171,11 +177,6 @@ export function PriceChart({
           seen.add(ts);
           return true;
         });
-
-        const expectedSlots =
-          !showHistoric && dateRange
-            ? buildFiveMinuteSlots(dateRange[0], dateRange[1])
-            : [];
 
         const slotPriceMap = new Map<string, number>();
         deduped.forEach((r) => {
@@ -207,7 +208,7 @@ export function PriceChart({
           groupers.length > 0 ? formatGroupLabel(groupers, groupValues) : "";
 
         return {
-          type: "scattergl" as const,
+          type: "scatter" as const,
           mode: "lines" as const,
           x,
           y,
