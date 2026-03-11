@@ -9,12 +9,17 @@ from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
 from ..enums.credit_insitute import CreditInstitute
 
 
+_shared_session = None
+
+
 def get_legacy_session():
-    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
-    session = requests.session()
-    session.mount('https://', CustomHttpAdapter(ctx))
-    return session
+    global _shared_session
+    if _shared_session is None:
+        ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
+        _shared_session = requests.session()
+        _shared_session.mount('https://', CustomHttpAdapter(ctx))
+    return _shared_session
 
 
 class Scraper:

@@ -44,6 +44,9 @@ def scrape(conn_module, debug=False):
             if is_holiday(today):
                 return
 
+        # Clear Jyske cache from previous scrape cycle so fresh data is fetched
+        JyskeScraper.clear_cache()
+
         fixed_scrapers: list[Scraper] = [
             JyskeScraper(),
             RealKreditDanmarkFixedScraper(),
@@ -108,7 +111,7 @@ def scrape(conn_module, debug=False):
 
 def update_status_table(conn_module, fixed_rate_bond_data, now, scrapers, utc_now):
     current_status = conn_module.query_db("select * from status")
-    status_columns = list(conn_module.query_db("select * from status").columns.values)
+    status_columns = list(current_status.columns.values)
     status_data_frame = pd.DataFrame(columns=status_columns)
     current_status.set_index("institute", inplace=True)
     for institute in CreditInstitute:

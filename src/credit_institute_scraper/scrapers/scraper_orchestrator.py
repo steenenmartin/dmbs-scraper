@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from ..bond_data.fixed_rate_bond_data import FixedRateBondData
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
 from ..bond_data.floating_rate_bond_data import FloatingRateBondData
@@ -10,33 +12,42 @@ class ScraperOrchestrator:
     def __init__(self, scrapers: list[Scraper]):
         self._scrapers = scrapers
 
-    def scrape_fixed_rate_bonds(self) -> FixedRateBondData:
-        fixed_rate_bond_data_entries: list[FixedRateBondDataEntry] = []
+    def _scrape_single(self, scraper, parse_method_name):
+        """Run a single scraper's parse method, returning (scraper, entries) or (scraper, error)."""
+        try:
+            entries = getattr(scraper, parse_method_name)()
+            logging.info(f"Scraping '{scraper.institute.name}' succeeded")
+            return scraper, entries, None
+        except Exception as e:
+            logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
+            return scraper, [], e
+
+    def _scrape_all(self, parse_method_name):
+        """Run all scrapers concurrently with retry logic, returning collected entries."""
+        all_entries = []
 
         while not all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
-            for scraper in self.scrapers:
-                if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
-                    try:
-                        fixed_rate_bond_data_entries.extend(scraper.parse_fixed_rate_bonds())
-                        logging.info(f"Scraping '{scraper.institute.name}' succeeded")
-                    except Exception as e:
-                        logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
+            pending = [s for s in self.scrapers if not s.scrape_success and s.tries_count < s.max_tries]
+            if not pending:
+                break
 
-        return FixedRateBondData(fixed_rate_bond_data_entries)
+            with ThreadPoolExecutor(max_workers=len(pending)) as executor:
+                futures = {
+                    executor.submit(self._scrape_single, scraper, parse_method_name): scraper
+                    for scraper in pending
+                }
+                for future in as_completed(futures):
+                    scraper, entries, error = future.result()
+                    if not error:
+                        all_entries.extend(entries)
+
+        return all_entries
+
+    def scrape_fixed_rate_bonds(self) -> FixedRateBondData:
+        return FixedRateBondData(self._scrape_all("parse_fixed_rate_bonds"))
 
     def scrape_floating_rate_bonds(self) -> FloatingRateBondData:
-        floating_rate_bond_data_entries: list[FloatingRateBondDataEntry] = []
-
-        while not all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
-            for scraper in self.scrapers:
-                if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
-                    try:
-                        floating_rate_bond_data_entries.extend(scraper.parse_floating_rate_bonds())
-                        logging.info(f"Scraping '{scraper.institute.name}' succeeded")
-                    except Exception as e:
-                        logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
-
-        return FloatingRateBondData(floating_rate_bond_data_entries)
+        return FloatingRateBondData(self._scrape_all("parse_floating_rate_bonds"))
 
     @property
     def scrapers(self):

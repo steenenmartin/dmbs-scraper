@@ -8,6 +8,10 @@ from ..scrapers.scraper import Scraper
 
 
 class JyskeScraper(Scraper):
+    @classmethod
+    def clear_cache(cls):
+        cls._class_data_cache = None
+
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
         return [
@@ -41,12 +45,12 @@ class JyskeScraper(Scraper):
     def institute(self) -> CreditInstitute:
         return CreditInstitute.Jyske
 
-    _data_cache: dict | None = None
+    _class_data_cache: dict | None = None
 
     def get_data(self):
-        # 1) Reuse cached payload for both parse_* calls
-        if self._data_cache is not None:
-            return self._data_cache
+        # 1) Reuse cached payload across all JyskeScraper instances (fixed + floating)
+        if JyskeScraper._class_data_cache is not None:
+            return JyskeScraper._class_data_cache
 
         import os
         from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
@@ -75,8 +79,8 @@ class JyskeScraper(Scraper):
                     resp = req_ctx.get(API, max_redirects=3, timeout=30000)
                     if resp.ok:
                         logging.info("Jyske: got data via lightweight APIRequestContext (%s)", resp.status)
-                        self._data_cache = resp.json()
-                        return self._data_cache
+                        JyskeScraper._class_data_cache = resp.json()
+                        return JyskeScraper._class_data_cache
                     logging.warning("Jyske: lightweight APIRequestContext returned HTTP %s", resp.status)
                 finally:
                     req_ctx.dispose()
@@ -161,9 +165,9 @@ class JyskeScraper(Scraper):
                     API,
                 )
                 if raw.get("ok"):
-                    self._data_cache = json.loads(raw["text"])
+                    JyskeScraper._class_data_cache = json.loads(raw["text"])
                     logging.info("Jyske: got data from in-page fetch")
-                    return self._data_cache
+                    return JyskeScraper._class_data_cache
 
                 logging.warning("Jyske: in-page fetch returned HTTP %s, trying context.request fallback", raw.get("status"))
 
@@ -180,8 +184,8 @@ class JyskeScraper(Scraper):
                 )
                 if resp.ok:
                     logging.info("Jyske: got data via APIRequestContext (%s)", resp.status)
-                    self._data_cache = resp.json()
-                    return self._data_cache
+                    JyskeScraper._class_data_cache = resp.json()
+                    return JyskeScraper._class_data_cache
 
                 # Non-2xx HTTP response
                 text_snippet = resp.text()[:180]
