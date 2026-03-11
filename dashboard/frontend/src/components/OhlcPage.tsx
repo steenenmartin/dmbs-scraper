@@ -30,6 +30,7 @@ function parseFilters(params: URLSearchParams): OhlcFilters {
 export function OhlcPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<OhlcFilters>(() => parseFilters(searchParams));
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const { masterData, loading: masterLoading } = useMasterData();
   const { ohlcPrices, loading: ohlcLoading } = useOHLCPrices();
 
@@ -117,9 +118,26 @@ export function OhlcPage() {
     });
   }, [ohlcPrices, filters.isin]);
 
+  const activeFilterCount = (Object.values(filters) as (string | number)[][]).filter((v) => v.length > 0).length;
+
   return (
     <div className="flex h-full flex-col gap-4 lg:flex-row lg:gap-6">
-      <div className="w-full lg:w-72 lg:shrink-0">
+      <button
+        className="lg:hidden flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm"
+        onClick={() => setFiltersOpen((prev) => !prev)}
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+        </svg>
+        Filters
+        {activeFilterCount > 0 && (
+          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-semibold text-blue-700">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      <div className={`${filtersOpen ? "block" : "hidden"} lg:block w-full lg:w-72 lg:shrink-0`}>
         <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-5">
             <MultiSelect
