@@ -14,3 +14,17 @@ body {
 .js-plotly-plot .plotly .modebar {
   display: none !important;
 }
+
+/* Mobile: allow vertical page scroll over Plotly charts */
+@media (max-width: 1023px) {
+  .js-plotly-plot,
+  .js-plotly-plot .plotly,
+  .js-plotly-plot .plotly svg {
+    touch-action: pan-y;
+  }
+}
+
+/* iOS momentum scrolling */
+main {
+  -webkit-overflow-scrolling: touch;
+}
