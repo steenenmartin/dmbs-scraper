@@ -45,3 +45,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 /src/credit_institute_scraper/database/credentials.json
+
+# local .env file
+.env.dashboard.local
