@@ -1,7 +1,7 @@
 pandas
 seaborn
 requests
-matplotlib==3.5.0  # newest version 3.5.2 has a bug, so we downgrade
+matplotlib>=3.8,<3.9
 dash==2.11.0
 dash_bootstrap_components==1.1.0
 plotly==5.8.2
@@ -9,9 +9,9 @@ gunicorn
 gevent
 colour
 APScheduler
-psycopg2
+psycopg2-binary>=2.9.9,<3
 sqlalchemy
-cryptography==36.0.2
+cryptography>=42,<44
 flask-caching
 dash_daq==0.5.0
 plotly-resampler

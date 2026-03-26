@@ -24,6 +24,38 @@ To run the scraper locally, execute `src/credit_institute_scraper/local_scraper.
 
 
 
+## Local command shortcuts (like `dx-*`)
+
+If you want terminal commands for backend/frontend:
+
+1. Activate your venv
+2. Install command entry points once:
+```bash
+pip install -e .
+```
+3. Create/edit `.env.dashboard.local` in repo root (only `DATABASE_URL` is required):
+```bash
+DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME
+```
+
+Then run in separate terminals:
+
+Backend:
+```bash
+dmbs-backend
+```
+
+Frontend:
+```bash
+dmbs-frontend
+```
+
+Notes:
+- `dmbs-backend` runs the TypeScript backend in watch mode (`tsx watch`).
+- `dmbs-frontend` runs Vite dev server with hot reload.
+- Frontend proxies `/api` to backend on `localhost:3001` by default.
+
+
 ## Deploying on Heroku (single app: TypeScript dashboard + Python scraper)
 This repository runs as **one Heroku app**:
 - `web` dyno: Node/TypeScript dashboard server (serves API + built frontend)
