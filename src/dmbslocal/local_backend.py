@@ -23,7 +23,7 @@ def run_backend() -> None:
     if not npm:
         raise SystemExit("npm was not found. Ensure Node.js is installed (where.exe npm).")
 
-    run(["npm", "--prefix", "dashboard", "run", "dev", "-w", "dmbs-backend"], env)
+    run([npm, "--prefix", "dashboard", "run", "dev", "-w", "dmbs-backend"], env)
 
 
 if __name__ == "__main__":
