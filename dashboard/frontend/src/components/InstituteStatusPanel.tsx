@@ -26,7 +26,7 @@ const STATUS_STYLES: Record<string, { dot: string; badge: string; label: string 
   ExchangeClosed: {
     dot: "bg-slate-400",
     badge: "bg-slate-100 text-slate-600",
-    label: "Exchange closed",
+    label: "Closed",
   },
 };
 
