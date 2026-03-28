@@ -4,9 +4,9 @@ import { useInstituteStatus } from "../hooks/useInstituteStatus";
 
 const navItems = [
   { path: "/", label: "Home", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  { path: "/prices", label: "Fixed Loan Prices", iconSrc: "/icons/padlock.png", invertIcon: true },
-  { path: "/rates", label: "Flex Loan Rates", iconSrc: "/icons/interest_rate.png", invertIcon: true },
-  { path: "/ohlc", label: "OHLC Prices", icon: "M3 3v18h18M7 16V9m5 11V6m5 14v-8" },
+  { path: "/prices", label: "Fixed Loan Prices", iconSrc: "/icons/prices.png", invertIcon: true },
+  { path: "/rates", label: "Flex Loan Rates", iconSrc: "/icons/rates.png", invertIcon: true },
+  { path: "/ohlc", label: "OHLC Prices", iconSrc: "/icons/ohlc.png", invertIcon: true },
 ];
 
 interface SidebarProps {
@@ -41,7 +41,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                `flex items-center gap-4 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-gray-700 text-white"
                     : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
@@ -56,11 +56,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   src={item.iconSrc}
                   alt=""
                   aria-hidden="true"
-                  className={`h-5 w-5 shrink-0 object-contain ${item.invertIcon ? "invert" : ""}`}
+                  className={`h-10 w-10 shrink-0 object-contain ${item.invertIcon ? "invert" : ""}`}
                 />
               ) : (
                 <svg
-                  className="h-5 w-5 shrink-0"
+                  className="h-8 w-10 shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
