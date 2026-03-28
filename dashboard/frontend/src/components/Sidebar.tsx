@@ -4,9 +4,9 @@ import { useInstituteStatus } from "../hooks/useInstituteStatus";
 
 const navItems = [
   { path: "/", label: "Home", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-  { path: "/prices", label: "Fixed Loan Prices", icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
-  { path: "/rates", label: "Flex Loan Rates", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-  { path: "/ohlc", label: "OHLC Prices", icon: "M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" },
+  { path: "/prices", label: "Fixed Loan Prices", iconSrc: "/icons/prices.png", invertIcon: true },
+  { path: "/rates", label: "Flex Loan Rates", iconSrc: "/icons/rates.png", invertIcon: true },
+  { path: "/ohlc", label: "OHLC Prices", iconSrc: "/icons/ohlc.png", invertIcon: true },
 ];
 
 interface SidebarProps {
@@ -31,7 +31,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         className={`fixed bottom-0 left-0 top-0 z-40 flex w-64 flex-col border-r border-slate-700/40 bg-gray-800 text-white shadow-2xl transition-transform duration-300 ${collapsed ? "-translate-x-full" : "translate-x-0"}`}
       >
         <div className="flex items-center gap-3 px-6 py-6">
-          <img src="/favicon.ico" alt="Bondstats logo" className="h-9 w-9 rounded-md" />
+          <img src="/favicon.ico" alt="Bondstats logo" className="h-9 w-9 rounded-md invert" />
           <h1 className="text-lg font-semibold tracking-wide text-gray-100">Bondstats</h1>
         </div>
 
@@ -41,7 +41,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                `flex items-center gap-4 rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-gray-700 text-white"
                     : "text-gray-300 hover:bg-gray-700/50 hover:text-white"
@@ -51,21 +51,30 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 if (window.innerWidth < 1024) onToggle();
               }}
             >
-              <svg
-                className="h-5 w-5 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
+              {item.iconSrc ? (
+                <img
+                  src={item.iconSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className={`h-10 w-10 shrink-0 object-contain ${item.invertIcon ? "invert" : ""}`}
+                />
+              ) : (
+                <svg
+                  className="h-8 w-10 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+              )}
               {item.label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="mt-3 flex-1 overflow-y-auto pb-2">
+        <div className="mt-auto px-3 pb-4">
           <InstituteStatusPanel status={status} loading={loading} inSidebar />
         </div>
       </aside>

@@ -18,13 +18,14 @@ type OhlcFilters = {
 type OhlcFilterKey = keyof OhlcFilters;
 
 function parseFilters(params: URLSearchParams): OhlcFilters {
+  const parsedIsins = params.get("isin")?.split(",").filter(Boolean) ?? [];
   return {
     institute: params.get("institute")?.split(",").filter(Boolean) ?? [],
     coupon_rate: params.get("coupon_rate")?.split(",").filter(Boolean).map(Number) ?? [],
     years_to_maturity: params.get("years_to_maturity")?.split(",").filter(Boolean).map(Number) ?? [],
     max_interest_only_period:
       params.get("max_interest_only_period")?.split(",").filter(Boolean).map(Number) ?? [],
-    isin: params.get("isin")?.split(",").filter(Boolean) ?? [],
+    isin: parsedIsins.length > 0 ? [parsedIsins[0]] : [],
   };
 }
 
@@ -43,57 +44,71 @@ export function OhlcPage() {
     setSearchParams(params, { replace: true });
   }, [filters, setSearchParams]);
 
-  const available = useFilterCascade(masterData, filters as FilterState);
+  const filtersWithoutIsin: FilterState = {
+    institute: filters.institute,
+    coupon_rate: filters.coupon_rate,
+    years_to_maturity: filters.years_to_maturity,
+    max_interest_only_period: filters.max_interest_only_period,
+    isin: [],
+  };
+  const isinsWithOhlc = useMemo(() => new Set(ohlcPrices.map((p) => p.isin)), [ohlcPrices]);
+  const masterDataWithOhlc = useMemo(
+    () => masterData.filter((row) => isinsWithOhlc.has(row.isin)),
+    [masterData, isinsWithOhlc]
+  );
+  const available = useFilterCascade(masterDataWithOhlc, filtersWithoutIsin);
+  const availableIsins = useMemo(
+    () => available.isin.filter((isin) => isinsWithOhlc.has(isin)),
+    [available.isin, isinsWithOhlc]
+  );
 
   useEffect(() => {
     setFilters((prev) => {
-      const nextIsin = prev.isin.filter((i) => available.isin.includes(i));
+      const nextIsin = prev.isin.filter((i) => availableIsins.includes(i));
       if (nextIsin.length === prev.isin.length && nextIsin.every((v, i) => v === prev.isin[i])) {
         return prev;
       }
       return { ...prev, isin: nextIsin };
     });
-  }, [available.isin]);
+  }, [availableIsins]);
 
   const traces = useMemo<Plotly.Data[]>(() => {
     if (filters.isin.length === 0) return [];
 
-    return filters.isin.flatMap((isin, idx) => {
-      const series = ohlcPrices
-        .filter((r) => r.isin === isin)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const selectedIsin = filters.isin[0];
+    const series = ohlcPrices
+      .filter((r) => r.isin === selectedIsin)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-      if (series.length === 0) return [];
+    if (series.length === 0) return [];
 
-      const x = series.map((r) => r.timestamp.split("T")[0]);
-      const close = series.map((r) => r.close_price);
+    const x = series.map((r) => r.timestamp.split("T")[0]);
+    const close = series.map((r) => r.close_price);
 
-      return [
-        {
-          type: "candlestick" as const,
-          name: `${isin} OHLC`,
-          x,
-          open: series.map((r) => r.open_price),
-          high: series.map((r) => r.high_price),
-          low: series.map((r) => r.low_price),
-          close,
-          increasing: { line: { color: "#16a34a" } },
-          decreasing: { line: { color: "#dc2626" } },
-          opacity: filters.isin.length > 1 ? 0.55 : 1,
-          showlegend: filters.isin.length > 1,
-        },
-        {
-          type: "scatter" as const,
-          mode: "lines" as const,
-          name: `${isin} close`,
-          x,
-          y: close,
-          line: { width: 1, color: ["#991b1b", "#1d4ed8", "#7c3aed", "#0f766e"][idx % 4] },
-          hoverinfo: "skip" as const,
-          showlegend: false,
-        },
-      ];
-    });
+    return [
+      {
+        type: "candlestick" as const,
+        name: `${selectedIsin} OHLC`,
+        x,
+        open: series.map((r) => r.open_price),
+        high: series.map((r) => r.high_price),
+        low: series.map((r) => r.low_price),
+        close,
+        increasing: { line: { color: "#16a34a" } },
+        decreasing: { line: { color: "#dc2626" } },
+        showlegend: false,
+      },
+      {
+        type: "scatter" as const,
+        mode: "lines" as const,
+        name: `${selectedIsin} close`,
+        x,
+        y: close,
+        line: { width: 1, color: "#1d4ed8" },
+        hoverinfo: "skip" as const,
+        showlegend: false,
+      },
+    ];
   }, [ohlcPrices, filters.isin]);
 
   const activeFilterCount = (Object.values(filters) as (string | number)[][]).filter((v) => v.length > 0).length;
@@ -147,14 +162,38 @@ export function OhlcPage() {
               value={filters.max_interest_only_period}
               onChange={(v) => setFilters((prev) => ({ ...prev, max_interest_only_period: v as number[] }))}
             />
-            <MultiSelect
-              label="ISIN"
-              options={available.isin.map((v) => ({ label: v, value: v }))}
-              value={filters.isin}
-              onChange={(v) => setFilters((prev) => ({ ...prev, isin: v as string[] }))}
-              searchable
-              placeholder="Select ISIN(s) to plot"
-            />
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                ISIN
+              </label>
+              <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-1">
+                {availableIsins.length === 0 ? (
+                  <div className="px-2 py-3 text-xs text-gray-400">No ISINs match selected filters.</div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    {availableIsins.map((isin) => {
+                      const isSelected = filters.isin[0] === isin;
+                      return (
+                        <button
+                          key={isin}
+                          type="button"
+                          onClick={() => setFilters((prev) => ({ ...prev, isin: isSelected ? [] : [isin] }))}
+                          className={`w-full rounded-md border px-2 py-1.5 text-left text-sm transition-colors ${
+                            isSelected
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-transparent bg-white text-gray-700 hover:bg-gray-100"
+                          }`}
+                          title={isin}
+                        >
+                          {isin}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">Click one ISIN to display its OHLC chart.</p>
+            </div>
           </div>
           </div>
         </div>
@@ -166,7 +205,7 @@ export function OhlcPage() {
             <div className="flex h-full min-h-[320px] items-center justify-center text-sm text-gray-400">Loading OHLC data...</div>
           ) : traces.length === 0 ? (
             <div className="flex h-full min-h-[320px] items-center justify-center text-sm text-gray-400">
-              Select one or more ISINs to show OHLC prices.
+              Select one ISIN to show OHLC prices.
             </div>
           ) : (
             <Plot
@@ -192,7 +231,7 @@ export function OhlcPage() {
                 },
                 yaxis: { showgrid: true, gridcolor: "#d1d5db" },
                 autosize: true,
-                showlegend: filters.isin.length > 1,
+                showlegend: false,
               }}
               useResizeHandler
               style={{ width: "100%", height: "100%" }}
