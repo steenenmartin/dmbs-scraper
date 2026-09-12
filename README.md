@@ -73,13 +73,18 @@ This repository runs as **one Heroku app**:
 - `web` dyno: Node/TypeScript dashboard server (serves API + built frontend)
 - `worker` dyno: Python scraper that uploads to the same PostgreSQL database
 
+The `Aptfile` targets **Heroku-26 / Ubuntu 26.04** and the pinned Playwright
+Firefox runtime. `.python-version` selects the latest supported Python 3.12 patch.
+The Python buildpack must precede the browser buildpack; Node.js runs last to
+build and serve the dashboard.
+
 ### Required buildpacks (in this order)
 ```bash
 heroku buildpacks:clear -a <your-app>
 heroku buildpacks:add heroku-community/apt -a <your-app>
-heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks:add heroku/python -a <your-app>
 heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
 ```
 
 ### Required config vars
@@ -107,9 +112,9 @@ Run the following exactly (single-app setup):
 ```bash
 heroku buildpacks:clear -a <your-app>
 heroku buildpacks:add heroku-community/apt -a <your-app>
-heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks:add heroku/python -a <your-app>
 heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks -a <your-app>
 ```
 

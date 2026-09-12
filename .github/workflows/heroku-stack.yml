@@ -1,0 +1,22 @@
+name: Heroku stack dependencies
+on:
+  push:
+    paths: [Aptfile, .python-version, requirements-scraper.txt, .github/workflows/heroku-stack.yml]
+  pull_request:
+    paths: [Aptfile, .python-version, requirements-scraper.txt, .github/workflows/heroku-stack.yml]
+permissions:
+  contents: read
+jobs:
+  apt:
+    runs-on: ubuntu-latest
+    container:
+      image: heroku/heroku:26-build
+      options: --user root
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve Aptfile on the actual Heroku stack
+        shell: bash
+        run: |
+          apt-get update
+          mapfile -t packages < <(sed '/^[[:space:]]*#/d; /^[[:space:]]*$/d' Aptfile)
+          apt-get --simulate install --reinstall "${packages[@]}"
