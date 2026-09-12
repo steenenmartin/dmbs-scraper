@@ -8,8 +8,7 @@ from ..scrapers.scraper import Scraper
 class RealKreditDanmarkFloatingScraper(Scraper):
     @Scraper.scraper
     def parse_floating_rate_bonds(self, data) -> list[FloatingRateBondDataEntry]:
-        bonds: list[FloatingRateBondDataEntry] = []
-        for product in data:
+        def parse_product(product):
             if re.match("^FlexLoan_F\\d{1,2}_", product["name"]):
                 bond = FloatingRateBondDataEntry(
                     self.institute.name,
@@ -18,9 +17,9 @@ class RealKreditDanmarkFloatingScraper(Scraper):
                     float(product["offerrate"])
                 )
 
-                bonds.append(bond)
+                return bond
 
-        return bonds
+        return self.parse_products(data, parse_product)
 
     @property
     def url(self) -> str:

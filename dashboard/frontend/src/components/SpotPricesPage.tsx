@@ -53,9 +53,9 @@ export function SpotPricesPage() {
     searchParams.get("show_historic") === "true"
   );
 
-  const { prices, dateRange, loading: pricesLoading } = useSpotPrices();
-  const { masterData, loading: masterLoading } = useMasterData();
-  const { closingPrices, loading: closingLoading, fetchClosingPrices } = useClosingPrices();
+  const { prices, dateRange, loading: pricesLoading, error: pricesError } = useSpotPrices();
+  const { masterData, loading: masterLoading, error: masterError } = useMasterData();
+  const { closingPrices, loading: closingLoading, error: closingError, fetchClosingPrices } = useClosingPrices();
 
   useEffect(() => {
     if (showHistoric) {
@@ -83,6 +83,9 @@ export function SpotPricesPage() {
     showHistoric && closingPrices ? closingPrices : prices;
 
   const activeFilterCount = Object.values(filters).filter((v) => v.length > 0).length;
+
+  const error = pricesError || masterError || closingError;
+  if (error) return <div role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Prøv igen</button></div>;
 
   return (
     <div className="flex h-full flex-col gap-4 lg:flex-row lg:gap-6">

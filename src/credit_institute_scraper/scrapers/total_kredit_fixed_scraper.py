@@ -7,7 +7,7 @@ from ..utils.isin_helper import build_isin_code
 class TotalKreditFixedScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
-        return [
+        return self.parse_products(data["groups"][0]['entries'], lambda product:
             FixedRateBondDataEntry(
                 self.institute.name,
                 int(float(product["lifetime"].split(" ")[0])),
@@ -16,8 +16,8 @@ class TotalKreditFixedScraper(Scraper):
                 0.0 if product["name"].endswith("med afdrag") else float(product["name"].split(" ")[5]),
                 float(product["name"].split(" ")[0].strip("%").replace(",", ".")),
                 build_isin_code("DK", product["fondCode"])
-            ) for product in data["groups"][0]['entries']
-        ]
+            )
+        )
 
     @property
     def url(self) -> str:

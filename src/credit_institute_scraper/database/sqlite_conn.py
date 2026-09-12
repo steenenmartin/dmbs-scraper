@@ -2,12 +2,13 @@ import pandas as pd
 import sqlite3
 import os
 import logging
+from contextlib import closing
 
 DATABASE_PATH = os.path.abspath(f"{__file__}/../../../../database.db")
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
-    with client_factory() as conn:
+    with closing(client_factory()) as conn:
         result = pd.read_sql(sql=sql, con=conn, params=params)
     if cast_date_col is not None:
         result[cast_date_col] = pd.to_datetime(result[cast_date_col])

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { ConnectionStatus } from "./components/ConnectionStatus";
 import { Sidebar } from "./components/Sidebar";
 
 const SpotPricesPage = lazy(() =>
@@ -11,6 +12,7 @@ const FlexRatesPage = lazy(() =>
 const OhlcPage = lazy(() =>
   import("./components/OhlcPage").then((m) => ({ default: m.OhlcPage }))
 );
+
 
 const PAGE_TITLES: Record<string, string> = {
   "/": "Home",
@@ -139,6 +141,7 @@ export default function App() {
         className="flex-1 overflow-auto p-3 transition-all duration-300 sm:p-4 lg:p-6"
         style={{ marginLeft: isDesktop && !sidebarCollapsed ? "16rem" : 0 }}
       >
+        <ConnectionStatus />
         <Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-gray-400">Loading...</div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />

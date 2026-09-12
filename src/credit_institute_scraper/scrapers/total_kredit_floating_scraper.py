@@ -8,13 +8,12 @@ from ..scrapers.scraper import Scraper
 class TotalKreditFloatingScraper(Scraper):
     @Scraper.scraper
     def parse_floating_rate_bonds(self, data) -> list[FloatingRateBondDataEntry]:
-        bonds: list[FloatingRateBondDataEntry] = []
-        for product in data["groups"][0]['entries']:
+        def parse_product(product):
             if product["name"].endswith("med afdrag"):
                 max_io_period = 0
             elif product["name"].endswith("års afdragsfrihed"):
                 regex_result = re.search("(F\\d{1,2} med op til )(\\d{2})( års afdragsfrihed)", product["name"])
-                max_io_period = regex_result.group(2)
+                max_io_period = int(regex_result.group(2))
             else:
                 raise NotImplementedError()
 
@@ -25,9 +24,9 @@ class TotalKreditFloatingScraper(Scraper):
                 float(product["innerInterestGrossValue"].replace("%", "").replace(",", "."))
             )
 
-            bonds.append(bond)
+            return bond
 
-        return bonds
+        return self.parse_products(data["groups"][0]['entries'], parse_product)
 
     @property
     def url(self) -> str:

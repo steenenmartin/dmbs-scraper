@@ -1,7 +1,7 @@
+import { fetchJson } from "../utils/api";
 import { useEffect, useState } from "react";
 import type { FlexRate } from "../types";
 
-let cache: FlexRate[] | null = null;
 
 function getSinceParam(): string {
   const d = new Date();
@@ -10,17 +10,17 @@ function getSinceParam(): string {
 }
 
 export function useFlexRates() {
-  const [rates, setRates] = useState<FlexRate[]>(cache ?? []);
-  const [loading, setLoading] = useState(cache === null);
+  const [rates, setRates] = useState<FlexRate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (cache !== null) return;
-    fetch(`/api/rates?since=${getSinceParam()}`)
-      .then((res) => res.json())
-      .then((data: FlexRate[]) => { cache = data; setRates(data); })
-      .catch((err) => console.error("Failed to fetch rates:", err))
+    fetchJson<any>(`/api/rates?since=${getSinceParam()}`)
+      .then((data: FlexRate[]) => { setRates(data); })
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  return { rates, loading };
+  return { rates, loading, error };
 }

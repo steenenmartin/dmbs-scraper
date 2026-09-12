@@ -1,3 +1,4 @@
+import { fetchJson } from "../utils/api";
 import { useEffect, useState } from "react";
 import type { MasterDataFloat } from "../types";
 
@@ -5,13 +6,14 @@ export function useMasterDataFloat() {
   const [masterDataFloat, setMasterDataFloat] = useState<MasterDataFloat[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    fetch("/api/master-data-float")
-      .then((res) => res.json())
+    fetchJson<any>("/api/master-data-float")
       .then((data) => setMasterDataFloat(data))
-      .catch((err) => console.error("Failed to fetch floating master data:", err))
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  return { masterDataFloat, loading };
+  return { masterDataFloat, loading, error };
 }

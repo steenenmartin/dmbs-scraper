@@ -10,4 +10,4 @@ class FloatingRateBondData(BondData):
 
     def to_master_data_frame(self) -> pd.DataFrame:
         df = self.to_data_frame()
-        return df[["institute", "fixed_rate_period", "max_interest_only_period"]]
+        return df.reindex(columns=["institute", "fixed_rate_period", "max_interest_only_period"])

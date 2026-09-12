@@ -3,15 +3,16 @@ import sqlalchemy
 import logging
 import json
 import os
-from ..utils.server_helper import is_heroku_server
 
 
 def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
     conn = client_factory()
 
     sql = sqlalchemy.text(sql)
-    result = pd.read_sql(sql=sql, con=conn, params=params)
-    conn.dispose()
+    try:
+        result = pd.read_sql(sql=sql, con=conn, params=params)
+    finally:
+        conn.dispose()
     result.columns = [x.lower() for x in result.columns]
 
     if cast_date_col is not None:
@@ -22,31 +23,33 @@ def query_db(sql: str, params: dict = None, cast_date_col=None) -> pd.DataFrame:
 
 
 def client_factory():
-    return sqlalchemy.create_engine(connection_string())
+    return sqlalchemy.create_engine(connection_string(), pool_pre_ping=True,
+                                    connect_args={'connect_timeout': 10, 'options': '-c statement_timeout=30000'})
 
 
 def connection_string():
-    if is_heroku_server():
-        database_path = os.environ.get('HEROKU_POSTGRESQL_BRONZE_URL')
-        if database_path and database_path.startswith("postgres://"):
-            # https://stackoverflow.com/questions/62688256/sqlalchemy-exc-nosuchmoduleerror-cant-load-plugin-sqlalchemy-dialectspostgre
-            database_path = database_path.replace("postgres://", "postgresql://", 1)
-    else:
-        with open(os.path.abspath(f'{__file__}/../credentials.json')) as fo:
-            crd = json.load(fo)
-        database_path = f'postgresql://{crd["user"]}:{crd["password"]}@{crd["host"]}:{crd["port"]}/{crd["database"]}'
-    return database_path
+    database_url = next((os.environ.get(key) for key in (
+        'DATABASE_URL', 'HEROKU_POSTGRESQL_BRONZE_URL',
+        'HEROKU_POSTGRESQL_COBALT_URL', 'HEROKU_POSTGRESQL_CRIMSON_URL'
+    ) if os.environ.get(key)), None)
+    if database_url:
+        return database_url.replace('postgres://', 'postgresql://', 1)
+
+    with open(os.path.join(os.path.dirname(__file__), 'credentials.json')) as fo:
+        crd = json.load(fo)
+    ssl_mode = os.environ.get('DATABASE_SSL', crd.get('ssl'))
+    return sqlalchemy.engine.URL.create(
+        'postgresql', username=crd['user'], password=crd['password'],
+        host=crd['host'], port=int(crd['port']), database=crd['database'],
+        query={'sslmode': ssl_mode} if ssl_mode else {},
+    )
 
 
 def execute_statements(statements: list):
     engine = client_factory()
-    conn = engine.connect()
-    trans = conn.begin()
     try:
-        for statement in statements:
-            conn.execute(statement)
-        trans.commit()
-    except Exception as e:
-        logging.error(e)
-        trans.rollback()
-        raise e
+        with engine.begin() as conn:
+            for statement in statements:
+                conn.execute(sqlalchemy.text(statement) if isinstance(statement, str) else statement)
+    finally:
+        engine.dispose()

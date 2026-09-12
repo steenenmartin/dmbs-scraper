@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from .utils import DEFAULT_ENV_FILE, env_with_defaults, npm_cmd, require_database_url, run
+from .utils import DEFAULT_ENV_FILE, env_with_defaults, npm_cmd, run
 
 
 def run_backend() -> None:
@@ -17,7 +17,6 @@ def run_backend() -> None:
 
     env = env_with_defaults(args.env_file)
     env["PORT"] = str(args.port)  # command-line flag should override env file
-    require_database_url(env)
 
     npm = npm_cmd()
     if not npm:
