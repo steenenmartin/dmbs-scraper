@@ -1,42 +1,45 @@
-from ..bond_data.fixed_rate_bond_data import FixedRateBondData
-from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
-from ..bond_data.floating_rate_bond_data import FloatingRateBondData
-from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
-from ..scrapers.scraper import Scraper
 import logging
+import time
+
+from ..bond_data.fixed_rate_bond_data import FixedRateBondData
+from ..bond_data.floating_rate_bond_data import FloatingRateBondData
 
 
 class ScraperOrchestrator:
-    def __init__(self, scrapers: list[Scraper]):
+    def __init__(self, scrapers, *, sleep=time.sleep):
         self._scrapers = scrapers
+        self._sleep = sleep
 
-    def scrape_fixed_rate_bonds(self) -> FixedRateBondData:
-        fixed_rate_bond_data_entries: list[FixedRateBondDataEntry] = []
+    def _scrape(self, method, collection):
+        entries = []
+        for scraper in self.scrapers:
+            scraper.reset()
+            # Bounded independently of decorator counters: even a broken adapter
+            # cannot create the old infinite retry loop.
+            for attempt in range(1, scraper.max_tries + 1):
+                try:
+                    observations = getattr(scraper, method)()
+                    if not observations:
+                        raise ValueError('No valid observations')
+                    entries.extend(observations)
+                    scraper.scrape_success = True
+                    logging.info('Scraped %s: %d observations, %d issues', scraper.institute.name, len(observations), len(scraper.issues))
+                    break
+                except Exception as error:
+                    scraper.scrape_success = False
+                    scraper._data_cache = None
+                    scraper.report_issue(f'{method} attempt {attempt}/{scraper.max_tries} failed: {type(error).__name__}: {error}')
+                    if attempt < scraper.max_tries:
+                        self._sleep(min(2 ** (attempt - 1), 8))
+            if not scraper.scrape_success:
+                logging.error('Scraping exhausted for %s (%s)', scraper.institute.name, method)
+        return collection(entries)
 
-        while not all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
-            for scraper in self.scrapers:
-                if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
-                    try:
-                        fixed_rate_bond_data_entries.extend(scraper.parse_fixed_rate_bonds())
-                        logging.info(f"Scraping '{scraper.institute.name}' succeeded")
-                    except Exception as e:
-                        logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
+    def scrape_fixed_rate_bonds(self):
+        return self._scrape('parse_fixed_rate_bonds', FixedRateBondData)
 
-        return FixedRateBondData(fixed_rate_bond_data_entries)
-
-    def scrape_floating_rate_bonds(self) -> FloatingRateBondData:
-        floating_rate_bond_data_entries: list[FloatingRateBondDataEntry] = []
-
-        while not all(s.scrape_success or s.tries_count == s.max_tries for s in self.scrapers):
-            for scraper in self.scrapers:
-                if not scraper.scrape_success and scraper.tries_count < scraper.max_tries:
-                    try:
-                        floating_rate_bond_data_entries.extend(scraper.parse_floating_rate_bonds())
-                        logging.info(f"Scraping '{scraper.institute.name}' succeeded")
-                    except Exception as e:
-                        logging.info(f"Scraping '{scraper.institute.name}' failed (try {scraper.tries_count}/{scraper.max_tries}): {e}")
-
-        return FloatingRateBondData(floating_rate_bond_data_entries)
+    def scrape_floating_rate_bonds(self):
+        return self._scrape('parse_floating_rate_bonds', FloatingRateBondData)
 
     @property
     def scrapers(self):

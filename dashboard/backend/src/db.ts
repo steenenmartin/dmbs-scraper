@@ -1,32 +1,29 @@
 import pg from "pg";
+import { databaseUrl, readCredentials } from "./config.js";
 
-function resolveDatabaseUrl(): string {
-  const databaseUrl =
-    process.env.DATABASE_URL ??
-    process.env.HEROKU_POSTGRESQL_BRONZE_URL ??
-    process.env.HEROKU_POSTGRESQL_COBALT_URL ??
-    process.env.HEROKU_POSTGRESQL_CRIMSON_URL;
-
-  if (!databaseUrl) {
-    throw new Error(
-      "Missing database connection string. Set DATABASE_URL (preferred) or HEROKU_POSTGRESQL_* env var."
-    );
-  }
-
-  return databaseUrl;
+export const databaseKind = "postgres";
+// Preserve timestamp precision; scraper timestamps without a zone are UTC.
+pg.types.setTypeParser(1114, value => value.replace(" ", "T") + "Z");
+pg.types.setTypeParser(1184, value => value.replace(" ", "T"));
+pg.types.setTypeParser(1082, value => value);
+pg.types.setTypeParser(1700, Number);
+let pool: pg.Pool | undefined;
+function getPool() {
+  if (pool) return pool;
+  const credentials = databaseUrl ? undefined : readCredentials();
+  if (!databaseUrl && !credentials) throw new Error("Configure DATABASE_URL or credentials.json.");
+  const sslMode = process.env.DATABASE_SSL || credentials?.ssl || (process.env.DYNO ? "require" : undefined);
+  const { ssl: _ssl, ...connection } = credentials ?? {};
+  pool = new pg.Pool({
+    ...(databaseUrl ? { connectionString: databaseUrl } : connection),
+    ...(sslMode === "disable" ? { ssl: false } : sslMode === "require" ? { ssl: { rejectUnauthorized: false } } : {}),
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 15000,
+    options: "-c timezone=UTC",
+  });
+  pool.on("error", () => console.error("Database connection lost"));
+  return pool;
 }
-
-const pool = new pg.Pool({
-  connectionString: resolveDatabaseUrl(),
-  ssl: { rejectUnauthorized: false },
-});
-
-export async function query<T extends pg.QueryResultRow = any>(
-  sql: string,
-  params?: any[]
-): Promise<T[]> {
-  const result = await pool.query<T>(sql, params);
-  return result.rows;
-}
-
-export default pool;
+export type Query = <T extends pg.QueryResultRow = any>(sql: string, params?: any[]) => Promise<T[]>;
+export const query: Query = async (sql, params = []) => (await getPool().query(sql, params)).rows;
+export async function closeDatabase() { await pool?.end(); pool = undefined; }

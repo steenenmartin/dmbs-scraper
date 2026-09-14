@@ -8,66 +8,83 @@ DMBS (Danish Mortgage Backed Securities) Scraper is a web-scraper and an applica
 ## Reporting issues
 Use the Github [issue tracker](https://github.com/steenenmartin/dmbs-scraper/issues) to file issues. Pull requests are very welcome
 
-## Running DMBS scraper locally
-To set up the repository locally, clone the repository and create a virtual environment with the packages specified in `requirements.txt`. The repository should work with both python 3.9 and 3.10.
+## Run the dashboard locally
 
-Unfortunately, we cannot grant unrestricted access to the underlying PostgreSQL we use to store the data, but you can change the functions in the repository to use a local SQLite database with a few modifications:
-Change the line `from ...database.postgres_conn import query_db` to `from ...database.sqlite_conn import query_db` in the following files
-* `src/credit_institute_scraper_database/dashapp/callbacks/main_app.py`
-* `src/credit_institute_scraper_database/dashapp/callbacks/ohlc_page.py`
-* `src/credit_institute_scraper_database/dashapp/pages/ohlc_plots.py`
+Use Node.js 24 and npm 11. Python dependencies are only needed for the scraper.
 
-To run the server locally, execute `src/credit_institute_scraper/dashapp/local_server.py`
-
-To run the scraper locally, execute `src/credit_institute_scraper/local_scraper.py`
-
-
-
-
-## Local command shortcuts (like `dx-*`)
-
-If you want terminal commands for backend/frontend:
-
-1. Activate your venv
-2. Install command entry points once:
 ```bash
-pip install -e .
-```
-3. Create/edit `.env.dashboard.local` in repo root (only `DATABASE_URL` is required):
-```bash
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME
+npm --prefix dashboard ci --include=dev
 ```
 
-Then run in separate terminals:
+Configure PostgreSQL using either:
 
-Backend:
+- `DATABASE_URL` in the environment or the root `.env.dashboard.local` file; or
+- `src/credit_institute_scraper/database/credentials.json` with your local connection settings.
+
+The credentials file is ignored by Git and is shared with the Python scraper.
+`DATABASE_URL` takes precedence. For a hosted database that requires TLS, set
+`DATABASE_SSL=require` or `"ssl": "require"` in the JSON file. This encrypts the
+connection without verifying the server certificate. Use `disable` for a local
+PostgreSQL server without TLS. Without an override, URL/driver SSL settings apply.
+
 ```bash
-dmbs-backend
+npm run dev
 ```
 
-Frontend:
+Open http://127.0.0.1:5173. Vite proxies `/api` to the backend at
+http://127.0.0.1:3001. Set `PORT` in `.env.dashboard.local` to change the backend
+port; restart both processes after configuration changes. `/api/health` reports
+whether the database connection works. The bundled `database.db` is an old SQLite
+archive and is not used by this dashboard.
+
+Build, test, and serve the built application:
+
 ```bash
-dmbs-frontend
+npm test
+npm run build
+npm start
 ```
 
-Notes:
-- `dmbs-backend` runs the TypeScript backend in watch mode (`tsx watch`).
-- `dmbs-frontend` runs Vite dev server with hot reload.
-- Frontend proxies `/api` to backend on `localhost:3001` by default.
+`npm test` uses an isolated in-memory PostgreSQL engine and does not connect to
+the configured database. `npm start` serves both API and frontend on port 3001.
+The optional Python command wrappers (`pip install -e .`, then `dmbs-backend` and
+`dmbs-frontend`) remain available.
 
+## Master-data ingestion
+
+Scraping inserts new fixed master products by ISIN, loan term and maximum
+interest-only period, while Jyske has one canonical row per ISIN. Nordea
+15/20-year variants remain independently filterable. Floating products are keyed
+by institute, fixed rate period and maximum interest-only period. Existing master
+records are preserved; differences are logged for review. Before deploying this
+writer against an old database, follow [migration 001](migrations/README.md): stop
+the old worker, back up and migrate the tables, deploy the new code, then resume.
+The old worker's `to_sql(if_exists="replace")` would otherwise remove the keys.
+
+## Scraper reliability
+
+See [scraper ingestion and recovery](docs/scraper-safety.md) for validation,
+transactional writes, replay protection, quality logs, tests and deployment order.
+Worker dependencies are pinned in `requirements-scraper.txt`; `requirements.txt`
+includes them alongside the legacy Python dashboard dependencies.
 
 ## Deploying on Heroku (single app: TypeScript dashboard + Python scraper)
 This repository runs as **one Heroku app**:
 - `web` dyno: Node/TypeScript dashboard server (serves API + built frontend)
 - `worker` dyno: Python scraper that uploads to the same PostgreSQL database
 
+The `Aptfile` targets **Heroku-26 / Ubuntu 26.04** and the pinned Playwright
+Firefox runtime. `.python-version` selects the latest supported Python 3.12 patch.
+The Python buildpack must precede the browser buildpack; Node.js runs last to
+build and serve the dashboard.
+
 ### Required buildpacks (in this order)
 ```bash
 heroku buildpacks:clear -a <your-app>
 heroku buildpacks:add heroku-community/apt -a <your-app>
-heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks:add heroku/python -a <your-app>
 heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
 ```
 
 ### Required config vars
@@ -95,9 +112,9 @@ Run the following exactly (single-app setup):
 ```bash
 heroku buildpacks:clear -a <your-app>
 heroku buildpacks:add heroku-community/apt -a <your-app>
-heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks:add heroku/python -a <your-app>
 heroku buildpacks:add https://github.com/Thomas-Boi/heroku-playwright-python-browsers -a <your-app>
+heroku buildpacks:add heroku/nodejs -a <your-app>
 heroku buildpacks -a <your-app>
 ```
 

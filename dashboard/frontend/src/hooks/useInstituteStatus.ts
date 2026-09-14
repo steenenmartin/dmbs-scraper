@@ -1,3 +1,4 @@
+import { fetchJson } from "../utils/api";
 import { useState, useEffect, useCallback } from "react";
 import type { InstituteStatus } from "../types";
 
@@ -7,13 +8,15 @@ export function useInstituteStatus() {
   const [status, setStatus] = useState<InstituteStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState("");
+
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch("/api/status");
-      const data = await res.json();
+      const data = await fetchJson<any>("/api/status");
+      setError("");
       setStatus(data);
     } catch (err) {
-      console.error("Failed to fetch status:", err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -25,5 +28,5 @@ export function useInstituteStatus() {
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
-  return { status, loading };
+  return { error, status, loading };
 }

@@ -1,3 +1,4 @@
+import { fetchJson } from "../utils/api";
 import { useState, useEffect, useCallback } from "react";
 import type { SpotPrice } from "../types";
 
@@ -8,14 +9,16 @@ export function useSpotPrices() {
   const [dateRange, setDateRange] = useState<[string, string] | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState("");
+
   const fetchPrices = useCallback(async () => {
     try {
-      const res = await fetch("/api/spot-prices");
-      const data = await res.json();
+      const data = await fetchJson<any>("/api/spot-prices");
+      setError("");
       setPrices(data.prices);
       setDateRange(data.dateRange);
     } catch (err) {
-      console.error("Failed to fetch spot prices:", err);
+      setError((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -27,5 +30,5 @@ export function useSpotPrices() {
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
-  return { prices, dateRange, loading, refetch: fetchPrices };
+  return { error, prices, dateRange, loading, refetch: fetchPrices };
 }

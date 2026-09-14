@@ -1,29 +1,18 @@
 import datetime as dt
 import pandas as pd
-from typing import Callable
+
+from .ingestion import prepare_observations
 
 
-def calculate_open_high_low_close_prices(today: dt.datetime, query_func: Callable) -> pd.DataFrame:
-    today_prices = query_func("select * from spot_prices where date(timestamp) = :today", params=locals())
-    today_prices.sort_values("timestamp")
-
-    ohlc_prices = pd.DataFrame()
-    for isin in set(today_prices["isin"]):
-        isin_prices = today_prices.loc[today_prices["isin"] == isin]
-
-        if isin_prices.spot_price.isnull().all():
-            continue
-
-        ohlc_price = pd.DataFrame(columns=["timestamp", "isin", "open_price", "high_price", "low_price", "close_price"])
-        ohlc_price.loc[0] = [
-            today,
-            isin,
-            isin_prices[isin_prices.timestamp == isin_prices.iloc[0].timestamp].spot_price.iloc[0],
-            isin_prices[isin_prices.spot_price == isin_prices.spot_price.max()].spot_price.iloc[0],
-            isin_prices[isin_prices.spot_price == isin_prices.spot_price.min()].spot_price.iloc[0],
-            isin_prices[isin_prices.timestamp == isin_prices.iloc[-1].timestamp].spot_price.iloc[0]
-        ]
-
-        ohlc_prices = pd.concat([ohlc_prices, ohlc_price])
-
-    return ohlc_prices
+def calculate_open_high_low_close_prices(today, query_func):
+    prices = query_func(
+        'SELECT timestamp, isin, spot_price FROM spot_prices WHERE timestamp >= :start AND timestamp < :end ORDER BY timestamp',
+        params={'start': today, 'end': today + dt.timedelta(days=1)})
+    prices = prepare_observations(prices, 'spot_prices').sort_values('timestamp', kind='stable')
+    columns = ['timestamp', 'isin', 'open_price', 'high_price', 'low_price', 'close_price']
+    if prices.empty:
+        return pd.DataFrame(columns=columns)
+    result = prices.groupby('isin', sort=True)['spot_price'].agg(
+        open_price='first', high_price='max', low_price='min', close_price='last').reset_index()
+    result.insert(0, 'timestamp', today)
+    return result[columns]

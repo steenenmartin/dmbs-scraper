@@ -10,7 +10,7 @@ from ..scrapers.scraper import Scraper
 class JyskeScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
-        return [
+        return self.parse_products(data["fastRenteProdukter"], lambda product:
             FixedRateBondDataEntry(
                 self.institute.name,
                 int(product["loebetidAar"]),
@@ -19,19 +19,19 @@ class JyskeScraper(Scraper):
                 float(product["maxAntalAfdragsfrieAar"]),
                 float(product["kuponrenteProcent"]),
                 product["isin"]
-            ) for product in data["fastRenteProdukter"]
-        ]
+            )
+        )
 
     @Scraper.scraper
     def parse_floating_rate_bonds(self, data) -> list[FloatingRateBondDataEntry]:
-        return [
+        return self.parse_products(data["variabelRenteProdukter"], lambda product:
             FloatingRateBondDataEntry(
                 self.institute.name,
                 int(product["fastrenteperiode"]),
                 0,
                 float(product["vaegtetTilbudskursProcent"]),
-            ) for product in data["variabelRenteProdukter"]
-        ]
+            )
+        )
 
     @property
     def url(self) -> str:

@@ -1,21 +1,9 @@
-import express from "express";
-import cors from "cors";
-import path from "node:path";
-import spotPricesRouter from "./routes/spotPrices.js";
+import { app } from "./app.js";
+import { host, port } from "./config.js";
+import { closeDatabase } from "./db.js";
 
-const app = express();
-const PORT = Number(process.env.PORT ?? 3001);
-const frontendDistPath = path.resolve(process.cwd(), "dashboard/frontend/dist");
-
-app.use(cors());
-app.use(express.json());
-app.use("/api", spotPricesRouter);
-app.use(express.static(frontendDistPath));
-
-app.get("*", (_req, res) => {
-  res.sendFile(path.join(frontendDistPath, "index.html"));
-});
-
-app.listen(PORT, () => {
-  console.log(`Dashboard server running on port ${PORT}`);
-});
+const server = app.listen(port, host, () => console.log(`Dashboard API: http://${host}:${port}`));
+server.on("error", error => { console.error(error.message); process.exitCode = 1; });
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => server.close(() => { void closeDatabase().then(() => process.exit(0)); }));
+}

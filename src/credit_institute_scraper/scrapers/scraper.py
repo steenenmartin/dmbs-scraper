@@ -1,85 +1,80 @@
+import logging
+import math
+from functools import wraps
+
 import requests
-from requests.adapters import HTTPAdapter
-import json
-import urllib3
-import ssl
 
+from ..bond_data.validation import validate_bond
 from ..bond_data.fixed_rate_bond_data_entry import FixedRateBondDataEntry
-from ..bond_data.floating_rate_bond_data_entry import FloatingRateBondDataEntry
-from ..enums.credit_insitute import CreditInstitute
 
 
-def get_legacy_session():
-    ctx = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    ctx.options |= 0x4  # OP_LEGACY_SERVER_CONNECT
-    session = requests.session()
-    session.mount('https://', CustomHttpAdapter(ctx))
-    return session
+class EmptyScrapeError(ValueError):
+    """No usable products were returned; the orchestrator may retry."""
 
 
 class Scraper:
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.scrape_success = False
         self.tries_count = 0
         self.missing_observations = False
+        self.issues = []
+        self._data_cache = None
 
-    @classmethod
-    def scraper(cls, parse_bond_data_func):
-        """
-        This method is designed to be a decorator for the parsing methods in Scraper child classes.
-        Sending the request and loading the .json data is done here in the super-class decorator, and then the child-specific data parsing is executed.
+    def report_issue(self, message):
+        self.missing_observations = True
+        self.issues.append(message)
+        logging.warning('%s: %s', self.institute.name, message)
 
-        :param parse_bond_data_func: The parsing function from child Scraper-class
-        """
+    def parse_products(self, products, parse_product):
+        if not isinstance(products, list):
+            raise ValueError('Expected a product list')
+        bonds = []
+        for index, product in enumerate(products):
+            try:
+                bond = parse_product(product)
+                if bond is not None:
+                    bonds.append(bond)
+            except (KeyError, ValueError, TypeError, IndexError, AttributeError, NotImplementedError) as error:
+                # Do not log full provider responses or let one bad product hide all others.
+                self.report_issue(f'Product {index} rejected during parsing: {type(error).__name__}: {error}')
+        return bonds
+
+    @staticmethod
+    def scraper(parse_bond_data_func):
+        @wraps(parse_bond_data_func)
         def wrapper(self):
             self.tries_count += 1
-
-            data = self.get_data()
-
-            bonds = parse_bond_data_func(self, data)
-
+            self.scrape_success = False
+            bonds = parse_bond_data_func(self, self.get_data())
+            valid_bonds = []
+            for bond in bonds:
+                try:
+                    valid_bonds.append(validate_bond(bond, self.institute.name))
+                    if isinstance(bond, FixedRateBondDataEntry) and not math.isfinite(bond.spot_price):
+                        self.report_issue(f'Observation {bond.isin} has no usable spot price; retaining master data only')
+                except (ValueError, TypeError, OverflowError) as error:
+                    product = getattr(bond, 'isin', None) or f'F{getattr(bond, "fixed_rate_period", "?")}/IO{getattr(bond, "max_interest_only_period", "?")}'
+                    self.report_issue(f'Observation {product} rejected: {error}')
+            if not valid_bonds:
+                raise EmptyScrapeError('No valid observations')
             self.scrape_success = True
-            return bonds
-
+            return valid_bonds
         return wrapper
 
-    def parse_fixed_rate_bonds(self) -> list[FixedRateBondDataEntry]:
-        raise NotImplementedError
-
-    def parse_floating_rate_bonds(self) -> list[FloatingRateBondDataEntry]:
-        raise NotImplementedError
-
     @property
-    def url(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def institute(self) -> CreditInstitute:
-        raise NotImplementedError
-
-    @property
-    def max_tries(self) -> int:
-        # Can be overridden by each Scraper-child class if necessary.
+    def max_tries(self):
         return 3
 
     @property
-    def headers(self) -> dict:
-        # Can be overridden by each Scraper-child class if necessary. See eg. jyske_scraper
+    def headers(self):
         return {}
 
     def get_data(self):
-        return json.loads(get_legacy_session().get(self.url, headers=self.headers, timeout=10).text)
-
-
-class CustomHttpAdapter(HTTPAdapter):
-    # "Transport adapter" that allows us to use custom ssl_context.
-
-    def __init__(self, ssl_context=None, **kwargs):
-        self.ssl_context = ssl_context
-        super().__init__(**kwargs)
-
-    def init_poolmanager(self, connections, maxsize, block=False):
-        self.poolmanager = urllib3.poolmanager.PoolManager(
-            num_pools=connections, maxsize=maxsize,
-            block=block, ssl_context=self.ssl_context)
-
+        # Always verify TLS and HTTP status; HTML error pages are not feed data.
+        with requests.Session() as session:
+            with session.get(self.url, headers=self.headers, timeout=(5, 20)) as response:
+                response.raise_for_status()
+                return response.json()

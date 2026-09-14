@@ -1,7 +1,7 @@
+import { fetchJson } from "../utils/api";
 import { useEffect, useState } from "react";
 import type { OHLCPrice } from "../types";
 
-let cache: OHLCPrice[] | null = null;
 
 function getSinceParam(): string {
   const d = new Date();
@@ -10,17 +10,17 @@ function getSinceParam(): string {
 }
 
 export function useOHLCPrices() {
-  const [ohlcPrices, setOhlcPrices] = useState<OHLCPrice[]>(cache ?? []);
-  const [loading, setLoading] = useState(cache === null);
+  const [ohlcPrices, setOhlcPrices] = useState<OHLCPrice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (cache !== null) return;
-    fetch(`/api/ohlc-prices?since=${getSinceParam()}`)
-      .then((res) => res.json())
-      .then((data: OHLCPrice[]) => { cache = data; setOhlcPrices(data); })
-      .catch((err) => console.error("Failed to fetch OHLC prices:", err))
+    fetchJson<any>(`/api/ohlc-prices?since=${getSinceParam()}`)
+      .then((data: OHLCPrice[]) => { setOhlcPrices(data); })
+      .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  return { ohlcPrices, loading };
+  return { ohlcPrices, loading, error };
 }

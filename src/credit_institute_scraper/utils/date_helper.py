@@ -1,6 +1,7 @@
 import datetime as dt
 import pytz
 import logging
+from dateutil.easter import easter
 
 
 def get_active_date():
@@ -24,18 +25,15 @@ def get_active_date():
 
 
 def is_holiday(date):
-    return date.date() in [
-        dt.date(2026, 1, 1),
-        dt.date(2026, 4, 2),
-        dt.date(2026, 4, 3),
-        dt.date(2026, 4, 6),
-        dt.date(2026, 5, 14),
-        dt.date(2026, 5, 15),
-        dt.date(2026, 6, 5),
-        dt.date(2026, 12, 24),
-        dt.date(2026, 12, 25),
-        dt.date(2026, 12, 31),
-    ]
+    date = date.date() if isinstance(date, dt.datetime) else date
+    # Copenhagen fixed-income holidays; checked against Nasdaq's 2026/2027
+    # calendars: https://www.nasdaq.com/european-market-activity/trading-hours
+    fixed = {(1, 1), (6, 5), (12, 24), (12, 25), (12, 26), (12, 31)}
+    offsets = (-3, -2, 1, 39, 40, 50)
+    movable = {easter(date.year) + dt.timedelta(days=offset) for offset in offsets}
+    if date.year <= 2023:
+        movable.add(easter(date.year) + dt.timedelta(days=26))
+    return date.weekday() >= 5 or (date.month, date.day) in fixed or date in movable
 
 def skip_holidays(date):
     if is_holiday(date):
@@ -76,7 +74,8 @@ def get_active_time_range(now=None, force_9_17=False):
         start = end - dt.timedelta(hours=8)
 
     if is_holiday(end):
-        return get_active_time_range(dt.datetime(end.year, end.month, end.day, 17, tzinfo=tz_cph) - dt.timedelta(days=1))
+        previous = tz_cph.localize(dt.datetime(end.year, end.month, end.day, 17) - dt.timedelta(days=1))
+        return get_active_time_range(previous, force_9_17=force_9_17)
 
     start = skip_holidays(start)
 

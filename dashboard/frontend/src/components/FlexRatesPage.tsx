@@ -28,8 +28,8 @@ export function FlexRatesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<FlexFilters>(() => parseFilters(searchParams));
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const { rates, loading: ratesLoading } = useFlexRates();
-  const { masterDataFloat, loading: masterLoading } = useMasterDataFloat();
+  const { rates, loading: ratesLoading, error: ratesError } = useFlexRates();
+  const { masterDataFloat, loading: masterLoading, error: masterError } = useMasterDataFloat();
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -108,6 +108,9 @@ export function FlexRatesPage() {
   }, [rates, filters]);
 
   const activeFilterCount = (Object.values(filters) as (string | number)[][]).filter((v) => v.length > 0).length;
+
+  const error = ratesError || masterError;
+  if (error) return <div role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Prøv igen</button></div>;
 
   return (
     <div className="flex h-full flex-col gap-4 lg:flex-row lg:gap-6">

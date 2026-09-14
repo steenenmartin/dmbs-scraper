@@ -6,7 +6,7 @@ from ..scrapers.scraper import Scraper
 class DlrKreditScraper(Scraper):
     @Scraper.scraper
     def parse_fixed_rate_bonds(self, data) -> list[FixedRateBondDataEntry]:
-        return [
+        return self.parse_products(data["obligationer"], lambda product:
             FixedRateBondDataEntry(
                 self.institute.name,
                 int(float(product["loebetid"])),
@@ -15,8 +15,8 @@ class DlrKreditScraper(Scraper):
                 float(product["afdragsfrihed"].split(" ")[0]) if product["afdragsfrihed"] != "" else 0.0,
                 float(product["navn"].split(" ")[0].replace(",", ".").replace("%", "")),
                 product["ISIN"]
-            ) for product in data["obligationer"] if product["laanbeskrivelse"] == "Fastforrentede obligationslån"
-        ]
+            ) if product["laanbeskrivelse"] == "Fastforrentede obligationslån" else None
+        )
 
     @property
     def url(self) -> str:

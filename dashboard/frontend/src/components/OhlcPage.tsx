@@ -33,8 +33,8 @@ export function OhlcPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState<OhlcFilters>(() => parseFilters(searchParams));
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const { masterData, loading: masterLoading } = useMasterData();
-  const { ohlcPrices, loading: ohlcLoading } = useOHLCPrices();
+  const { masterData, loading: masterLoading, error: masterError } = useMasterData();
+  const { ohlcPrices, loading: ohlcLoading, error: ohlcError } = useOHLCPrices();
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -112,6 +112,9 @@ export function OhlcPage() {
   }, [ohlcPrices, filters.isin]);
 
   const activeFilterCount = (Object.values(filters) as (string | number)[][]).filter((v) => v.length > 0).length;
+
+  const error = ohlcError || masterError;
+  if (error) return <div role="alert" className="rounded-lg bg-red-50 p-4 text-red-800">{error} <button className="underline" onClick={() => window.location.reload()}>Prøv igen</button></div>;
 
   return (
     <div className="flex h-full flex-col gap-4 lg:flex-row lg:gap-6">

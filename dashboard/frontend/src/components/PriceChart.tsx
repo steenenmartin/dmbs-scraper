@@ -179,9 +179,11 @@ export function PriceChart({
         });
 
         const slotPriceMap = new Map<string, number>();
-        deduped.forEach((r) => {
-          slotPriceMap.set(toCopenhagenLocalMinuteTimestamp(r.timestamp), r.spot_price);
-        });
+        if (!showHistoric) {
+          deduped.forEach((r) => {
+            slotPriceMap.set(toCopenhagenLocalMinuteTimestamp(r.timestamp), r.spot_price);
+          });
+        }
 
         const x = showHistoric
           ? deduped.map((r) => r.timestamp.split("T")[0])

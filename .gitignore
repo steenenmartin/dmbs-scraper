@@ -48,3 +48,6 @@ __pycache__/
 
 # local .env file
 .env.dashboard.local
+node_modules/
+*.tsbuildinfo
+.local/

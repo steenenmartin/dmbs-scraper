@@ -11,12 +11,12 @@ class FixedRateBondData(BondData):
 
     def to_master_data_frame(self) -> pd.DataFrame:
         df = self.to_data_frame()
-        return df[["isin", "institute", "years_to_maturity", "max_interest_only_period", "coupon_rate"]]
+        return df.reindex(columns=["isin", "institute", "years_to_maturity", "max_interest_only_period", "coupon_rate"])
 
     def to_spot_prices_data_frame(self, scrape_time: dt.datetime = None) -> pd.DataFrame:
         df = self.to_data_frame(scrape_time)
-        return df[["timestamp", "isin", "spot_price"]]
+        return df.reindex(columns=["timestamp", "isin", "spot_price"])
 
     def to_offer_prices_data_frame(self, scrape_time: dt.datetime = None) -> pd.DataFrame:
         df = self.to_data_frame(scrape_time)
-        return df[["timestamp", "isin", "offer_price"]]
+        return df.reindex(columns=["timestamp", "isin", "offer_price"])
