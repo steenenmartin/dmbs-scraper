@@ -25,14 +25,14 @@ retains its existing meaning as a loan-product term, not a computed bond maturit
 From the repo root, with Python dependencies installed and credentials configured:
 
 ```bash
-PYTHONPATH=src python migrations/master_data.py
+PYTHONPATH=. python migrations/master_data.py
 ```
 
 This only reads the database and writes a local backup/report under `.local/`.
 After stopping the old worker and preparing deployment of the updated scraper:
 
 ```bash
-PYTHONPATH=src python migrations/master_data.py --apply
+PYTHONPATH=. python migrations/master_data.py --apply
 ```
 
 The apply command takes a new backup inside the transaction while both tables are
@@ -41,10 +41,10 @@ success is a no-op. If validation fails, all database changes are rolled back.
 Deploy the new code before resuming scraping. Test commands:
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s test -p 'test_*.py'
+TEST_POSTGRES_URL=postgresql://test:test@127.0.0.1:5432/test python -m unittest discover -s test
 npm --prefix dashboard run test -w dmbs-backend
 ```
 
 The PostgreSQL migration tests use PGlite and an isolated fixture. Python writer
-regression tests use an isolated SQLite database with the equivalent unique keys.
+regression tests use an isolated PostgreSQL schema with the production column types and keys.
 Neither test suite uses real database credentials.

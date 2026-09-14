@@ -1,0 +1,142 @@
+{
+  "jyske_fixed": [
+    {
+      "coupon_rate": 4.0,
+      "institute": "Jyske",
+      "isin": "DK0009420069",
+      "max_interest_only_period": 0,
+      "offer_price": 98.1,
+      "spot_price": 98.25,
+      "years_to_maturity": 30
+    },
+    {
+      "coupon_rate": 4.0,
+      "institute": "Jyske",
+      "isin": "DK0009420143",
+      "max_interest_only_period": 10,
+      "offer_price": 95.8,
+      "spot_price": 96.0,
+      "years_to_maturity": 30
+    }
+  ],
+  "jyske_floating": [
+    {
+      "fixed_rate_period": 3,
+      "institute": "Jyske",
+      "max_interest_only_period": 0,
+      "spot_rate": 2.5
+    },
+    {
+      "fixed_rate_period": 5,
+      "institute": "Jyske",
+      "max_interest_only_period": 0,
+      "spot_rate": -0.25
+    }
+  ],
+  "nordea_fixed": [
+    {
+      "coupon_rate": 3.5,
+      "institute": "Nordea",
+      "isin": "DK0002066521",
+      "max_interest_only_period": 0,
+      "offer_price": null,
+      "spot_price": 93.1,
+      "years_to_maturity": 20
+    },
+    {
+      "coupon_rate": 3.5,
+      "institute": "Nordea",
+      "isin": "DK0002066521",
+      "max_interest_only_period": 0,
+      "offer_price": null,
+      "spot_price": 93.1,
+      "years_to_maturity": 15
+    },
+    {
+      "coupon_rate": 4.0,
+      "institute": "Nordea",
+      "isin": "DK0002066448",
+      "max_interest_only_period": 30,
+      "offer_price": null,
+      "spot_price": 91.4,
+      "years_to_maturity": 30
+    }
+  ],
+  "rd_fixed": [
+    {
+      "coupon_rate": 4.0,
+      "institute": "RealKreditDanmark",
+      "isin": "DK0004635232",
+      "max_interest_only_period": 30,
+      "offer_price": 91.55,
+      "spot_price": 91.55,
+      "years_to_maturity": 30
+    },
+    {
+      "coupon_rate": 1.0,
+      "institute": "RealKreditDanmark",
+      "isin": "DK0004635075",
+      "max_interest_only_period": 0,
+      "offer_price": 64.55,
+      "spot_price": null,
+      "years_to_maturity": 30
+    },
+    {
+      "coupon_rate": 0.0,
+      "institute": "RealKreditDanmark",
+      "isin": "DK0004618733",
+      "max_interest_only_period": 0,
+      "offer_price": null,
+      "spot_price": null,
+      "years_to_maturity": 30
+    }
+  ],
+  "rd_floating": [
+    {
+      "fixed_rate_period": 3,
+      "institute": "RealKreditDanmark",
+      "max_interest_only_period": 0,
+      "spot_rate": 2.5
+    },
+    {
+      "fixed_rate_period": 5,
+      "institute": "RealKreditDanmark",
+      "max_interest_only_period": 30,
+      "spot_rate": 2.75
+    }
+  ],
+  "tk_fixed": [
+    {
+      "coupon_rate": 4.0,
+      "institute": "TotalKredit",
+      "isin": "DK0009420069",
+      "max_interest_only_period": 0,
+      "offer_price": 97.0,
+      "spot_price": 98.0,
+      "years_to_maturity": 30
+    },
+    {
+      "coupon_rate": 4.0,
+      "institute": "TotalKredit",
+      "isin": "DK0009420143",
+      "max_interest_only_period": 10,
+      "offer_price": null,
+      "spot_price": 95.0,
+      "years_to_maturity": 30
+    }
+  ],
+  "tk_floating": [
+    {
+      "fixed_rate_period": 3,
+      "institute": "TotalKredit",
+      "max_interest_only_period": 0,
+      "spot_rate": 2.75
+    },
+    {
+      "fixed_rate_period": 5,
+      "institute": "TotalKredit",
+      "max_interest_only_period": 10,
+      "spot_rate": 2.95
+    }
+  ]
+}

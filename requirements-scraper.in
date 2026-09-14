@@ -1,9 +1,7 @@
-# Worker runtime only; keep legacy dashboard dependencies in requirements.txt.
-pandas>=2.2,<4
-requests>=2.32,<3
+# Worker runtime; the dashboard has its own Node dependencies.
+aiohttp>=3.12,<4
 SQLAlchemy>=2.0,<3
 psycopg2-binary>=2.9.9,<3
 APScheduler>=3.10,<4
 playwright>=1.49,<2
-pytz
 python-dateutil>=2.9,<3

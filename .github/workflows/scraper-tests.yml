@@ -26,5 +26,5 @@ jobs:
       - run: python -m pip install -r requirements-scraper.txt
       - run: python -m unittest discover -s test
         env:
-          PYTHONPATH: src
+          PYTHONPATH: .
           TEST_POSTGRES_URL: postgresql://scraper_test:local_test_only@127.0.0.1:5432/scraper_test

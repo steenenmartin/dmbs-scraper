@@ -1,117 +1,161 @@
-# Scraper ingestion and recovery
+# Scraper operation and data guarantees
 
-The worker fetches provider data before opening a write transaction. Source
-adapters parse individual products; shared validation rejects malformed metadata,
-zero/non-finite floating rates and invalid prices. A bad product does not discard
-valid siblings. Fixed products without a price can still contribute master data.
-Negative floating rates and zero-coupon fixed bonds remain valid.
+The worker has four non-empty Python modules: the root `scraper.py` entrypoint,
+and `sources.py`, `transport.py`, `storage.py` under `src/credit_institute_scraper`.
+They handle scheduling, pure field translation, bounded network access and
+PostgreSQL persistence. There are no adapter, repository or result-handler layers.
+The TypeScript dashboard is a separate process; its API and database schema are
+unchanged. Legacy Python/Dash, SQLite and old internal Python interfaces are removed.
 
-## Failure handling
+## One flow per institute
 
-- HTTP requests verify TLS, reject unsuccessful HTTP statuses, and have connection
-  and read timeouts. Jyske retains its browser transport with bounded timeouts.
-- Each provider has at most three attempts, with 1- and 2-second retry delays.
-  Empty/all-invalid responses count as failure. A failed source does not prevent
-  successful sources from being collected. Reusing a scraper resets its state.
-- A run's master data, prices, rates, status and quality audit commit in one
-  transaction. A database error rolls them all back. The failure is logged and
-  re-raised; a separate transaction attempts to persist its audit record.
-- All framework writers share a PostgreSQL transaction advisory lock. Writes have
-  a 5-second lock timeout and 30-second statement timeout. This serializes
-  overlapping write transactions without holding a lock during HTTP requests.
-- `status.last_data_time` only advances when the source has usable spot prices.
-  Failed or partial responses are visible as `NotOK` / `SomeDataMissing`.
+On Danish business days, APScheduler runs four independent jobs at 09:02, then
+09:05, 09:10 and every five minutes through 17:00. Each institute has one combined
+trigger, `max_instances=1`, coalescing and a 60-second misfire grace period. A slow
+source can skip its next run without holding up another source's fetch. Weekends,
+fixed closures and Easter-relative closures retain the previous calendar rules.
 
-## Data integrity
+Each job fixes its UTC five-minute slot when it starts (09:02 maps to 09:00),
+fetches both prices and floating rates, parses them, then opens a write transaction.
+Requests only retrieve the data available at request time. Missed historical quotes
+cannot be fetched later; neither scheduling nor the inspection command backfills them.
+Jyske's shared endpoint is fetched once per job. Re-fetching daily rates makes
+recovery and discovery of new products automatic; only the first valid daily rate
+and offer price are stored for each product. RD and Totalkredit each make one
+additional endpoint request every five minutes compared with the previous pipeline.
 
-Master records use migration 001's database keys and insert-only ingestion.
-Known ISINs cannot acquire a different issuer or coupon through a new product
-variant. Jyske's rule chooses the greatest observed interest-only period when
-otherwise matching observations conflict, and logs that decision. Nordea's
-legitimate 15/20-year product variants remain separate. Quotes whose issuer/ISIN/
-coupon identity was rejected from master data are not ingested as orphan prices.
+HTTP uses aiohttp with a 20-second total request timeout and 5-second connection
+timeout. The entire network phase shares a 90-second budget including retries and
+Jyske's browser fallback. Only transient connection failures, timeouts and HTTP
+408/429/500/502/503/504 are retried, at most three attempts with 1- and 2-second
+delays. Certificate and malformed JSON errors are reported without retrying.
+Unexpected programming errors propagate with their traceback and fail the job;
+they are not converted into ordinary quality issues or retried.
+Successful endpoints survive another endpoint's timeout. Browser resources have
+bounded cleanup; the 90-second network budget can be followed by that cleanup.
 
-Observation keys are `(timestamp, isin)` for fixed prices/OHLC and
-`(timestamp, institute, fixed_rate_period, max_interest_only_period)` for rates.
-Identical duplicates collapse. Conflicting observations in one response are
-rejected and logged. Existing observations are retained on replay; incoming
-changes are logged, not silently overwritten. Missing/zero/non-finite prices,
-zero/non-finite floating rates and inconsistent OHLC bounds are rejected.
-Tables must already exist: ingestion never creates or replaces them.
+Jyske retains direct APIRequestContext, in-page fetch and context-request fallback.
+There is no network-idle wait. The in-page request aborts after 30 seconds including
+body reading. Cancellation unwinds owned browser contexts. Successful retries and
+fallbacks do not create quality warnings. Pure parsers do not fetch, log or write.
 
-OHLC uses sorted, valid observations, including the current closing snapshot.
-The open and close are the first and last valid prices of the day. Historical
-OHLC values are not automatically recalculated or overwritten by this change.
+## Validation and persistence
 
-## Schedule and daily recovery
+- Numeric validation precedes conversion: boolean prices are invalid; fractional
+  product periods are rejected rather than truncated. Missing, non-positive or
+  non-finite fixed prices become `None` without discarding valid master data or
+  another valid price. Floating rates must be finite and nonzero; negative rates
+  and zero fixed coupons are valid. A missing floating rate also retains its valid
+  master identity, so a newly discovered product cannot disappear from coverage.
+  Expected invalid input becomes a contextual issue without discarding valid siblings.
+  Parsers catch only explicit source-validation errors; programming errors propagate.
+- Existing master products and manual corrections are insert-only. Security issuer
+  and coupon conflicts are rejected across product keys. Jyske retains the greatest
+  observed interest-only period for otherwise matching variants. Nordea 15/20-year
+  variants remain independently filterable. Existing migration 001 keys are required.
+- Master data, observations, status and quality audit commit together per institute.
+  A database error rolls back that institute and attempts a separate failure audit.
+  One pooled SQLAlchemy engine lives for the worker lifetime. Connections belong to
+  individual transactions; jobs never dispose the pool.
+- Writers retain the shared PostgreSQL transaction advisory lock, 5-second lock
+  timeout and 30-second statement timeout. Network work happens before that lock.
+  Database transactions are briefly serialized; external writers bypassing this
+  lock are not covered by application-level duplicate-write protection.
+- Exact duplicates collapse; conflicting incoming observations are rejected.
+  Existing observations, including invalid historical keys, are never overwritten
+  or repaired by inserting duplicates. Daily values retain their first valid value.
+  Tables are never created, replaced or migrated by the worker.
+- Status freshness advances only for accepted or identical existing spot quotes.
+  It never moves backwards, and a write older than the saved data time cannot replace
+  that status. Empty/failed fixed results are `NotOK`; incomplete required data are
+  `SomeDataMissing`. Nordea does not provide offer prices. Failed optional daily
+  retrieval after today's products are covered is informational, not partial status.
+  A missing rate is harmless only when that exact product already has a valid daily
+  rate. Malformed product identities and response formats remain visible even after
+  known daily products are covered.
+- At close, validated stored spot observations produce OHLC and closing prices.
+  A rejected incoming quote cannot become a closing price. OHLC is sorted and
+  scoped by institute without multiplying quotes for product variants. Existing
+  OHLC/closing history remains unchanged on conflicting duplicate writes.
 
-The scheduler uses `Europe/Copenhagen`, including DST. On working days, only the
-opening collection is delayed to 09:02; subsequent collections run every five
-minutes from 09:05 through 17:00. Intraday
-observations are assigned to the preceding five-minute slot (09:02 -> 09:00),
-so retries within that slot do not create extra samples. This retains the
-application's existing 09:00-17:00 collection window.
+Known floating products missing from today's rates continue to make data partial.
+If a provider permanently removes a product, its retained master row needs review.
+Unknown products absent from the feed and plausible but incorrect new values cannot
+be independently detected by this scraper.
 
-Holiday rules include weekends, fixed closures and Easter-relative closures,
-checked against the [Nasdaq Copenhagen fixed-income calendars for 2026 and
-2027](https://www.nasdaq.com/european-market-activity/trading-hours).
-Review these rules when exchange calendars change.
+## Logs, tests and rollout
 
-The first valid daily offer quote is retained. Floating sources are retried
-throughout the day while known products are missing, instead of only being
-attempted at exactly 09:00. If a provider permanently removes a product, its old
-master row can therefore cause repeated attempts; the audit makes this visible.
-A provider's first valid daily response discovers new floating products. The
-framework cannot detect an unknown product omitted from that response.
+Each commit emits an `institute_committed` JSON log with institute, slot, actual
+start/fetch/commit times, fetch/parse/database/total durations, inserted counts and
+issue count. `scrape_logs` retains `scrape_quality` and `scrape_failed` JSON events;
+quality events include typed issues and compatible message strings. Reports retain
+at most 100 issues of 2,000 message characters each. Historical log rows stay readable.
+Failure events include the slot, stage and a bounded traceback, including underlying
+errors from concurrent requests. Retry logs identify institute, endpoint, attempt,
+elapsed time and the exception message; Jyske logs also identify the fallback path.
+Product validation messages include a product identity where available and the
+offending field/value. The worker adds the source endpoint to quality messages.
+The dashboard polls every 60 seconds; display time is separate from database commit.
 
-## Auditing
+To locate a failure, follow its stage directly to the responsible module:
 
-Warnings are written to the worker log and to the existing `scrape_logs` table as
-JSON with `event="scrape_quality"`, `warning_count` and `messages`. A bounded
-summary retains the first 100 messages (up to 2,000 characters each) per cycle.
-Failure records use `event="scrape_failed"`. If the database is unavailable,
-the worker log remains the fallback. Existing older text log rows are preserved.
-No external notifications are configured.
+| Stage | Module | Responsibility |
+| --- | --- | --- |
+| Scheduling/job | `scraper.py` | Market times, orchestration and commit/failure logs |
+| `fetch` | `transport.py` | HTTP, retry, timeout and browser fallback |
+| `parse.fixed` / `parse.floating` | `sources.py` | Source fields, product identity and validation |
+| `database` | `storage.py` | Coverage, transactions and preserved observations |
 
-A plausible but wrong value for a new product can still pass validation. The
-framework does not independently check issuer terms or source publication dates.
-Observation replay protection applies to cooperating framework writers; external
-writers are not covered by its advisory lock. Master uniqueness is additionally
-enforced by database constraints. The old deployed worker must be stopped before
-migration, because its table replacement bypasses all these protections.
+Within `storage.py`, `save()` coordinates one transaction. `write()` validates and
+preserves observations, `daily_issues()` checks coverage, `scrape_status()` applies
+status priority, and `record_status()` persists status and quality issues together.
+The two coverage/status functions are pure: they take explicit facts and return a
+result without SQL, logging or changes to their input. Their rules can be exercised
+directly with `python -m unittest test.test_storage.CoverageTests`.
 
-## Verification
-
-Install the pinned worker dependencies and run the isolated tests:
+Inspect a saved raw JSON response from one endpoint without fetching or writing:
 
 ```sh
-python -m pip install -r requirements-scraper.txt
-PYTHONPATH=src python -m unittest discover -s test
+python scraper.py --inspect response.json --institute Nordea --kind fixed
 ```
 
-The ordinary tests use temporary SQLite databases and recorded/synthetic source
-responses. PostgreSQL integration tests are enabled only with an explicit
-loopback `TEST_POSTGRES_URL`; they create and remove a randomly named test schema.
-They never use the application's credentials file or `DATABASE_URL`.
+This works outside market hours and needs no database credentials. It prints parsed
+products and issues as JSON. Exit codes are 0 for no issues, 1 for validation issues
+and 2 for invalid arguments or an unreadable/invalid JSON file. Unexpected bugs retain
+their traceback. The input is the endpoint's raw response, not the combined fixture
+catalogue. Inspection reproduces parsing of a saved response; it cannot recover a
+missed historical quote. Running `python scraper.py` without arguments starts the worker.
+
+Install `requirements-scraper.txt`, then from the repository root:
 
 ```sh
-TEST_POSTGRES_URL=postgresql://test:test@127.0.0.1:5432/test \
-  PYTHONPATH=src python -m unittest test.test_postgres_ingestion
+TEST_POSTGRES_URL=postgresql://test:test@127.0.0.1:5432/test python -m unittest discover -s test
+npm test
+npm run build
 ```
 
-The GitHub Actions workflow runs both test groups against a disposable PostgreSQL
-17 service. It covers transactional rollback, replay, missing migration keys,
-parser isolation, retries, zero rates, preserved corrections, OHLC and scheduling.
-Update dependencies deliberately by editing `requirements-scraper.in`, running
-`uv pip compile requirements-scraper.in -o requirements-scraper.txt`, and rerunning
-these checks. Browser installation must match the pinned Playwright release.
+Database tests require an explicit loopback URL and use a randomly named disposable
+PostgreSQL schema. They never read application credentials or `DATABASE_URL`.
+Without `TEST_POSTGRES_URL`, only pure/parser/network/worker unit tests run; database
+tests are visibly skipped. CI supplies PostgreSQL 17. Provider fixtures include
+recorded public fields and synthetic edge cases; network tests use mocks and a local
+HTTP server, and execute the actual in-page JavaScript with a hanging response body.
 
-## Deployment
+Tests keep the runtime within four non-empty modules. There is no hard class,
+function or line-count ceiling: explicit validation, useful types and diagnostics
+take priority over saving lines. The simplified worker keeps the direct four-module
+flow without the earlier adapter, repository and compatibility layers. Regression
+tests inject real provider/transport programming errors and verify missing-product
+coverage, recovery and failure diagnostics against PostgreSQL.
 
-1. Stop the old worker and let any running scrape finish.
-2. Follow [migration 001](../migrations/README.md), including its backup and review.
-3. Deploy the new worker code. In this project a push to `main` triggers Heroku.
-4. Resume the worker and inspect status plus `scrape_logs` after the first run.
+Recompile dependencies deliberately with
+`uv pip compile requirements-scraper.in -o requirements-scraper.txt --python-version 3.12`.
+The installed browser must match the pinned Playwright version.
 
-This refactor does not itself apply production migrations or deploy the worker.
-Do not resume the old worker after migration: it can drop the new constraints.
+This change needs no new database migration. Existing migration 001 is still required;
+its [preflight tool](../migrations/README.md) is preserved. Drain the previous worker
+before replacement. SIGTERM/keyboard shutdown drains jobs before disposing the pool;
+an external hard termination may interrupt that drain and PostgreSQL rolls back any
+uncommitted transaction. After an authorized deployment, check per-institute commit
+times, status and opening/closing observations. Commit/push/deployment are separate
+actions; this refactor does not itself change production data.

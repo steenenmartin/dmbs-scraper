@@ -1,0 +1,176 @@
+{
+  "jyske_fixed": {
+    "fastRenteProdukter": [
+      {
+        "loebetidAar": 30,
+        "aktuelKurs": 98.25,
+        "tilbudsKurs": 98.1,
+        "maxAntalAfdragsfrieAar": 0,
+        "kuponrenteProcent": 4,
+        "isin": "DK0009420069"
+      },
+      {
+        "loebetidAar": 30,
+        "aktuelKurs": 96,
+        "tilbudsKurs": 95.8,
+        "maxAntalAfdragsfrieAar": 10,
+        "kuponrenteProcent": 4,
+        "isin": "DK0009420143"
+      }
+    ]
+  },
+  "jyske_floating": {
+    "variabelRenteProdukter": [
+      {
+        "fastrenteperiode": 3,
+        "vaegtetTilbudskursProcent": 2.5
+      },
+      {
+        "fastrenteperiode": 5,
+        "vaegtetTilbudskursProcent": -0.25
+      },
+      {
+        "fastrenteperiode": 1,
+        "vaegtetTilbudskursProcent": 0
+      }
+    ]
+  },
+  "nordea_fixed": [
+    {
+      "rate": "93,100",
+      "fundName": "3,500000% Nordea Kredit ann SDRO ann SDRO",
+      "loanPeriodMax": "20",
+      "repaymentFreedomMax": "Nej",
+      "isinCode": "DK0002066521"
+    },
+    {
+      "rate": "93,100",
+      "fundName": "3,500000% Nordea Kredit ann SDRO ann SDRO",
+      "loanPeriodMax": "15",
+      "repaymentFreedomMax": "Nej",
+      "isinCode": "DK0002066521"
+    },
+    {
+      "rate": "91,400",
+      "fundName": "4,000000% Nordea Kredit ann OA30SDRO OA30",
+      "loanPeriodMax": "30",
+      "repaymentFreedomMax": "30",
+      "isinCode": "DK0002066448"
+    },
+    {
+      "rate": "98,000",
+      "fundName": "4% old filtered product",
+      "loanPeriodMax": "15",
+      "repaymentFreedomMax": "Nej",
+      "isinCode": "DK0002056134"
+    }
+  ],
+  "rd_fixed": [
+    {
+      "isinCode": "DK0004635232",
+      "termToMaturityYears": "30.00",
+      "nominelInterestRate": "4.0000",
+      "numberOfTermsWithoutRepayment": "119",
+      "loanTypeCode": "16",
+      "offerprice": 91.55,
+      "prices": [
+        {
+          "date": "2026-09-14",
+          "price": "91,5500"
+        }
+      ]
+    },
+    {
+      "isinCode": "DK0004635075",
+      "termToMaturityYears": "30.00",
+      "nominelInterestRate": "1.0000",
+      "numberOfTermsWithoutRepayment": "0",
+      "loanTypeCode": "01",
+      "offerprice": 64.55,
+      "prices": [
+        {
+          "date": "2026-09-14",
+          "price": "-1,0000"
+        }
+      ]
+    },
+    {
+      "isinCode": "DK0004618733",
+      "termToMaturityYears": "0.00",
+      "nominelInterestRate": "0.0000",
+      "numberOfTermsWithoutRepayment": "0",
+      "loanTypeCode": "01",
+      "offerprice": -1,
+      "prices": [
+        {
+          "price": "98,0000"
+        }
+      ]
+    },
+    {
+      "isinCode": "DK0004634938",
+      "termToMaturityYears": "30.00",
+      "nominelInterestRate": "4.0000",
+      "numberOfTermsWithoutRepayment": "0",
+      "loanTypeCode": "99",
+      "offerprice": 94.4,
+      "prices": [
+        {
+          "price": "94,2500"
+        }
+      ]
+    }
+  ],
+  "rd_floating": [
+    {
+      "name": "FlexLoan_F3_WithInstallment",
+      "offerrate": "2.5"
+    },
+    {
+      "name": "FlexLoan_F5_WithoutInstallment",
+      "offerrate": "2.75"
+    },
+    {
+      "name": "OtherProduct",
+      "offerrate": "4"
+    }
+  ],
+  "tk_fixed": {
+    "groups": [
+      {
+        "entries": [
+          {
+            "lifetime": "30 år",
+            "spotPriceRatePayment": "98,00",
+            "priceRate": "97,00",
+            "name": "4% med afdrag",
+            "fondCode": "942006"
+          },
+          {
+            "lifetime": "30 år",
+            "spotPriceRatePayment": "95,00",
+            "priceRate": "",
+            "name": "4% lån med op til 10 års afdragsfrihed",
+            "fondCode": "942014"
+          }
+        ]
+      }
+    ]
+  },
+  "tk_floating": {
+    "groups": [
+      {
+        "entries": [
+          {
+            "name": "F3 med afdrag",
+            "innerInterestGrossValue": "2,75%"
+          },
+          {
+            "name": "F5 med op til 10 års afdragsfrihed",
+            "innerInterestGrossValue": "2,95%"
+          }
+        ]
+      }
+    ]
+  }
+}

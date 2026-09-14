@@ -3,7 +3,7 @@
 DMBS (Danish Mortgage Backed Securities) Scraper is a web-scraper and an application to extract and display price data for all currently active DMBS ISINs. 
 
 * `scraper.py` collects data periodically every 5 minutes from the 4 main mortgage institutes in Denmark - Nordea Kredit, TotalKredit, Realkredit Danmark and Jyske Realkredit. DLR kredit unfortunately does not display intra-day offer prices, and as such they are not included.
-* `app.py` is a dash application enabling the data to be displayed in your browser
+* `dashboard/` contains the TypeScript API and browser dashboard.
 
 ## Reporting issues
 Use the Github [issue tracker](https://github.com/steenenmartin/dmbs-scraper/issues) to file issues. Pull requests are very welcome
@@ -63,10 +63,24 @@ The old worker's `to_sql(if_exists="replace")` would otherwise remove the keys.
 
 ## Scraper reliability
 
-See [scraper ingestion and recovery](docs/scraper-safety.md) for validation,
-transactional writes, replay protection, quality logs, tests and deployment order.
-Worker dependencies are pinned in `requirements-scraper.txt`; `requirements.txt`
-includes them alongside the legacy Python dashboard dependencies.
+See [scraper operation and debugging](docs/scraper-safety.md) for validation,
+transactional writes, duplicate protection, quality logs, tests and deployment order.
+Four Python modules handle scheduling, source parsing, bounded network access,
+and PostgreSQL writes. Each institute fetches both prices and daily rates, then
+commits its own data, status and audit. Only the opening collection is delayed to
+09:02; subsequent jobs run at five-minute boundaries through 17:00 in Danish time.
+Worker dependencies are pinned in `requirements-scraper.txt` and included by
+`requirements.txt`. The worker requires PostgreSQL; SQLite and the legacy Python
+dashboard are no longer supported.
+
+To debug parsing of a saved endpoint response without network or database access:
+
+```bash
+python scraper.py --inspect response.json --institute Nordea --kind fixed
+```
+
+The command prints products and validation issues. It only inspects saved JSON;
+missed historical quotes cannot be retrieved by running a new scrape.
 
 ## Deploying on Heroku (single app: TypeScript dashboard + Python scraper)
 This repository runs as **one Heroku app**:
