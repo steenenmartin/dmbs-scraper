@@ -21,7 +21,7 @@ const STATUS_STYLES: Record<string, { dot: string; badge: string; label: string 
   SomeDataMissing: {
     dot: "bg-amber-500",
     badge: "bg-amber-100 text-amber-700",
-    label: "Some missing",
+    label: "Partial",
   },
   ExchangeClosed: {
     dot: "bg-slate-400",
@@ -121,8 +121,11 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
                     : "rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2"
                 }
               >
-                <div className={inSidebar ? "flex items-center justify-between gap-2" : "flex items-center gap-2"}>
-                  <p className={`${inSidebar ? "text-xs" : "text-sm"} font-medium ${inSidebar ? "text-slate-200" : "text-slate-700"}`}>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                  <p
+                    className={`min-w-0 truncate ${inSidebar ? "text-xs" : "text-sm"} font-medium ${inSidebar ? "text-slate-200" : "text-slate-700"}`}
+                    title={row.institute}
+                  >
                     {row.institute}
                   </p>
                   <span
