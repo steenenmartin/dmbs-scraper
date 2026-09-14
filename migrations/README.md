@@ -25,14 +25,14 @@ retains its existing meaning as a loan-product term, not a computed bond maturit
 From the repo root, with Python dependencies installed and credentials configured:
 
 ```bash
-PYTHONPATH=. python migrations/master_data.py
+python -m migrations.master_data
 ```
 
 This only reads the database and writes a local backup/report under `.local/`.
 After stopping the old worker and preparing deployment of the updated scraper:
 
 ```bash
-PYTHONPATH=. python migrations/master_data.py --apply
+python -m migrations.master_data --apply
 ```
 
 The apply command takes a new backup inside the transaction while both tables are

@@ -1,18 +1,19 @@
 {
   "name": "dmbs-scraper",
   "description": "DMBS scraper worker + TypeScript dashboard web app",
+  "stack": "heroku-26",
   "buildpacks": [
     {
       "url": "heroku-community/apt"
-    },
-    {
-      "url": "heroku/nodejs"
     },
     {
       "url": "heroku/python"
     },
     {
       "url": "https://github.com/Thomas-Boi/heroku-playwright-python-browsers"
+    },
+    {
+      "url": "heroku/nodejs"
     }
   ],
   "formation": {

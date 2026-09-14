@@ -1,6 +1,5 @@
-# Ignore these directories
-Kurser/
-plots/
+# Retired local SQLite snapshot
+/database.db
 
 # Ignore Logs
 logs

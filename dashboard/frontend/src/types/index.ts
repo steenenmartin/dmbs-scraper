@@ -49,9 +49,4 @@ export interface FilterState {
   isin: string[];
 }
 
-export interface SpotPricesResponse {
-  prices: SpotPrice[];
-  dateRange: [string, string];
-}
-
 export type FilterKey = keyof FilterState;

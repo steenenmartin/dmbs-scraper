@@ -37,13 +37,6 @@ def npm_cmd() -> str:
     return shutil.which("npm.cmd") or shutil.which("npm.exe") or shutil.which("npm") or ""
 
 
-def require_database_url(env: dict[str, str]) -> None:
-    if not env.get("DATABASE_URL"):
-        raise SystemExit(
-            "DATABASE_URL is missing or empty. Set it in environment or in .env.dashboard.local."
-        )
-
-
 def env_with_defaults(env_file: Path | None) -> dict[str, str]:
     env = os.environ.copy()
     if env_file is not None:
