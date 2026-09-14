@@ -2,7 +2,7 @@ import json
 import sqlite3
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -234,11 +234,27 @@ class SourceSafetyTests(unittest.TestCase):
             worker.main()
         self.assertEqual(scheduler.call_args.kwargs['timezone'], 'Europe/Copenhagen')
         from apscheduler.triggers.cron import CronTrigger
-        schedule = scheduler.return_value.add_job.call_args_list[0].kwargs
-        trigger = CronTrigger(day_of_week=schedule['day_of_week'], hour=schedule['hour'], minute=schedule['minute'], timezone='Europe/Copenhagen')
+        triggers = [
+            CronTrigger(day_of_week=call.kwargs['day_of_week'], hour=call.kwargs['hour'],
+                        minute=call.kwargs['minute'], timezone='Europe/Copenhagen')
+            for call in scheduler.return_value.add_job.call_args_list
+        ]
         for instant, hour in [(datetime(2026, 9, 14, 0, tzinfo=timezone.utc), 7), (datetime(2026, 11, 2, 0, tzinfo=timezone.utc), 8)]:
-            next_run = trigger.get_next_fire_time(None, instant).astimezone(timezone.utc)
-            self.assertEqual((next_run.hour, next_run.minute), (hour, 2))
+            with self.subTest(day=instant.date()):
+                runs = []
+                for trigger in triggers:
+                    next_run = trigger.get_next_fire_time(None, instant)
+                    while next_run.astimezone(timezone.utc).date() == instant.date():
+                        runs.append(next_run.astimezone(timezone.utc))
+                        next_run = trigger.get_next_fire_time(next_run, next_run + timedelta(seconds=1))
+                opening = instant.replace(hour=hour)
+                expected = [opening + timedelta(minutes=2)] + [
+                    opening + timedelta(minutes=minute) for minute in range(5, 481, 5)
+                ]
+                self.assertEqual(sorted(runs), expected)
+        saturday = datetime(2026, 9, 12, tzinfo=timezone.utc)
+        for trigger in triggers:
+            self.assertEqual(trigger.get_next_fire_time(None, saturday).date(), STAMP.date())
 
     def test_http_status_checked_before_json_and_connections_closed(self):
         source = FixtureSource()

@@ -45,8 +45,9 @@ OHLC values are not automatically recalculated or overwritten by this change.
 
 ## Schedule and daily recovery
 
-The scheduler uses `Europe/Copenhagen`, including DST. It collects every five
-minutes from 09:02 through 16:57 and once at 17:00 on working days. Intraday
+The scheduler uses `Europe/Copenhagen`, including DST. On working days, only the
+opening collection is delayed to 09:02; subsequent collections run every five
+minutes from 09:05 through 17:00. Intraday
 observations are assigned to the preceding five-minute slot (09:02 -> 09:00),
 so retries within that slot do not create extra samples. This retains the
 application's existing 09:00-17:00 collection window.
