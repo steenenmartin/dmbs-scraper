@@ -184,7 +184,7 @@ def nordea(kind: str, p: dict[str, Any]) -> Bond | None:
     )
 
 
-def realkredit(kind: str, p: dict[str, Any]) -> Bond | Rate | None:
+def realkredit_dk(kind: str, p: dict[str, Any]) -> Bond | Rate | None:
     if kind == "floating":
         match = re.fullmatch(
             r"FlexLoan_F(\d{1,2})_(WithInstallment|WithoutInstallment)",
@@ -253,7 +253,7 @@ def totalkredit(kind: str, p: dict[str, Any]) -> Bond | Rate:
 PARSERS: dict[str, Callable[[str, dict[str, Any]], Bond | Rate | None]] = {
     "Jyske": jyske,
     "Nordea": nordea,
-    "RealKreditDanmark": realkredit,
+    "RealKreditDanmark": realkredit_dk,
     "TotalKredit": totalkredit,
 }
 
