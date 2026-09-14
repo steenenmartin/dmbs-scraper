@@ -102,11 +102,13 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
       ) : (
         <div className={inSidebar ? "space-y-1.5" : "space-y-2"}>
           {status.map((row) => {
-            const style = STATUS_STYLES[row.status] ?? {
+            const scrapeStyle = STATUS_STYLES[row.status] ?? {
               dot: "bg-slate-400",
               badge: "bg-slate-100 text-slate-600",
               label: row.status,
             };
+            const style = liveLabel === "Closed" ? STATUS_STYLES.ExchangeClosed : scrapeStyle;
+            const description = `${liveLabel === "Closed" ? "Market closed. " : ""}Last scrape: ${scrapeStyle.label}.`;
 
             const lastUpdate = inSidebar
               ? formatSidebarLastUpdate(row.last_data_time)
@@ -130,6 +132,8 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
                   </p>
                   <span
                     className={`inline-flex min-h-5 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium leading-none whitespace-nowrap ${style.badge}`}
+                    title={description}
+                    aria-label={description}
                   >
                     <span className={`h-1.5 w-1.5 rounded-full ${style.dot}`} />
                     {style.label}

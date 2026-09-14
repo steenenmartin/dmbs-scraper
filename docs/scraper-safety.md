@@ -73,6 +73,8 @@ fallbacks do not create quality warnings. Pure parsers do not fetch, log or writ
   A missing rate is harmless only when that exact product already has a valid daily
   rate. Malformed product identities and response formats remain visible even after
   known daily products are covered.
+  Outside trading hours, the dashboard shows `Closed` and keeps the last scrape's
+  quality status in the badge tooltip; the stored status and audit are unchanged.
 - At close, validated stored spot observations produce OHLC and closing prices.
   A rejected incoming quote cannot become a closing price. OHLC is sorted and
   scoped by institute without multiplying quotes for product variants. Existing
