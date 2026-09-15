@@ -2,6 +2,7 @@ import express from "express";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import spotPricesRouter from "./routes/spotPrices.js";
+import statusRouter from "./routes/status.js";
 import { query, databaseKind } from "./db.js";
 import { repoRoot } from "./config.js";
 
@@ -16,6 +17,7 @@ app.get("/api/health", async (_req, res) => {
   }
 });
 app.use("/api", spotPricesRouter);
+app.use("/api", statusRouter);
 app.use("/api", (_req, res) => { res.status(404).json({ error: "Unknown API endpoint" }); });
 app.use(express.static(frontendDistPath));
 app.get("*", (_req, res) => {

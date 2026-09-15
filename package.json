@@ -9,7 +9,7 @@
     "dev": "node dashboard/scripts/dev.mjs",
     "build": "npm --prefix dashboard run build --workspaces",
     "start": "npm --prefix dashboard run start -w dmbs-backend",
-    "test": "npm --prefix dashboard run test -w dmbs-backend",
+    "test": "npm --prefix dashboard run test --workspaces",
     "heroku-postbuild": "npm --prefix dashboard ci --include=dev && npm run build -w dmbs-backend --prefix dashboard && npm run build -w dmbs-frontend --prefix dashboard"
   }
 }

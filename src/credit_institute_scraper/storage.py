@@ -40,7 +40,6 @@ type ObservationRows = dict[RowKey, dict[str, Any]]
 
 
 class SaveResult(TypedDict):
-    status: str
     inserted: dict[str, int]
     issues: int
     committed_at: str
@@ -297,7 +296,7 @@ def write(
     end: datetime,
     ids: Sequence[str],
     issues: list[Issue],
-) -> tuple[int, set[RowKey], ObservationRows]:
+) -> tuple[int, ObservationRows]:
     keys = RATE_KEY if table == "rates" else ("timestamp", "isin")
     identity = "institute" if table == "rates" else "isin"
     columns = (*keys, *VALUES[table])
@@ -316,14 +315,13 @@ def write(
             )
         except (ValueError, TypeError, OverflowError):
             continue
-    inserts, accepted = [], set()
+    inserts = []
     for key, row in clean(incoming, table, issues).items():
         if key not in occupied:
             inserts.append(row)
             previous[key] = row
-            accepted.add(key)
         elif previous.get(key) == row or (table in {"rates", "offer_prices"} and key in previous):
-            accepted.add(key)
+            continue
         else:
             issues.append(
                 Issue(
@@ -339,7 +337,7 @@ def write(
             ),
             inserts,
         )
-    return len(inserts), accepted, previous
+    return len(inserts), previous
 
 
 def close_prices(
@@ -403,60 +401,6 @@ def daily_issues(
     ]
 
 
-def scrape_status(
-    *, has_fixed: bool, has_spots: bool, issues: Sequence[Issue], closing: bool
-) -> str:
-    """Missing fixed products outrank partial data; closing requires healthy data."""
-    if not has_fixed:
-        return "NotOK"
-    if not has_spots or issues:
-        return "SomeDataMissing"
-    return "ExchangeClosed" if closing else "OK"
-
-
-def record_status(
-    connection: Connection,
-    *,
-    institute: str,
-    slot: datetime,
-    has_spots: bool,
-    status: str,
-    issues: Sequence[Issue],
-) -> str:
-    """Persist status and quality audit together in the caller's transaction."""
-    previous = read(
-        connection,
-        "SELECT last_data_time, status FROM status WHERE institute=:institute ORDER BY last_data_time DESC NULLS LAST LIMIT 1",
-        {"institute": institute},
-    )
-    stamp = previous[0]["last_data_time"] if previous else None
-    if stamp is not None and slot < stamp:
-        status = previous[0]["status"]
-    else:
-        connection.execute(
-            text("DELETE FROM status WHERE institute=:institute"), {"institute": institute}
-        )
-        connection.execute(
-            text(
-                "INSERT INTO status (institute,last_data_time,status) VALUES (:institute,:stamp,:status)"
-            ),
-            {"institute": institute, "stamp": slot if has_spots else stamp, "status": status},
-        )
-    if issues:
-        audit = dict(
-            event="scrape_quality",
-            institute=institute,
-            warning_count=len(issues),
-            issues=[asdict(i) | {"message": i.message[:2000]} for i in issues[:100]],
-            messages=[i.message[:2000] for i in issues[:100]],
-        )
-        connection.execute(
-            text("INSERT INTO scrape_logs (time,error) VALUES (:time,:error)"),
-            {"time": slot, "error": json.dumps(audit)},
-        )
-    return status
-
-
 def save(
     engine: Engine,
     *,
@@ -491,12 +435,12 @@ def save(
             if p.offer_price is not None
         ]
         rates = [dict(timestamp=day, **asdict(p)) for p in floating if p.spot_rate is not None]
-        count, accepted_spots, _ = write(connection, "spot_prices", spots, slot, slot, ids, issues)
+        count, _ = write(connection, "spot_prices", spots, slot, slot, ids, issues)
         inserted = {"spot_prices": count}
-        inserted["offer_prices"], _, daily_offers = write(
+        inserted["offer_prices"], daily_offers = write(
             connection, "offer_prices", offers, day, day, ids, issues
         )
-        inserted["rates"], _, daily_rates = write(
+        inserted["rates"], daily_rates = write(
             connection, "rates", rates, day, day, [institute], issues
         )
         known = read(
@@ -523,25 +467,22 @@ def save(
         if closing:
             inserted.update(close_prices(connection, institute, day, slot, issues))
         issues = list(dict.fromkeys(issues))
-        status = scrape_status(
-            has_fixed=any(isinstance(p, Bond) for p in products),
-            has_spots=bool(accepted_spots),
-            issues=issues,
-            closing=closing,
-        )
-        status = record_status(
-            connection,
-            institute=institute,
-            slot=slot,
-            has_spots=bool(accepted_spots),
-            status=status,
-            issues=issues,
-        )
+        if issues:
+            audit = dict(
+                event="scrape_quality",
+                institute=institute,
+                warning_count=len(issues),
+                issues=[asdict(i) | {"message": i.message[:2000]} for i in issues[:100]],
+                messages=[i.message[:2000] for i in issues[:100]],
+            )
+            connection.execute(
+                text("INSERT INTO scrape_logs (time,error) VALUES (:time,:error)"),
+                {"time": slot, "error": json.dumps(audit)},
+            )
     committed_at = datetime.now(timezone.utc).isoformat()
     for issue in issues:
         logging.warning("%s: %s %s %s", institute, issue.code, issue.product or "", issue.message)
     return dict(
-        status=status,
         inserted=inserted,
         issues=len(issues),
         committed_at=committed_at,

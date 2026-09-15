@@ -1,9 +1,10 @@
-import type { InstituteStatus } from "../types";
+import type { StatusSnapshot } from "../types";
 import { getCopenhagenTzAbbreviation } from "../utils/timezone";
 
 interface InstituteStatusPanelProps {
-  status: InstituteStatus[];
+  snapshot: StatusSnapshot | null;
   loading: boolean;
+  error: string;
   inSidebar?: boolean;
 }
 
@@ -28,53 +29,35 @@ const STATUS_STYLES: Record<string, { dot: string; badge: string; label: string 
     badge: "bg-slate-100 text-slate-600",
     label: "Closed",
   },
+  Waiting: {
+    dot: "bg-slate-400",
+    badge: "bg-slate-100 text-slate-600",
+    label: "Waiting",
+  },
+  Unavailable: {
+    dot: "bg-slate-400",
+    badge: "bg-slate-100 text-slate-600",
+    label: "Unknown",
+  },
 };
 
-function formatLastUpdate(value: string): { formatted: string; timezone: "CET" | "CEST" } {
-  const date = new Date(value);
+function formatLastUpdate(value: string | null, inSidebar: boolean): string {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "No data";
   const formatted = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Copenhagen",
-    day: "2-digit",
-    month: "2-digit",
+    ...(inSidebar ? {} : { day: "2-digit", month: "2-digit" } as const),
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   }).format(date);
 
-  return { formatted, timezone: getCopenhagenTzAbbreviation(date) };
+  return `${inSidebar ? "" : "Updated "}${formatted} ${getCopenhagenTzAbbreviation(date)}`;
 }
 
-function formatSidebarLastUpdate(value: string): { formatted: string; timezone: "CET" | "CEST" } {
-  const date = new Date(value);
-  const formatted = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Copenhagen",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-
-  return { formatted, timezone: getCopenhagenTzAbbreviation(date) };
-}
-
-function getCopenhagenLiveLabel(): "Live" | "Closed" {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Copenhagen",
-    weekday: "short",
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-
-  const weekday = parts.find((part) => part.type === "weekday")?.value;
-  const hourValue = parts.find((part) => part.type === "hour")?.value;
-  const hour = hourValue ? Number.parseInt(hourValue, 10) : NaN;
-  const isWeekday = weekday !== "Sat" && weekday !== "Sun";
-  const isLiveHour = !Number.isNaN(hour) && hour >= 9 && hour < 17;
-
-  return isWeekday && isLiveHour ? "Live" : "Closed";
-}
-
-export function InstituteStatusPanel({ status, loading, inSidebar = false }: InstituteStatusPanelProps) {
-  const liveLabel = getCopenhagenLiveLabel();
+export function InstituteStatusPanel({ snapshot, loading, error, inSidebar = false }: InstituteStatusPanelProps) {
+  const unavailable = Boolean(error) || !snapshot;
+  const liveLabel = unavailable ? "" : snapshot.market_open ? "Live" : "Closed";
 
   return (
     <div
@@ -101,18 +84,15 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
         <p className={`text-sm ${inSidebar ? "text-slate-400" : "text-slate-400"}`}>Loading status…</p>
       ) : (
         <div className={inSidebar ? "space-y-1.5" : "space-y-2"}>
-          {status.map((row) => {
-            const scrapeStyle = STATUS_STYLES[row.status] ?? {
-              dot: "bg-slate-400",
-              badge: "bg-slate-100 text-slate-600",
-              label: row.status,
-            };
-            const style = liveLabel === "Closed" ? STATUS_STYLES.ExchangeClosed : scrapeStyle;
-            const description = `${liveLabel === "Closed" ? "Market closed. " : ""}Last scrape: ${scrapeStyle.label}.`;
-
-            const lastUpdate = inSidebar
-              ? formatSidebarLastUpdate(row.last_data_time)
-              : formatLastUpdate(row.last_data_time);
+          {unavailable && (
+            <p role="status" className={`text-xs ${inSidebar ? "text-slate-400" : "text-slate-500"}`}>
+              Status unavailable
+            </p>
+          )}
+          {snapshot?.institutes.map((row) => {
+            const dataStyle = STATUS_STYLES[row.status] ?? STATUS_STYLES.Unavailable;
+            const style = unavailable ? STATUS_STYLES.Unavailable : liveLabel === "Closed" ? STATUS_STYLES.ExchangeClosed : dataStyle;
+            const description = `${unavailable ? "Status unavailable. Last confirmed " : liveLabel === "Closed" ? "Market closed. " : ""}${snapshot.trading_date}: ${dataStyle.label}. ${row.detail}`;
 
             return (
               <div
@@ -142,7 +122,7 @@ export function InstituteStatusPanel({ status, loading, inSidebar = false }: Ins
                 <p
                   className={`mt-1 text-xs ${inSidebar ? "text-slate-400" : "text-slate-500"}`}
                 >
-                  {inSidebar ? `${lastUpdate.formatted} ${lastUpdate.timezone}` : `Updated ${lastUpdate.formatted} ${lastUpdate.timezone}`}
+                  {formatLastUpdate(row.last_data_time, inSidebar)}
                 </p>
               </div>
             );

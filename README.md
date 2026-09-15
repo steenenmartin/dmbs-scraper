@@ -10,7 +10,8 @@ Use the Github [issue tracker](https://github.com/steenenmartin/dmbs-scraper/iss
 
 ## Run the dashboard locally
 
-Use Node.js 24 and npm 11. Python dependencies are only needed for the scraper.
+Use Node.js 24 and npm 11. Python dependencies are needed for the scraper and the
+cross-language calendar tests, but not to run or build the dashboard.
 
 ```bash
 npm --prefix dashboard ci --include=dev
@@ -66,11 +67,19 @@ See [scraper operation and debugging](docs/scraper-safety.md) for validation,
 transactional writes, duplicate protection, quality logs, tests and deployment order.
 Four Python modules handle scheduling, source parsing, bounded network access,
 and PostgreSQL writes. Each institute fetches both prices and daily rates, then
-commits its own data, status and audit. Only the opening collection is delayed to
+commits its own data and audit. Only the opening collection is delayed to
 09:02; subsequent jobs run at five-minute boundaries through 17:00 in Danish time.
 Worker dependencies are pinned in `requirements-scraper.txt` and included by
 `requirements.txt`. The worker requires PostgreSQL; SQLite and the legacy Python
 dashboard are no longer supported.
+
+Python and the API share [market-calendar.json](market-calendar.json). Institute
+status describes only the trading day's spot-price history: `Partial` persists
+after recovery while five-minute observations are still missing. Before a bond's
+first valid quote that day it has no coverage requirement. Offers, rates and
+parser warnings do not determine this badge. Outside the collection window the
+badge shows `Closed`, with the day's data status in its tooltip, even if the final
+scrape failed. See [status rules](docs/scraper-safety.md#spot-status) for deadlines.
 
 To debug parsing of a saved endpoint response without network or database access:
 

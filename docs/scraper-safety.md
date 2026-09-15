@@ -4,16 +4,19 @@ The worker has four non-empty Python modules: the root `scraper.py` entrypoint,
 and `sources.py`, `transport.py`, `storage.py` under `src/credit_institute_scraper`.
 They handle scheduling, pure field translation, bounded network access and
 PostgreSQL persistence. There are no adapter, repository or result-handler layers.
-The TypeScript dashboard is a separate process; its API and database schema are
-unchanged. Legacy Python/Dash, SQLite and old internal Python interfaces are removed.
+The TypeScript dashboard is a separate process. Legacy Python/Dash, SQLite and old
+internal Python interfaces are removed. The database schema remains unchanged.
 
 ## One flow per institute
 
 On Danish business days, APScheduler runs four independent jobs at 09:02, then
 09:05, 09:10 and every five minutes through 17:00. Each institute has one combined
 trigger, `max_instances=1`, coalescing and a 60-second misfire grace period. A slow
-source can skip its next run without holding up another source's fetch. Weekends,
-fixed closures and Easter-relative closures retain the previous calendar rules.
+source can skip its next run without holding up another source's fetch.
+`market-calendar.json` is the shared definition of the collection window, schedule,
+timezone, weekends and fixed/Easter-relative holidays. Python and TypeScript use
+the same rules, with cross-language calendar and schedule tests. The browser uses
+the API's calendar result rather than maintaining a third calendar.
 
 Each job fixes its UTC five-minute slot when it starts (09:02 maps to 09:00),
 fetches both prices and floating rates, parses them, then opens a write transaction.
@@ -48,12 +51,14 @@ fallbacks do not create quality warnings. Pure parsers do not fetch, log or writ
   and zero fixed coupons are valid. A missing floating rate also retains its valid
   master identity, so a newly discovered product cannot disappear from coverage.
   Expected invalid input becomes a contextual issue without discarding valid siblings.
+  RD's explicit `-1` quote sentinel means unavailable and does not create a parser
+  warning. A previously quoted bond still leaves a coverage gap when its quote disappears.
   Parsers catch only explicit source-validation errors; programming errors propagate.
 - Existing master products and manual corrections are insert-only. Security issuer
   and coupon conflicts are rejected across product keys. Jyske retains the greatest
   observed interest-only period for otherwise matching variants. Nordea 15/20-year
   variants remain independently filterable. Existing migration 001 keys are required.
-- Master data, observations, status and quality audit commit together per institute.
+- Master data, observations and quality audit commit together per institute.
   A database error rolls back that institute and attempts a separate failure audit.
   One pooled SQLAlchemy engine lives for the worker lifetime. Connections belong to
   individual transactions; jobs never dispose the pool.
@@ -65,25 +70,61 @@ fallbacks do not create quality warnings. Pure parsers do not fetch, log or writ
   Existing observations, including invalid historical keys, are never overwritten
   or repaired by inserting duplicates. Daily values retain their first valid value.
   Tables are never created, replaced or migrated by the worker.
-- Status freshness advances only for accepted or identical existing spot quotes.
-  It never moves backwards, and a write older than the saved data time cannot replace
-  that status. Empty/failed fixed results are `NotOK`; incomplete required data are
-  `SomeDataMissing`. Nordea does not provide offer prices. Failed optional daily
-  retrieval after today's products are covered is informational, not partial status.
+- Nordea does not provide offer prices. Failed optional daily
+  retrieval after today's products are covered is informational.
   A missing rate is harmless only when that exact product already has a valid daily
   rate. Malformed product identities and response formats remain visible even after
   known daily products are covered.
-  Outside trading hours, the dashboard shows `Closed` and keeps the last scrape's
-  quality status in the badge tooltip; the stored status and audit are unchanged.
 - At close, validated stored spot observations produce OHLC and closing prices.
   A rejected incoming quote cannot become a closing price. OHLC is sorted and
   scoped by institute without multiplying quotes for product variants. Existing
   OHLC/closing history remains unchanged on conflicting duplicate writes.
 
-Known floating products missing from today's rates continue to make data partial.
+Known floating products missing from today's rates continue to produce quality diagnostics.
 If a provider permanently removes a product, its retained master row needs review.
 Unknown products absent from the feed and plausible but incorrect new values cannot
 be independently detected by this scraper.
+
+## Spot status
+
+`GET /api/status` computes coverage directly from stored spot observations. The
+worker no longer reads or writes the legacy `status` table; existing rows are left
+untouched and are not used by the dashboard. No migration is required.
+
+The response contains `trading_date`, `market_open`, `checked_at`, `refresh_at` and
+`institutes`. All four institutes are present, each with `status`, nullable
+`last_data_time` and a short `detail`. Offers, rates, OHLC and quality-log warnings
+do not determine this badge. The route disables HTTP caching.
+
+The institute must have quotes for every elapsed five-minute slot from 09:00.
+Individual ISINs are required only from their first valid quote on that trading
+day. Unquoted master records do not manufacture missing products. Identical
+duplicates count once, conflicting valid quotes do not count, and invalid,
+non-finite, future or off-grid observations cannot fill a gap. Product variants
+sharing an ISIN do not multiply coverage.
+
+There is a 60-second delivery tolerance, separate from the worker schedule:
+09:00 data are first required at 09:03 (the job starts at 09:02); 09:05 data at
+09:06; the final 17:00 data at 17:01. Only observations up to the required slot
+contribute to coverage; newer observations cannot hide older missing slots.
+
+| Data status | Meaning |
+| --- | --- |
+| `Waiting` | No quotes yet, and the first delivery deadline has not passed. |
+| `OK` | All expected spot observations through the required slot are present. |
+| `SomeDataMissing` / Partial | The latest slot has quotes, but the day's history has gaps. |
+| `NotOK` / Not OK | The required latest slot has no valid quotes for this institute. |
+
+Recovery changes `Not OK` to `Partial` while older gaps remain. A legitimate late
+commit of its original slot can fill a gap; a new scrape cannot fetch past data.
+The next trading day starts a new coverage history.
+
+At 17:00 the display becomes neutral `Closed` regardless of worker success. Its
+tooltip retains that trading day's data status; a missing final scrape becomes
+`Not OK` after 17:01 and stays visible through the evening, weekend or holidays.
+Before the next opening the API continues to assess the previous trading day.
+The frontend refreshes at calendar/deadline boundaries and at least every minute;
+unavailable or expired responses cannot leave a verified green status behind.
 
 ## Logs, tests and rollout
 
@@ -97,7 +138,7 @@ errors from concurrent requests. Retry logs identify institute, endpoint, attemp
 elapsed time and the exception message; Jyske logs also identify the fallback path.
 Product validation messages include a product identity where available and the
 offending field/value. The worker adds the source endpoint to quality messages.
-The dashboard polls every 60 seconds; display time is separate from database commit.
+Display time is separate from database commit.
 
 To locate a failure, follow its stage directly to the responsible module:
 
@@ -106,14 +147,14 @@ To locate a failure, follow its stage directly to the responsible module:
 | Scheduling/job | `scraper.py` | Market times, orchestration and commit/failure logs |
 | `fetch` | `transport.py` | HTTP, retry, timeout and browser fallback |
 | `parse.fixed` / `parse.floating` | `sources.py` | Source fields, product identity and validation |
-| `database` | `storage.py` | Coverage, transactions and preserved observations |
+| `database` | `storage.py` | Transactions, preserved observations and quality audit |
+| Dashboard status | `dashboard/backend/src/routes/status.ts` | Spot-history coverage and current data availability |
 
 Within `storage.py`, `save()` coordinates one transaction. `write()` validates and
-preserves observations, `daily_issues()` checks coverage, `scrape_status()` applies
-status priority, and `record_status()` persists status and quality issues together.
-The two coverage/status functions are pure: they take explicit facts and return a
-result without SQL, logging or changes to their input. Their rules can be exercised
-directly with `python -m unittest test.test_storage.CoverageTests`.
+preserves observations, and `daily_issues()` filters daily diagnostics already
+covered by valid stored data. Quality issues are audited in the same transaction.
+Dashboard status is derived separately from the actual spot history, never from
+the number of parser warnings.
 
 Inspect a saved raw JSON response from one endpoint without fetching or writing:
 

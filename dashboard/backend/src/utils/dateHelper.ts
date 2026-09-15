@@ -1,171 +1,86 @@
-import { toZonedTime, fromZonedTime } from "date-fns-tz";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-const TZ_CPH = "Europe/Copenhagen";
+export const MARKET_CALENDAR: {
+  timezone: string;
+  open: string;
+  close: string;
+  intervalMinutes: number;
+  firstScrapeDelayMinutes: number;
+  deliveryGraceSeconds: number;
+  weekendDays: number[];
+  fixedHolidays: string[];
+  easterHolidays: { offsetDays: number; throughYear?: number }[];
+} = JSON.parse(readFileSync(resolve(__dirname, "../../../../market-calendar.json"), "utf8"));
 
-const HOLIDAYS_2026 = [
-  "2026-01-01",
-  "2026-04-02",
-  "2026-04-03",
-  "2026-04-06",
-  "2026-05-14",
-  "2026-05-15",
-  "2026-06-05",
-  "2026-12-24",
-  "2026-12-25",
-  "2026-12-31",
-];
+const DAY = 86_400_000;
+const INTERVAL = MARKET_CALENDAR.intervalMinutes * 60_000;
+const GRACE = MARKET_CALENDAR.deliveryGraceSeconds * 1000;
 
-function dateToString(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function shiftDay(day: string, offset: number): string {
+  return new Date(Date.parse(day) + offset * DAY).toISOString().slice(0, 10);
 }
 
-function isHoliday(date: Date): boolean {
-  return HOLIDAYS_2026.includes(dateToString(date));
+export function isTradingDay(day: string): boolean {
+  if (MARKET_CALENDAR.weekendDays.includes(new Date(day).getUTCDay()) ||
+      MARKET_CALENDAR.fixedHolidays.includes(day.slice(5))) return false;
+
+  // Gregorian Easter (Meeus/Jones/Butcher), matching Python dateutil.easter.
+  const year = Number(day.slice(0, 4));
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const date = (h + l - 7 * m + 114) % 31 + 1;
+  const easter = Date.UTC(year, month - 1, date);
+  return !MARKET_CALENDAR.easterHolidays.some(rule =>
+    (rule.throughYear === undefined || year <= rule.throughYear) &&
+    Date.parse(day) === easter + rule.offsetDays * DAY);
 }
 
-function skipHolidays(date: Date): Date {
-  if (isHoliday(date)) {
-    const prev = new Date(date);
-    prev.setDate(prev.getDate() - 1);
-    return skipHolidays(prev);
+/** One trading day's observations, with deadlines separate from market opening hours. */
+export function getMarketWindow(now = new Date()): {
+  tradingDate: string;
+  open: Date;
+  close: Date;
+  marketOpen: boolean;
+  requiredSlot: Date | null;
+  refreshAt: Date;
+} {
+  const today = formatInTimeZone(now, MARKET_CALENDAR.timezone, "yyyy-MM-dd");
+  const at = (day: string, time: string) =>
+    fromZonedTime(`${day}T${time}:00`, MARKET_CALENDAR.timezone);
+  let tradingDate = today;
+  if (now < at(today, MARKET_CALENDAR.open)) tradingDate = shiftDay(tradingDate, -1);
+  while (!isTradingDay(tradingDate)) tradingDate = shiftDay(tradingDate, -1);
+  const open = at(tradingDate, MARKET_CALENDAR.open);
+  const close = at(tradingDate, MARKET_CALENDAR.close);
+  const firstDeadline = open.getTime() + MARKET_CALENDAR.firstScrapeDelayMinutes * 60_000 + GRACE;
+  let requiredSlot: Date | null = null;
+  let nextDeadline = firstDeadline;
+  if (now.getTime() >= firstDeadline) {
+    const elapsed = Math.floor((now.getTime() - GRACE - open.getTime()) / INTERVAL);
+    requiredSlot = new Date(Math.min(close.getTime(), open.getTime() + elapsed * INTERVAL));
+    nextDeadline = requiredSlot.getTime() < close.getTime()
+      ? requiredSlot.getTime() + INTERVAL + GRACE : Infinity;
   }
-  return date;
+  let nextDay = shiftDay(tradingDate, 1);
+  while (!isTradingDay(nextDay)) nextDay = shiftDay(nextDay, 1);
+  const marketOpen = now >= open && now < close;
+  const transition = marketOpen ? close : at(nextDay, MARKET_CALENDAR.open);
+  return {
+    tradingDate, open, close, marketOpen, requiredSlot,
+    refreshAt: new Date(Math.min(now.getTime() + 60_000, transition.getTime(), nextDeadline)),
+  };
 }
 
-/**
- * Port of Python's get_active_time_range.
- * Returns [startUTC, endUTC] as ISO strings.
- *
- * The logic determines which trading window to show:
- * - Weekend → previous Friday 9-17 CET
- * - Weekday before 9 CET → previous day 9-17 CET
- * - Weekday 9-17 CET → live window (start = 24h ago, end = now, but force_9_17 overrides)
- * - Weekday after 17 CET → today 9-17 CET
- * - Holidays → skip backwards recursively
- *
- * force_9_17=true forces start/end to exactly 9:00-17:00 on the end date.
- */
-export function getActiveTimeRange(
-  nowUtc?: Date,
-  force917 = false
-): [Date, Date] {
-  const now = nowUtc ?? new Date();
-
-  // Convert to Copenhagen local time
-  const cphNow = toZonedTime(now, TZ_CPH);
-  const weekday = cphNow.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const hour = cphNow.getHours();
-  const minute = cphNow.getMinutes();
-
-  let startCph: Date;
-  let endCph: Date;
-
-  if (weekday === 0) {
-    // Sunday → previous Friday 9-17
-    endCph = new Date(
-      cphNow.getFullYear(),
-      cphNow.getMonth(),
-      cphNow.getDate() - 2,
-      17,
-      0
-    );
-    startCph = new Date(endCph.getTime());
-    startCph.setHours(startCph.getHours() - 8);
-  } else if (weekday === 6) {
-    // Saturday → previous Friday 9-17
-    endCph = new Date(
-      cphNow.getFullYear(),
-      cphNow.getMonth(),
-      cphNow.getDate() - 1,
-      17,
-      0
-    );
-    startCph = new Date(endCph.getTime());
-    startCph.setHours(startCph.getHours() - 8);
-  } else if (hour >= 9 && hour < 17) {
-    // During trading hours
-    const roundedMinute = minute - (minute % 5);
-    endCph = new Date(
-      cphNow.getFullYear(),
-      cphNow.getMonth(),
-      cphNow.getDate(),
-      Math.min(hour, 17),
-      roundedMinute
-    );
-    if (weekday === 1) {
-      // Monday → start from 72h ago (Friday)
-      startCph = new Date(endCph.getTime());
-      startCph.setHours(startCph.getHours() - 72);
-    } else {
-      startCph = new Date(endCph.getTime());
-      startCph.setHours(startCph.getHours() - 24);
-    }
-  } else if (hour < 9) {
-    // Before market open
-    if (weekday === 1) {
-      // Monday before 9 → previous Friday
-      endCph = new Date(
-        cphNow.getFullYear(),
-        cphNow.getMonth(),
-        cphNow.getDate() - 3,
-        17,
-        0
-      );
-    } else {
-      endCph = new Date(
-        cphNow.getFullYear(),
-        cphNow.getMonth(),
-        cphNow.getDate() - 1,
-        17,
-        0
-      );
-    }
-    startCph = new Date(endCph.getTime());
-    startCph.setHours(startCph.getHours() - 8);
-  } else {
-    // After market close (hour >= 17)
-    endCph = new Date(
-      cphNow.getFullYear(),
-      cphNow.getMonth(),
-      cphNow.getDate(),
-      17,
-      0
-    );
-    startCph = new Date(endCph.getTime());
-    startCph.setHours(startCph.getHours() - 8);
-  }
-
-  // Holiday check on end date
-  if (isHoliday(endCph)) {
-    const prevDay = new Date(endCph);
-    prevDay.setDate(prevDay.getDate() - 1);
-    prevDay.setHours(17, 0, 0, 0);
-    const prevDayUtc = fromZonedTime(prevDay, TZ_CPH);
-    return getActiveTimeRange(prevDayUtc, force917);
-  }
-
-  startCph = skipHolidays(startCph);
-
-  if (force917) {
-    startCph = new Date(
-      endCph.getFullYear(),
-      endCph.getMonth(),
-      endCph.getDate(),
-      9,
-      0
-    );
-    endCph = new Date(
-      endCph.getFullYear(),
-      endCph.getMonth(),
-      endCph.getDate(),
-      17,
-      0
-    );
-  }
-
-  // Convert Copenhagen local times back to UTC
-  const startUtc = fromZonedTime(startCph, TZ_CPH);
-  const endUtc = fromZonedTime(endCph, TZ_CPH);
-
-  return [startUtc, endUtc];
+/** Chart window uses the same trading day as status. */
+export function getActiveTimeRange(now?: Date): [Date, Date] {
+  const { open, close } = getMarketWindow(now);
+  return [open, close];
 }

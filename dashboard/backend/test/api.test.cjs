@@ -24,6 +24,12 @@ test('health reports database availability without editing capabilities', async 
   assert.deepEqual(await response.json(), { connected: true, database: 'postgres' });
   assert.deepEqual(poolOptions.ssl, { rejectUnauthorized: false });
 });
+test('database timestamps retain precision and parse to the same UTC instant across offsets', () => {
+  assert.equal(pg.types.getTypeParser(1114)('2026-09-14 15:00:00.123456'), '2026-09-14T15:00:00.123456Z');
+  for (const stamp of ['2026-09-14 15:00:00+00', '2026-09-14 05:00:00-10', '2026-09-14 20:30:00+05:30']) {
+    assert.equal(new Date(pg.types.getTypeParser(1184)(stamp)).toISOString(), '2026-09-14T15:00:00.000Z');
+  }
+});
 test('API has no data editing endpoints', async () => {
   for (const [path, method] of [['/api/admin/tables', 'GET'], ['/api/admin/master_data', 'PATCH'], ['/api/master-data', 'POST']]) {
     const response = await request(path, method);

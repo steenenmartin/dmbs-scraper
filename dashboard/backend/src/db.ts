@@ -4,7 +4,7 @@ import { databaseUrl, readCredentials } from "./config.js";
 export const databaseKind = "postgres";
 // Preserve timestamp precision; scraper timestamps without a zone are UTC.
 pg.types.setTypeParser(1114, value => value.replace(" ", "T") + "Z");
-pg.types.setTypeParser(1184, value => value.replace(" ", "T"));
+pg.types.setTypeParser(1184, value => value.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00"));
 pg.types.setTypeParser(1082, value => value);
 pg.types.setTypeParser(1700, Number);
 let pool: pg.Pool | undefined;

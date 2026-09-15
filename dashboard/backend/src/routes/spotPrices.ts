@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/spot-prices", async (_req, res) => {
   try {
-    const [startUtc, endUtc] = getActiveTimeRange(undefined, true);
+    const [startUtc, endUtc] = getActiveTimeRange();
 
     const prices = await query(
       "SELECT * FROM spot_prices WHERE timestamp BETWEEN $1 AND $2",
@@ -40,16 +40,6 @@ router.get("/closing-prices", async (_req, res) => {
   } catch (err) {
     console.error("Error fetching closing prices:", err);
     res.status(500).json({ error: "Failed to fetch closing prices" });
-  }
-});
-
-router.get("/status", async (_req, res) => {
-  try {
-    const data = await query("SELECT * FROM status ORDER BY institute");
-    res.json(data);
-  } catch (err) {
-    console.error("Error fetching status:", err);
-    res.status(500).json({ error: "Failed to fetch status" });
   }
 });
 

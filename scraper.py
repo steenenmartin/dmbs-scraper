@@ -23,16 +23,25 @@ from sqlalchemy.engine import Engine
 
 from src.credit_institute_scraper import sources, storage, transport
 
-COPENHAGEN = ZoneInfo("Europe/Copenhagen")
+MARKET_CALENDAR = json.loads(Path(__file__).with_name("market-calendar.json").read_text())
+COPENHAGEN = ZoneInfo(MARKET_CALENDAR["timezone"])
+OPEN_MINUTE, CLOSE_MINUTE = (
+    int(value[:2]) * 60 + int(value[3:])
+    for value in (MARKET_CALENDAR["open"], MARKET_CALENDAR["close"])
+)
+INTERVAL_MINUTES = MARKET_CALENDAR["intervalMinutes"]
 
 
 def is_holiday(day: date) -> bool:
     day = day.date() if isinstance(day, datetime) else day
-    fixed = {(1, 1), (6, 5), (12, 24), (12, 25), (12, 26), (12, 31)}
-    offsets = (-3, -2, 1, 39, 40, 50, *([26] if day.year <= 2023 else []))
+    offsets = (
+        rule["offsetDays"]
+        for rule in MARKET_CALENDAR["easterHolidays"]
+        if day.year <= rule.get("throughYear", day.year)
+    )
     return (
-        day.weekday() >= 5
-        or (day.month, day.day) in fixed
+        (day.weekday() + 1) % 7 in MARKET_CALENDAR["weekendDays"]
+        or day.strftime("%m-%d") in MARKET_CALENDAR["fixedHolidays"]
         or day in {easter(day.year) + timedelta(days=d) for d in offsets}
     )
 
@@ -44,10 +53,14 @@ def run_institute(
     if now.tzinfo is None:
         raise ValueError("Scrape time must include a timezone")
     local = now.astimezone(COPENHAGEN)
-    if is_holiday(local) or not (9 <= local.hour < 17 or (local.hour == 17 and local.minute < 5)):
+    minute = local.hour * 60 + local.minute
+    if is_holiday(local) or not OPEN_MINUTE <= minute < CLOSE_MINUTE + INTERVAL_MINUTES:
         return None
     utc = now.astimezone(timezone.utc)
-    slot = utc.replace(tzinfo=None, minute=utc.minute - utc.minute % 5, second=0, microsecond=0)
+    slot = local.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
+        minutes=OPEN_MINUTE + (minute - OPEN_MINUTE) // INTERVAL_MINUTES * INTERVAL_MINUTES
+    )
+    slot = slot.astimezone(timezone.utc).replace(tzinfo=None)
     day = datetime(local.year, local.month, local.day)
     started = time.monotonic()
     stage = "fetch"
@@ -75,7 +88,7 @@ def run_institute(
                 institute=institute,
                 slot=slot,
                 day=day,
-                closing=local.hour == 17,
+                closing=minute >= CLOSE_MINUTE,
                 products=products,
                 issues=issues,
             )
@@ -100,11 +113,22 @@ def run_institute(
 
 
 def market_trigger() -> OrTrigger:
+    minutes = [
+        OPEN_MINUTE + MARKET_CALENDAR["firstScrapeDelayMinutes"],
+        *range(OPEN_MINUTE + INTERVAL_MINUTES, CLOSE_MINUTE + 1, INTERVAL_MINUTES),
+    ]
+    weekdays = ",".join(
+        str(day) for day in range(7) if (day + 1) % 7 not in MARKET_CALENDAR["weekendDays"]
+    )
     return OrTrigger(
         [
-            CronTrigger(day_of_week="mon-fri", hour=9, minute="2,5-55/5", timezone=COPENHAGEN),
-            CronTrigger(day_of_week="mon-fri", hour="10-16", minute="*/5", timezone=COPENHAGEN),
-            CronTrigger(day_of_week="mon-fri", hour=17, minute=0, timezone=COPENHAGEN),
+            CronTrigger(
+                day_of_week=weekdays,
+                hour=hour,
+                minute=",".join(str(minute % 60) for minute in minutes if minute // 60 == hour),
+                timezone=COPENHAGEN,
+            )
+            for hour in sorted({minute // 60 for minute in minutes})
         ]
     )
 

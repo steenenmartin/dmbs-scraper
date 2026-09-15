@@ -1,0 +1,19 @@
+{
+  "timezone": "Europe/Copenhagen",
+  "open": "09:00",
+  "close": "17:00",
+  "intervalMinutes": 5,
+  "firstScrapeDelayMinutes": 2,
+  "deliveryGraceSeconds": 60,
+  "weekendDays": [0, 6],
+  "fixedHolidays": ["01-01", "06-05", "12-24", "12-25", "12-26", "12-31"],
+  "easterHolidays": [
+    { "offsetDays": -3 },
+    { "offsetDays": -2 },
+    { "offsetDays": 1 },
+    { "offsetDays": 39 },
+    { "offsetDays": 40 },
+    { "offsetDays": 50 },
+    { "offsetDays": 26, "throughYear": 2023 }
+  ]
+}

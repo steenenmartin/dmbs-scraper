@@ -34,11 +34,14 @@ class ParserRegressionTests(unittest.TestCase):
 
 
 class DatabaseRegressionTests(DatabaseCase):
-    def test_old_replay_does_not_move_status_backwards(self):
+    def test_delayed_commit_preserves_later_observation(self):
         self.cycle(now=STAMP.replace(hour=8, minute=0))
-        before = self.rows("status")
+        before = self.rows("spot_prices")[0]
         self.cycle(now=STAMP.replace(hour=7, minute=0))
-        self.assertEqual(self.rows("status"), before)
+        observations = self.rows("spot_prices")
+        self.assertIn(before, observations)
+        self.assertEqual(len(observations), 2)
+        self.assertEqual(max(row["timestamp"] for row in observations), before["timestamp"])
 
     def test_closing_uses_stored_spot_when_incoming_spot_conflicts(self):
         self.sql(f"INSERT INTO spot_prices VALUES ('2026-09-14 15:00:00','{ISIN}',99)")

@@ -28,3 +28,11 @@ jobs:
         env:
           PYTHONPATH: .
           TEST_POSTGRES_URL: postgresql://scraper_test:local_test_only@127.0.0.1:5432/scraper_test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm --prefix dashboard ci --include=dev
+      - run: npm test
+      - run: npm run build

@@ -9,7 +9,7 @@ from src.credit_institute_scraper import sources, storage
 from test.support import ISIN, NORDEA, STAMP, DatabaseCase, payload
 
 
-class CoverageTests(unittest.TestCase):
+class DailyQualityTests(unittest.TestCase):
     def test_empty_daily_coverage_requires_rates_except_for_nordea(self):
         for institute, expected in (("Jyske", ["floating.missing"]), ("Nordea", [])):
             with self.subTest(institute=institute):
@@ -69,29 +69,6 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual(actual[:-1], [issue, issue])
         self.assertEqual(actual[-1].code, "floating.missing")
 
-    def test_status_prioritizes_missing_fixed_data_and_quality_over_market_close(self):
-        warning = [sources.Issue("closing_prices", "Conflicting closing quote", ISIN)]
-        cases = (
-            (False, False, [], False, "NotOK"),
-            (False, False, warning, True, "NotOK"),
-            (True, False, [], False, "SomeDataMissing"),
-            (True, False, warning, True, "SomeDataMissing"),
-            (True, True, warning, False, "SomeDataMissing"),
-            (True, True, warning, True, "SomeDataMissing"),
-            (True, True, [], False, "OK"),
-            (True, True, [], True, "ExchangeClosed"),
-        )
-        for has_fixed, has_spots, issues, closing, expected in cases:
-            with self.subTest(
-                fixed=has_fixed, spots=has_spots, issues=bool(issues), closing=closing
-            ):
-                self.assertEqual(
-                    storage.scrape_status(
-                        has_fixed=has_fixed, has_spots=has_spots, issues=issues, closing=closing
-                    ),
-                    expected,
-                )
-
 
 class StorageTests(DatabaseCase):
     def test_cycle_is_idempotent_and_preserves_schema(self):
@@ -103,14 +80,36 @@ class StorageTests(DatabaseCase):
             "spot_prices",
             "offer_prices",
             "rates",
-            "status",
         ):
             self.assertEqual(len(self.rows(table)), 1, table)
-        self.assertEqual(first["status"], "OK")
+        self.assertEqual(first["inserted"], {"spot_prices": 1, "offer_prices": 1, "rates": 1})
         self.assertEqual(second["inserted"], {"spot_prices": 0, "offer_prices": 0, "rates": 0})
         self.assertEqual(second["issues"], 0)
         with self.assertRaises(IntegrityError):
             self.sql("INSERT INTO master_data SELECT * FROM master_data")
+
+    def test_retired_status_table_is_optional_and_existing_rows_are_untouched(self):
+        self.sql("INSERT INTO status VALUES ('Jyske','2022-01-03','NotOK')")
+        previous = self.rows("status")
+        self.cycle()
+        self.assertEqual(self.rows("status"), previous)
+        self.sql("DROP TABLE status")
+        self.assertEqual(self.cycle(now=STAMP.replace(minute=7))["inserted"]["spot_prices"], 1)
+        with self.engine.connect() as connection:
+            self.assertIsNone(connection.execute(text("SELECT to_regclass('status')")).scalar())
+
+    def test_quality_audit_failure_rolls_back_observations(self):
+        self.sql(
+            "ALTER TABLE scrape_logs ADD CONSTRAINT reject_quality CHECK (error::json->>'event' <> 'scrape_quality')"
+        )
+        with self.assertLogs(level="ERROR"), self.assertRaises(IntegrityError):
+            self.cycle(aktuelKurs=None)
+        self.assertEqual(self.rows("master_data"), [])
+        self.assertEqual(self.rows("offer_prices"), [])
+        self.assertEqual(self.rows("rates"), [])
+        audit = json.loads(self.rows("scrape_logs")[0]["error"])
+        self.assertEqual(audit["event"], "scrape_failed")
+        self.assertEqual(audit["stage"], "database")
 
     def test_transaction_rolls_back_and_failure_audit_survives(self):
         self.sql("ALTER TABLE rates ADD CONSTRAINT reject_rate CHECK (spot_rate < 0)")
@@ -179,7 +178,6 @@ class StorageTests(DatabaseCase):
         fixed = next(iter(data.values()))
         fixed.append(fixed[0] | {"loanPeriodMax": "15"})
         result = self.cycle("Nordea", data=data)
-        self.assertEqual(result["status"], "OK")
         self.assertEqual(result["issues"], 0)
         self.assertEqual(sorted(r["years_to_maturity"] for r in self.rows("master_data")), [15, 20])
         self.assertEqual(len(self.rows("spot_prices")), 1)
@@ -192,7 +190,7 @@ class StorageTests(DatabaseCase):
         self.assertEqual(len(self.rows("master_data")), 1)
         self.assertEqual(len(self.rows("spot_prices")), 1)
         self.assertEqual(result["inserted"]["spot_prices"], 0)
-        self.assertEqual(result["status"], "SomeDataMissing")
+        self.assertGreater(result["issues"], 0)
 
     def test_conflicting_new_identities_are_not_guessed(self):
         for field, value in [("kuponrenteProcent", 5), ("loebetidAar", 20)]:
@@ -207,33 +205,35 @@ class StorageTests(DatabaseCase):
     def test_missing_price_preserves_master_and_offer_and_warns_once(self):
         with self.assertLogs(level="WARNING") as logs:
             result = self.cycle(aktuelKurs=None)
-        self.assertEqual(result["status"], "SomeDataMissing")
         self.assertEqual(result["issues"], 1)
         self.assertEqual(len(logs.output), 1)
         self.assertEqual(len(self.rows("master_data")), 1)
         self.assertEqual(len(self.rows("offer_prices")), 1)
         self.assertEqual(self.rows("spot_prices"), [])
-        self.assertIsNone(self.rows("status")[0]["last_data_time"])
+        audit = json.loads(self.rows("scrape_logs")[0]["error"])
+        self.assertEqual(audit["issues"][0]["code"], "fixed.spot_price")
 
-    def test_failed_fetch_preserves_freshness(self):
+    def test_failed_fetch_keeps_prior_quotes_and_leaves_current_slot_empty(self):
         self.cycle()
-        previous = self.rows("status")[0]["last_data_time"]
+        previous = self.rows("spot_prices")
         data = {url: TimeoutError("timeout") for url in sources.ENDPOINTS["Jyske"]}
         with self.assertLogs(level="WARNING"):
             result = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual(result["status"], "NotOK")
-        self.assertEqual(self.rows("status")[0]["last_data_time"], previous)
+        self.assertEqual(result["inserted"]["spot_prices"], 0)
+        self.assertEqual(self.rows("spot_prices"), previous)
+        audit = json.loads(self.rows("scrape_logs")[0]["error"])
+        self.assertIn("fixed.fetch", [issue["code"] for issue in audit["issues"]])
 
-    def test_conflicting_response_and_replay_do_not_advance_freshness(self):
+    def test_conflicting_response_and_duplicate_commit_preserve_prior_quotes(self):
         self.cycle()
-        previous = self.rows("status")[0]["last_data_time"]
+        previous = self.rows("spot_prices")
         data = payload()
         fixed = next(iter(data.values()))["fastRenteProdukter"]
         fixed.append(fixed[0] | {"aktuelKurs": 99})
         with self.assertLogs(level="WARNING"):
             result = self.cycle(now=STAMP.replace(minute=7), data=data)
         self.assertEqual(result["inserted"]["spot_prices"], 0)
-        self.assertEqual(self.rows("status")[0]["last_data_time"], previous)
+        self.assertEqual(self.rows("spot_prices"), previous)
         with self.assertLogs(level="WARNING"):
             self.cycle(aktuelKurs=99)
         self.assertEqual(self.rows("spot_prices")[0]["spot_price"], 98.25)
@@ -243,18 +243,18 @@ class StorageTests(DatabaseCase):
         data = payload(tilbudsKurs=96, aktuelKurs=99)
         next(iter(data.values()))["variabelRenteProdukter"][0]["vaegtetTilbudskursProcent"] = 3
         result = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual((result["status"], result["issues"]), ("OK", 0))
+        self.assertEqual(result["issues"], 0)
         self.assertEqual(self.rows("offer_prices")[0]["offer_price"], 98.1)
         self.assertEqual(self.rows("rates")[0]["spot_rate"], 2.5)
         self.assertEqual(len(self.rows("spot_prices")), 2)
 
-    def test_already_covered_daily_data_does_not_make_status_partial(self):
+    def test_already_covered_daily_data_does_not_repeat_quality_warnings(self):
         self.cycle()
         data = payload(tilbudsKurs=None)
         floating = next(iter(data.values()))["variabelRenteProdukter"]
         floating[0]["vaegtetTilbudskursProcent"] = None
         result = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual((result["status"], result["issues"]), ("OK", 0))
+        self.assertEqual(result["issues"], 0)
         self.assertEqual(len(self.rows("rates")), 1)
         self.assertEqual(self.rows("rates")[0]["spot_rate"], 2.5)
 
@@ -265,7 +265,7 @@ class StorageTests(DatabaseCase):
         floating.append(floating[0] | {"fastrenteperiode": 5, "vaegtetTilbudskursProcent": None})
         with self.assertLogs(level="WARNING"):
             missing = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual(missing["status"], "SomeDataMissing")
+        self.assertEqual(missing["issues"], 2)
         self.assertEqual(
             sorted(r["fixed_rate_period"] for r in self.rows("master_data_float")),
             [3, 5],
@@ -281,7 +281,7 @@ class StorageTests(DatabaseCase):
         floating[0]["vaegtetTilbudskursProcent"] = 3
         floating[1]["vaegtetTilbudskursProcent"] = 2.75
         recovered = self.cycle(now=STAMP.replace(minute=12), data=data)
-        self.assertEqual((recovered["status"], recovered["issues"]), ("OK", 0))
+        self.assertEqual(recovered["issues"], 0)
         self.assertEqual(
             {r["fixed_rate_period"]: r["spot_rate"] for r in self.rows("rates")},
             {3: 2.5, 5: 2.75},
@@ -292,14 +292,14 @@ class StorageTests(DatabaseCase):
         fixed_url, floating_url = sources.ENDPOINTS["RealKreditDanmark"]
         data[fixed_url] = data[fixed_url][:1]
         data[floating_url] = data[floating_url][:1]
-        self.assertEqual(self.cycle("RealKreditDanmark", data=data)["status"], "OK")
+        self.assertEqual(self.cycle("RealKreditDanmark", data=data)["issues"], 0)
         data[floating_url] = [
             {"name": "FlexLoan_F3_WithInstallment", "offerrate": None},
             {"name": "FlexLoan_F3_WithoutInstallment", "offerrate": None},
         ]
         with self.assertLogs(level="WARNING"):
             result = self.cycle("RealKreditDanmark", now=STAMP.replace(minute=7), data=data)
-        self.assertEqual(result["status"], "SomeDataMissing")
+        self.assertEqual(result["issues"], 2)
         audit = json.loads(self.rows("scrape_logs")[0]["error"])
         self.assertEqual(
             [i["product"] for i in audit["issues"] if i["code"] == "floating.spot_rate"],
@@ -308,14 +308,14 @@ class StorageTests(DatabaseCase):
         self.assertEqual(len(self.rows("master_data_float")), 2)
         self.assertEqual(len(self.rows("rates")), 1)
 
-    def test_covered_daily_fetch_failure_does_not_make_status_partial(self):
+    def test_covered_daily_fetch_failure_does_not_repeat_quality_warnings(self):
         data = payload("RealKreditDanmark")
         fixed_url, floating_url = sources.ENDPOINTS["RealKreditDanmark"]
         data[fixed_url] = data[fixed_url][:1]
-        self.assertEqual(self.cycle("RealKreditDanmark", data=data)["status"], "OK")
+        self.assertEqual(self.cycle("RealKreditDanmark", data=data)["issues"], 0)
         data[floating_url] = TimeoutError("floating quote request timed out")
         result = self.cycle("RealKreditDanmark", now=STAMP.replace(minute=7), data=data)
-        self.assertEqual((result["status"], result["issues"]), ("OK", 0))
+        self.assertEqual(result["issues"], 0)
         self.assertEqual(len(self.rows("rates")), 2)
 
     def test_malformed_new_floating_identity_is_not_hidden_by_daily_coverage(self):
@@ -325,7 +325,7 @@ class StorageTests(DatabaseCase):
         floating.append(floating[0] | {"fastrenteperiode": "bad"})
         with self.assertLogs(level="WARNING"):
             result = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual((result["status"], result["issues"]), ("SomeDataMissing", 1))
+        self.assertEqual(result["issues"], 1)
         audit = json.loads(self.rows("scrape_logs")[0]["error"])
         self.assertEqual(audit["issues"][0]["code"], "floating.product")
         self.assertIn("bad", audit["issues"][0]["message"])
@@ -338,7 +338,6 @@ class StorageTests(DatabaseCase):
                 data = payload()
                 next(iter(data.values()))["variabelRenteProdukter"] = response
                 result = self.cycle(now=STAMP.replace(minute=7 + 5 * index), data=data)
-                self.assertEqual(result["status"], "SomeDataMissing")
                 self.assertGreater(result["issues"], 0)
         self.assertEqual(len(self.rows("rates")), 1)
 
@@ -346,12 +345,12 @@ class StorageTests(DatabaseCase):
         self.sql("INSERT INTO master_data_float VALUES ('Jyske',5,0)")
         with self.assertLogs(level="WARNING"):
             first = self.cycle()
-        self.assertEqual(first["status"], "SomeDataMissing")
+        self.assertEqual(first["issues"], 1)
         data = payload()
         floating = next(iter(data.values()))["variabelRenteProdukter"]
         floating.append(floating[0] | {"fastrenteperiode": 5})
         second = self.cycle(now=STAMP.replace(minute=7), data=data)
-        self.assertEqual(second["status"], "OK")
+        self.assertEqual(second["issues"], 0)
         self.assertEqual(len(self.rows("rates")), 2)
 
     def test_new_floating_products_are_discovered_after_open(self):
@@ -363,16 +362,17 @@ class StorageTests(DatabaseCase):
         self.assertEqual(len(self.rows("master_data_float")), 2)
         self.assertEqual(len(self.rows("rates")), 2)
 
-    def test_other_institutes_bad_history_does_not_affect_status(self):
+    def test_other_institutes_bad_history_does_not_pollute_quality_audit(self):
         self.sql(f"INSERT INTO spot_prices VALUES ('2026-09-14 07:00:00','{NORDEA}',NULL)")
         self.sql("INSERT INTO rates VALUES ('2026-09-14','Nordea',3,'bad',NULL)")
-        self.assertEqual(self.cycle()["status"], "OK")
+        self.assertEqual(self.cycle()["issues"], 0)
+        self.assertEqual(self.rows("scrape_logs"), [])
 
     def test_invalid_existing_quote_is_not_repaired_by_adding_a_duplicate(self):
         self.sql(f"INSERT INTO spot_prices VALUES ('2026-09-14 07:00:00','{ISIN}',NULL)")
         with self.assertLogs(level="WARNING"):
             result = self.cycle()
-        self.assertEqual(result["status"], "SomeDataMissing")
+        self.assertGreater(result["issues"], 0)
         self.assertEqual(result["inserted"]["spot_prices"], 0)
         self.assertEqual(len(self.rows("spot_prices")), 1)
 
@@ -424,7 +424,7 @@ class StorageTests(DatabaseCase):
                 ):
                     issue = []
                     record = base | {storage.VALUES[table][0]: invalid}
-                    count, accepted, _ = storage.write(
+                    count, observations = storage.write(
                         c,
                         table,
                         [record],
@@ -433,7 +433,7 @@ class StorageTests(DatabaseCase):
                         ["Jyske"] if table == "rates" else [ISIN],
                         issue,
                     )
-                    self.assertEqual((count, accepted), (0, set()))
+                    self.assertEqual((count, observations), (0, {}))
                     self.assertTrue(issue)
 
     def test_inconsistent_ohlc_bounds_are_rejected(self):

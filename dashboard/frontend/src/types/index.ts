@@ -37,8 +37,17 @@ export interface OHLCPrice {
 
 export interface InstituteStatus {
   institute: string;
-  last_data_time: string;
-  status: "OK" | "NotOK" | "ExchangeClosed" | "SomeDataMissing" | string;
+  last_data_time: string | null;
+  status: "OK" | "NotOK" | "SomeDataMissing" | "Waiting";
+  detail: string;
+}
+
+export interface StatusSnapshot {
+  trading_date: string;
+  market_open: boolean;
+  checked_at: string;
+  refresh_at: string;
+  institutes: InstituteStatus[];
 }
 
 export interface FilterState {

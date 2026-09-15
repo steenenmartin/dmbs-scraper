@@ -15,7 +15,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
-  const { status, loading } = useInstituteStatus();
+  const { snapshot, loading, error } = useInstituteStatus();
 
   return (
     <>
@@ -75,7 +75,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         </nav>
 
         <div className="mt-auto px-3 pb-4">
-          <InstituteStatusPanel status={status} loading={loading} inSidebar />
+          <InstituteStatusPanel snapshot={snapshot} loading={loading} error={error} inSidebar />
         </div>
       </aside>
 

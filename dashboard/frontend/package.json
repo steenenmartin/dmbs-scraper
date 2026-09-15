@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --import tsx --test test/status.test.cjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },

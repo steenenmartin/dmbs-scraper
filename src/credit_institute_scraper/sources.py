@@ -184,6 +184,11 @@ def nordea(kind: str, p: dict[str, Any]) -> Bond | None:
     )
 
 
+def rd_unavailable(value: object) -> bool:
+    """RD's explicit unavailable quote marker, including localized decimal strings."""
+    return bool(re.fullmatch(r"-1(?:[.,]0+)?", str(value).strip()))
+
+
 def realkredit_dk(kind: str, p: dict[str, Any]) -> Bond | Rate | None:
     if kind == "floating":
         match = re.fullmatch(
@@ -211,7 +216,7 @@ def realkredit_dk(kind: str, p: dict[str, Any]) -> Bond | Rate | None:
         if isinstance(quotes, list) and quotes and isinstance(quotes[0], dict)
         else None
     )
-    if p.get("offerprice") in (-1, "-1", "-1.0"):
+    if rd_unavailable(p.get("offerprice")):
         spot = None
     return bond(
         "RealKreditDanmark",
@@ -329,8 +334,19 @@ def parse(institute: str, kind: str, payload: Any) -> tuple[list[Bond | Rate], l
                 if getattr(entry, quote) is None:
                     raw_field = QUOTE_FIELDS[institute][quote]
                     detail = f"{raw_field}={product.get(raw_field)!r}"
-                    if institute == "RealKreditDanmark" and quote == "spot_price":
-                        detail += f", offerprice={product.get('offerprice')!r}"
+                    if institute == "RealKreditDanmark" and isinstance(entry, Bond):
+                        raw = product.get(raw_field)
+                        if quote == "spot_price":
+                            detail += f", offerprice={product.get('offerprice')!r}"
+                            raw = (
+                                raw[0].get("price")
+                                if isinstance(raw, list) and raw and isinstance(raw[0], dict)
+                                else None
+                            )
+                            if rd_unavailable(product.get("offerprice")) and price(raw) is not None:
+                                continue
+                        if rd_unavailable(raw):
+                            continue
                     issues.append(
                         Issue(
                             f"{kind}.{quote}",

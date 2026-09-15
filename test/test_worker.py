@@ -197,12 +197,12 @@ class WorkerIntegrationTests(DatabaseCase):
             try:
                 self.assertTrue(entered.wait(2))
                 fast = pool.submit(scraper.run_institute, self.engine, "Nordea", STAMP)
-                self.assertEqual(fast.result(timeout=3)["status"], "OK")
+                self.assertEqual(fast.result(timeout=3)["inserted"]["spot_prices"], 1)
                 self.assertFalse(slow.done())
                 self.assertEqual([r["isin"] for r in self.rows("spot_prices")], [NORDEA])
             finally:
                 release.set()
-            self.assertEqual(slow.result(timeout=3)["status"], "OK")
+            self.assertEqual(slow.result(timeout=3)["inserted"]["spot_prices"], 1)
 
     def test_constraint_failure_does_not_roll_back_another_institute(self):
         self.sql(f"ALTER TABLE spot_prices ADD CONSTRAINT reject_jyske CHECK (isin <> '{ISIN}')")
@@ -217,11 +217,11 @@ class WorkerIntegrationTests(DatabaseCase):
         ):
             failed = pool.submit(scraper.run_institute, self.engine, "Jyske", STAMP)
             healthy = pool.submit(scraper.run_institute, self.engine, "Nordea", STAMP)
-            self.assertEqual(healthy.result(timeout=3)["status"], "OK")
+            self.assertEqual(healthy.result(timeout=3)["inserted"]["spot_prices"], 1)
             with self.assertRaises(IntegrityError):
                 failed.result(timeout=3)
         self.assertEqual([r["isin"] for r in self.rows("spot_prices")], [NORDEA])
-        self.assertEqual([r["institute"] for r in self.rows("status")], ["Nordea"])
+        self.assertEqual([r["institute"] for r in self.rows("master_data")], ["Nordea"])
 
     def test_scheduler_skips_overlap_and_waits_for_active_job_at_shutdown(self):
         entered, release, skipped = threading.Event(), threading.Event(), threading.Event()
@@ -254,7 +254,7 @@ class WorkerIntegrationTests(DatabaseCase):
                 scheduler.shutdown(wait=True)
                 thread.join(3)
         self.assertFalse(thread.is_alive())
-        self.assertEqual(self.rows("status")[0]["status"], "OK")
+        self.assertEqual([r["isin"] for r in self.rows("spot_prices")], [ISIN])
         self.assertEqual(self.engine.pool.checkedout(), 0)
 
     def test_a_parser_bug_is_not_retried_and_is_audited(self):
@@ -290,7 +290,6 @@ class WorkerIntegrationTests(DatabaseCase):
             self.assertIn("provider programming bug", audit["traceback"])
         self.assertEqual(self.rows("master_data"), [])
         self.assertEqual(self.rows("spot_prices"), [])
-        self.assertEqual(self.rows("status"), [])
 
     def test_transport_programming_error_is_a_failed_job_with_original_traceback(self):
         request = AsyncMock(side_effect=TypeError("request programming bug"))
@@ -315,16 +314,16 @@ class WorkerIntegrationTests(DatabaseCase):
         data[floating_url] = TimeoutError("daily endpoint unavailable")
         with self.assertLogs(level="WARNING"):
             first = self.cycle("RealKreditDanmark", data=data)
-        self.assertEqual(first["status"], "SomeDataMissing")
+        self.assertGreater(first["issues"], 0)
         self.assertEqual(first["inserted"]["spot_prices"], 1)
         recovered = payload("RealKreditDanmark")
         recovered[fixed_url] = recovered[fixed_url][:1]
         self.assertEqual(
-            self.cycle("RealKreditDanmark", now=STAMP.replace(minute=7), data=recovered)["status"],
-            "OK",
+            self.cycle("RealKreditDanmark", now=STAMP.replace(minute=7), data=recovered)["issues"],
+            0,
         )
         self.assertEqual(
-            self.cycle("RealKreditDanmark", now=STAMP.replace(minute=12), data=data)["status"], "OK"
+            self.cycle("RealKreditDanmark", now=STAMP.replace(minute=12), data=data)["issues"], 0
         )
 
     def test_logs_distinguish_slot_from_actual_commit(self):

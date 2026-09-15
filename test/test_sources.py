@@ -92,6 +92,49 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(issues[0].product, "DK0002066521")
         self.assertIn("rate='unavailable'", issues[0].message)
 
+    def test_rd_unavailable_spot_marker_keeps_offer_without_parser_warning(self):
+        for marker in (-1, -1.0, "-1", "-1.0", "-1,0000", " -1.0000 "):
+            with self.subTest(marker=marker):
+                product = copy.deepcopy(PAYLOADS["rd_fixed"][0])
+                product.update(prices=[{"price": marker}], offerprice="64,55")
+                entries, issues = sources.parse("RealKreditDanmark", "fixed", [product])
+                self.assertEqual(len(entries), 1)
+                self.assertIsNone(entries[0].spot_price)
+                self.assertEqual(entries[0].offer_price, 64.55)
+                self.assertEqual(issues, [])
+
+    def test_rd_unavailable_offer_marker_preserves_existing_spot_omission_rule(self):
+        for marker in (-1, -1.0, "-1", "-1.0", "-1,0000", " -1.0000 "):
+            with self.subTest(marker=marker):
+                product = copy.deepcopy(PAYLOADS["rd_fixed"][0])
+                product.update(prices=[{"price": 98.25}], offerprice=marker)
+                entries, issues = sources.parse("RealKreditDanmark", "fixed", [product])
+                self.assertIsNone(entries[0].spot_price)
+                self.assertIsNone(entries[0].offer_price)
+                self.assertEqual(issues, [])
+
+    def test_rd_sentinel_does_not_hide_malformed_sibling_quote(self):
+        for value in (None, "", "unavailable", -2, 0, True, float("nan"), float("inf")):
+            for quote in ("spot_price", "offer_price"):
+                with self.subTest(value=value, quote=quote):
+                    product = copy.deepcopy(PAYLOADS["rd_fixed"][0])
+                    product.update(
+                        prices=[{"price": value if quote == "spot_price" else "-1,0000"}],
+                        offerprice=value if quote == "offer_price" else "-1,0000",
+                    )
+                    entries, issues = sources.parse("RealKreditDanmark", "fixed", [product])
+                    self.assertEqual(len(entries), 1)
+                    self.assertEqual(len(issues), 1)
+                    self.assertEqual(issues[0].code, "fixed." + quote)
+                    self.assertEqual(issues[0].product, product["isinCode"])
+                    self.assertIn(repr(value), issues[0].message)
+
+    def test_negative_one_remains_a_quote_issue_for_other_providers(self):
+        product = copy.deepcopy(PAYLOADS["nordea_fixed"][0])
+        product["rate"] = "-1,0000"
+        _, issues = sources.parse("Nordea", "fixed", [product])
+        self.assertEqual([issue.code for issue in issues], ["fixed.spot_price"])
+
     def test_unexpected_parser_exceptions_propagate(self):
         for error_type in (TypeError, AttributeError, KeyError, ValueError):
             failure = error_type("parser implementation bug")
