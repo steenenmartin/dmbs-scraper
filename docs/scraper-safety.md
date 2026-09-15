@@ -113,15 +113,15 @@ contribute to coverage; newer observations cannot hide older missing slots.
 | `Waiting` | No quotes yet, and the first delivery deadline has not passed. |
 | `OK` | All expected spot observations through the required slot are present. |
 | `SomeDataMissing` / Partial | The latest slot has quotes, but the day's history has gaps. |
-| `NotOK` / Not OK | The required latest slot has no valid quotes for this institute. |
+| `NotOK` / Error | The required latest slot has no valid quotes for this institute. |
 
-Recovery changes `Not OK` to `Partial` while older gaps remain. A legitimate late
+Recovery changes `Error` to `Partial` while older gaps remain. A legitimate late
 commit of its original slot can fill a gap; a new scrape cannot fetch past data.
 The next trading day starts a new coverage history.
 
 At 17:00 the display becomes neutral `Closed` regardless of worker success. Its
 tooltip retains that trading day's data status; a missing final scrape becomes
-`Not OK` after 17:01 and stays visible through the evening, weekend or holidays.
+`Error` after 17:01 and stays visible through the evening, weekend or holidays.
 Before the next opening the API continues to assess the previous trading day.
 The frontend refreshes at calendar/deadline boundaries and at least every minute;
 unavailable or expired responses cannot leave a verified green status behind.

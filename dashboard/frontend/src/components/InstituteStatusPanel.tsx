@@ -17,7 +17,7 @@ const STATUS_STYLES: Record<string, { dot: string; badge: string; label: string 
   NotOK: {
     dot: "bg-rose-500",
     badge: "bg-rose-100 text-rose-700",
-    label: "Not OK",
+    label: "Error",
   },
   SomeDataMissing: {
     dot: "bg-amber-500",

@@ -41,7 +41,7 @@ test('closed badges stay neutral while tooltips retain the trading day and missi
 });
 
 test('live outcomes, absent data and Copenhagen timestamps render without overflow-prone labels', () => {
-  for (const [status, label] of [['OK', 'OK'], ['SomeDataMissing', 'Partial'], ['NotOK', 'Not OK'], ['Waiting', 'Waiting']]) {
+  for (const [status, label] of [['OK', 'OK'], ['SomeDataMissing', 'Partial'], ['NotOK', 'Error'], ['Waiting', 'Waiting']]) {
     const data = snapshot();
     data.institutes[0].status = status;
     data.institutes[0].last_data_time = null;
