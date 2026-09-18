@@ -72,7 +72,7 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
     async def test_bad_json_preserves_success_from_other_endpoint(self):
         error = json.JSONDecodeError("bad JSON", "{", 1)
 
-        async def request(session, institute, url):
+        async def request(session, institute, url, *, attempt=1):
             if url == "fixed":
                 return {"ok": True}
             raise error
@@ -121,7 +121,7 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
     async def test_total_budget_cancels_hang_but_retains_other_endpoint(self):
         cancelled = asyncio.Event()
 
-        async def request(session, institute, url):
+        async def request(session, institute, url, *, attempt=1):
             if url == "fast":
                 return {"ok": True}
             try:
@@ -273,6 +273,48 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             await transport.jyske("url")
         self.assertIn("institute=Jyske url=url path=in_page status=503", logs.output[1])
 
+    async def test_network_error_and_400_restore_original_page_on_retries(self):
+        fixtures = [self.fixture(in_page=False), self.fixture(in_page=False), self.fixture()]
+        failures = [
+            {"ok": False, "error": "TypeError: NetworkError when attempting to fetch resource."},
+            {"ok": False, "status": 400, "text": "Bad Request" + "x" * 500},
+        ]
+        for fixture, failure in zip(fixtures, failures):
+            fixture[5].evaluate.side_effect = [None, failure]
+            fixture[4].request.get.return_value.ok = False
+            fixture[4].request.get.return_value.status = 403
+        with (
+            patch.object(transport, "async_playwright", side_effect=[f[0] for f in fixtures]),
+            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
+            self.assertLogs(level="INFO") as logs,
+        ):
+            results = await transport.fetch("Jyske")
+        self.assertEqual(results, {transport.ENDPOINTS["Jyske"][0]: {}})
+        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
+        for attempt, (_, _, _, browser, context, _) in enumerate(fixtures, start=1):
+            route_request = context.route.await_args.args[1]
+            for resource_type, url, blocked in (
+                ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", attempt == 1),
+                ("document", "https://jyskebank.tv/v.ihtml/player.html", attempt == 1),
+                ("image", "https://www.jyskebank.dk/image.png", True),
+                ("script", "https://www.jyskebank.dk/cdn-cgi/challenge-platform/scripts/jsd/main.js", False),
+            ):
+                with self.subTest(attempt=attempt, url=url):
+                    route = AsyncMock()
+                    route.request.resource_type, route.request.url = resource_type, url
+                    await route_request(route)
+                    self.assertEqual(route.abort.await_count, int(blocked))
+                    self.assertEqual(route.continue_.await_count, int(not blocked))
+            context.close.assert_awaited_once()
+            browser.close.assert_awaited_once()
+        paths = [line for line in logs.output if "path=in_page" in line]
+        self.assertEqual(len(paths), 3)
+        for line, profile in zip(paths, ("lean", "full", "full")):
+            self.assertIn("profile=" + profile, line)
+        excerpt = next(line for line in logs.output if "body_excerpt=" in line)
+        self.assertIn("Bad Request", excerpt)
+        self.assertNotIn("x" * 300, excerpt)
+
     async def test_failed_context_cleanup_still_closes_browser(self):
         manager, _, _, browser, context, _ = self.fixture()
         context.close.side_effect = RuntimeError("closed")
@@ -292,7 +334,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         context.request.get.return_value.status = 403
 
         async def after_cleanup(delay):
-            self.assertEqual(delay, 1)
+            self.assertEqual(delay, 5)
             context.close.assert_awaited_once()
             browser.close.assert_awaited_once()
             manager.__aexit__.assert_awaited_once()
@@ -346,7 +388,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         error = results[transport.ENDPOINTS["Jyske"][0]]
         self.assertIsInstance(error, transport.FetchError)
         self.assertIn("AbortError", str(error))
-        self.assertEqual(sleep.await_args_list, [call(1), call(2)])
+        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
         for _, _, _, browser, context, _ in fixtures:
             context.close.assert_awaited_once()
             browser.close.assert_awaited_once()

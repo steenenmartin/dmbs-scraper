@@ -54,7 +54,7 @@ async def close_resource(resource: Browser | BrowserContext) -> None:
         logger.info("Browser resource cleanup failed", exc_info=True)
 
 
-async def jyske(url: str) -> JsonValue:
+async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
     started = monotonic()
     async with async_playwright() as runtime, AsyncExitStack() as cleanup:
         request = await runtime.request.new_context(
@@ -96,21 +96,23 @@ async def jyske(url: str) -> JsonValue:
                 "azure.com",
                 "optimizely.com",
                 "cdn.segment.com",
-                "jyskebank.tv",
             )
             parsed_url = urlsplit(route.request.url)
-            # We fetch the JSON ourselves: the embedded quote UI otherwise
-            # boots a second application and fetches the same endpoint again.
-            quote_ui = (
-                parsed_url.hostname == "calculators.jyskebank.dk"
-                and parsed_url.path.startswith("/jyske-kursliste-app/")
+            # Save memory on the first attempt, but restore the previously
+            # working page on retries in case its initialization is required.
+            optional_app = not full_page and (
+                parsed_url.hostname == "jyskebank.tv"
+                or (
+                    parsed_url.hostname == "calculators.jyskebank.dk"
+                    and parsed_url.path.startswith("/jyske-kursliste-app/")
+                )
             )
             if route.request.resource_type in {
                 "image",
                 "media",
                 "font",
                 "stylesheet",
-            } or any(h in route.request.url for h in blocked) or quote_ui:
+            } or any(h in route.request.url for h in blocked) or optional_app:
                 await route.abort()
             else:
                 await route.continue_()
@@ -131,14 +133,22 @@ async def jyske(url: str) -> JsonValue:
         await page.evaluate("window.scrollTo(0, 600); window.scrollTo(0, 0)")
         result = await page.evaluate(PAGE_FETCH, url)
         logger.info(
-            "fetch_path institute=Jyske url=%s path=in_page status=%s error=%s elapsed_ms=%.0f",
+            "fetch_path institute=Jyske url=%s path=in_page status=%s error=%s elapsed_ms=%.0f profile=%s",
             url,
             result.get("status"),
             result.get("error"),
             (monotonic() - started) * 1000,
+            "full" if full_page else "lean",
         )
         if result.get("ok"):
             return json.loads(result["text"])
+        if result.get("text"):
+            # Only failed public feed responses; never log cookies/headers or
+            # successful payloads. Keep enough context to distinguish HTTP 400s.
+            logger.info(
+                "fetch_response institute=Jyske url=%s status=%s body_excerpt=%r",
+                url, result.get("status"), result["text"][:300],
+            )
         response = await context.request.get(url, headers=HEADERS, max_redirects=3, timeout=20000)
         logger.info(
             "fetch_path institute=Jyske url=%s path=context_request status=%s elapsed_ms=%.0f",
@@ -162,9 +172,11 @@ async def jyske(url: str) -> JsonValue:
         return await response.json()
 
 
-async def request_json(session: aiohttp.ClientSession, institute: str, url: str) -> JsonValue:
+async def request_json(
+    session: aiohttp.ClientSession, institute: str, url: str, *, attempt: int = 1
+) -> JsonValue:
     if institute == "Jyske":
-        return await jyske(url)
+        return await jyske(url, full_page=attempt > 1)
     async with session.get(url) as response:
         if response.status >= 400:
             raise FetchError(f"HTTP {response.status}: {url}", response.status in RETRY_STATUS)
@@ -180,7 +192,7 @@ async def retry(
     started = monotonic()
     for attempt in range(1, 4):
         try:
-            results[url] = await request_json(session, institute, url)
+            results[url] = await request_json(session, institute, url, attempt=attempt)
             logger.info(
                 "fetch_succeeded institute=%s url=%s attempt=%d elapsed_ms=%.0f",
                 institute,
@@ -241,7 +253,9 @@ async def retry(
             if not will_retry:
                 results[url] = error
                 return
-            await asyncio.sleep(attempt)
+            # A new browser immediately after a rejection can hit the same
+            # transient failure. Jyske still shares the 90-second total budget.
+            await asyncio.sleep(attempt * 5 if institute == "Jyske" else attempt)
         except Exception as error:
             error.add_note(f"Fetch failed: institute={institute}, url={url}, attempt={attempt}")
             raise

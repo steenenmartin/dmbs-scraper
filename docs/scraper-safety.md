@@ -31,7 +31,8 @@ HTTP uses aiohttp with a 20-second total request timeout and 5-second connection
 timeout. The entire network phase shares a 90-second budget including retries and
 Jyske's browser fallback. Only transient connection failures, timeouts and HTTP
 408/429/500/502/503/504 are retried, at most three attempts with 1- and 2-second
-delays. Certificate and malformed JSON errors are reported without retrying.
+delays (5 and 10 seconds for Jyske). Certificate and malformed JSON errors are
+reported without retrying.
 Unexpected programming errors propagate with their traceback and fail the job;
 they are not converted into ordinary quality issues or retried.
 Successful endpoints survive another endpoint's timeout. Browser resources have
@@ -42,13 +43,19 @@ There is no network-idle wait. The in-page request aborts after 30 seconds inclu
 body reading. Cancellation unwinds owned browser contexts. Successful retries and
 fallbacks do not create quality warnings. Pure parsers do not fetch, log or write.
 
-The browser blocks the embedded `jyskebank.tv` video player and the
+On the first attempt the browser blocks the embedded `jyskebank.tv` video player and the
 `calculators.jyskebank.dk/jyske-kursliste-app/` quote UI, in addition to media,
 styles and trackers. The quote UI otherwise starts another application and fetches
 the same JSON endpoint again; our in-page fetch supplies the data directly.
 The bank page, cookies and challenge scripts still load in Firefox. This is not a
 hard RAM cap; verify actual worker memory and successful quotes after deployment.
 Each retry closes the previous context/browser and starts a fresh session.
+Retries restore the original page's video and quote application requests, since
+their initialization may be needed even when the lean path works locally.
+The original image/media/font/stylesheet and tracker blocking stays in place.
+In-page logs identify `profile=lean` or `profile=full`. Failed in-page HTTP responses
+include at most 300 characters of their body in a separate `fetch_response` log;
+successful payloads and request cookies/headers are not logged.
 Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
 even if the final HTTP fallback returns a non-transient status. The final error
 retains the in-page failure as well as the fallback status. Browser crashes/closed
