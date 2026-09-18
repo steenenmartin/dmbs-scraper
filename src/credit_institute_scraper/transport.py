@@ -6,6 +6,7 @@ import logging
 import os
 from contextlib import AsyncExitStack
 from time import monotonic
+from urllib.parse import urlsplit
 
 import aiohttp
 from playwright.async_api import Browser, BrowserContext, Route, async_playwright
@@ -72,7 +73,8 @@ async def jyske(url: str) -> JsonValue:
         finally:
             await request.dispose()
         browser = await runtime.firefox.launch(
-            executable_path=os.getenv("FIREFOX_EXECUTABLE_PATH") or None, headless=True
+            executable_path=os.getenv("FIREFOX_EXECUTABLE_PATH") or None,
+            headless=True,
         )
         cleanup.push_async_callback(close_resource, browser)
         context = await browser.new_context(locale="da-DK", user_agent=USER_AGENT)
@@ -94,13 +96,21 @@ async def jyske(url: str) -> JsonValue:
                 "azure.com",
                 "optimizely.com",
                 "cdn.segment.com",
+                "jyskebank.tv",
+            )
+            parsed_url = urlsplit(route.request.url)
+            # We fetch the JSON ourselves: the embedded quote UI otherwise
+            # boots a second application and fetches the same endpoint again.
+            quote_ui = (
+                parsed_url.hostname == "calculators.jyskebank.dk"
+                and parsed_url.path.startswith("/jyske-kursliste-app/")
             )
             if route.request.resource_type in {
                 "image",
                 "media",
                 "font",
                 "stylesheet",
-            } or any(h in route.request.url for h in blocked):
+            } or any(h in route.request.url for h in blocked) or quote_ui:
                 await route.abort()
             else:
                 await route.continue_()
@@ -137,7 +147,18 @@ async def jyske(url: str) -> JsonValue:
             (monotonic() - started) * 1000,
         )
         if not response.ok:
-            raise FetchError(f"Jyske HTTP {response.status}", response.status in RETRY_STATUS)
+            # The cookie-sharing HTTP fallback can return 403 even when the
+            # browser failure was transient. Preserve both paths in the error;
+            # retry() closes this session before starting a fresh browser.
+            browser_transient = (
+                bool(result.get("error"))
+                or result.get("status") in RETRY_STATUS | {403}
+            )
+            raise FetchError(
+                f"Jyske HTTP {response.status}; in-page status={result.get('status')} "
+                f"error={result.get('error')}",
+                browser_transient or response.status in RETRY_STATUS | {403},
+            )
         return await response.json()
 
 
@@ -201,6 +222,8 @@ async def retry(
                         "connection reset",
                         "connection closed",
                         "ns_error_net",
+                        "page crashed",
+                        "target page, context or browser has been closed",
                     )
                 )
             will_retry = transient and attempt < 3

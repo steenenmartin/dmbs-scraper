@@ -26,6 +26,9 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
             (TimeoutError(), 3),
             (aiohttp.ClientSSLError(None, OSError("certificate")), 1),
             (aiohttp.InvalidURL("bad"), 1),
+            (transport.BrowserError("Page.goto: Page crashed"), 3),
+            (transport.BrowserError("Target page, context or browser has been closed"), 3),
+            (transport.BrowserError("Executable doesn't exist"), 1),
         ]
         for error, attempts in cases:
             request = AsyncMock(side_effect=error)
@@ -238,6 +241,29 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("path=context_request status=200", logs.output[2])
         self.assertTrue(all("elapsed_ms=" in entry for entry in logs.output))
 
+    async def test_blocks_video_and_duplicate_quote_ui_but_keeps_browser_fetch_dependencies(self):
+        manager, _, _, _, context, _ = self.fixture()
+        with patch.object(transport, "async_playwright", return_value=manager):
+            await transport.jyske("url")
+        route_request = context.route.await_args.args[1]
+        for resource_type, url, blocked in (
+            ("document", "https://jyskebank.tv/v.ihtml/player.html", True),
+            ("script", "https://jyskebank.tv/v.ihtml/player.js", True),
+            ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", True),
+            ("document", transport.PAGE, False),
+            ("fetch", transport.ENDPOINTS["Jyske"][0], False),
+            ("script", "https://www.jyskebank.dk/cdn-cgi/challenge-platform/scripts/jsd/main.js", False),
+            ("script", "https://policy.app.cookieinformation.com/uc.js", False),
+            ("script", "https://calculators.jyskebank.dk/other-app/script.js", False),
+        ):
+            with self.subTest(url=url):
+                route = AsyncMock()
+                route.request.resource_type = resource_type
+                route.request.url = url
+                await route_request(route)
+                self.assertEqual(route.abort.await_count, int(blocked))
+                self.assertEqual(route.continue_.await_count, int(not blocked))
+
     async def test_in_page_http_failure_logs_status_before_context_fallback(self):
         manager, _, _, _, _, _ = self.fixture(in_page=False)
         with (
@@ -256,6 +282,91 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         ):
             await transport.jyske("url")
         browser.close.assert_awaited_once()
+
+    async def test_aborted_browser_then_403_retries_with_a_fresh_session(self):
+        first = self.fixture(in_page=False)
+        second = self.fixture()
+        manager, _, _, browser, context, page = first
+        page.evaluate.side_effect = [None, {"ok": False, "error": "AbortError: body timed out"}]
+        context.request.get.return_value.ok = False
+        context.request.get.return_value.status = 403
+
+        async def after_cleanup(delay):
+            self.assertEqual(delay, 1)
+            context.close.assert_awaited_once()
+            browser.close.assert_awaited_once()
+            manager.__aexit__.assert_awaited_once()
+            second[1].firefox.launch.assert_not_awaited()
+
+        with (
+            patch.object(transport, "async_playwright", side_effect=[manager, second[0]]),
+            patch.object(transport.asyncio, "sleep", AsyncMock(side_effect=after_cleanup)),
+            self.assertLogs(level="INFO") as logs,
+        ):
+            results = await transport.fetch("Jyske")
+        self.assertEqual(results, {transport.ENDPOINTS["Jyske"][0]: {}})
+        second[1].firefox.launch.assert_awaited_once()
+        second[3].close.assert_awaited_once()
+        failed = next(line for line in logs.output if "fetch_failed" in line)
+        self.assertIn("AbortError: body timed out", failed)
+        self.assertIn("Jyske HTTP 403", failed)
+        self.assertIn("retry=True", failed)
+
+    async def test_jyske_browser_failure_is_not_hidden_by_fallback_status(self):
+        for in_page, fallback, retryable in (
+            ({"status": 503}, 404, True),
+            ({"status": 403}, 403, True),
+            ({"status": 404}, 403, True),
+            ({"status": 404}, 404, False),
+        ):
+            with self.subTest(in_page=in_page, fallback=fallback):
+                manager, _, _, browser, context, page = self.fixture(in_page=False)
+                page.evaluate.side_effect = [None, {"ok": False, **in_page}]
+                context.request.get.return_value.ok = False
+                context.request.get.return_value.status = fallback
+                with (
+                    patch.object(transport, "async_playwright", return_value=manager),
+                    self.assertRaises(transport.FetchError) as raised,
+                ):
+                    await transport.jyske("url")
+                self.assertEqual(raised.exception.retryable, retryable)
+                browser.close.assert_awaited_once()
+
+    async def test_repeated_browser_abort_is_bounded_to_three_attempts(self):
+        fixtures = [self.fixture(in_page=False) for _ in range(3)]
+        for _, _, _, _, context, page in fixtures:
+            page.evaluate.side_effect = [None, {"ok": False, "error": "AbortError"}]
+            context.request.get.return_value.ok = False
+            context.request.get.return_value.status = 403
+        with (
+            patch.object(transport, "async_playwright", side_effect=[f[0] for f in fixtures]),
+            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            results = await transport.fetch("Jyske")
+        error = results[transport.ENDPOINTS["Jyske"][0]]
+        self.assertIsInstance(error, transport.FetchError)
+        self.assertIn("AbortError", str(error))
+        self.assertEqual(sleep.await_args_list, [call(1), call(2)])
+        for _, _, _, browser, context, _ in fixtures:
+            context.close.assert_awaited_once()
+            browser.close.assert_awaited_once()
+
+    async def test_total_budget_closes_hanging_browser(self):
+        manager, _, _, browser, context, page = self.fixture()
+
+        async def hang(*args):
+            await asyncio.Event().wait()
+
+        page.evaluate.side_effect = hang
+        with (
+            patch.object(transport, "async_playwright", return_value=manager),
+            patch.object(transport, "FETCH_SECONDS", 0.05),
+        ):
+            results = await asyncio.wait_for(transport.fetch("Jyske"), 2)
+        self.assertIsInstance(results[transport.ENDPOINTS["Jyske"][0]], TimeoutError)
+        context.close.assert_awaited_once()
+        browser.close.assert_awaited_once()
+        manager.__aexit__.assert_awaited_once()
 
     async def test_cancellation_closes_owned_browser_and_context(self):
         manager, _, _, browser, context, page = self.fixture()

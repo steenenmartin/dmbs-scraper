@@ -42,6 +42,19 @@ There is no network-idle wait. The in-page request aborts after 30 seconds inclu
 body reading. Cancellation unwinds owned browser contexts. Successful retries and
 fallbacks do not create quality warnings. Pure parsers do not fetch, log or write.
 
+The browser blocks the embedded `jyskebank.tv` video player and the
+`calculators.jyskebank.dk/jyske-kursliste-app/` quote UI, in addition to media,
+styles and trackers. The quote UI otherwise starts another application and fetches
+the same JSON endpoint again; our in-page fetch supplies the data directly.
+The bank page, cookies and challenge scripts still load in Firefox. This is not a
+hard RAM cap; verify actual worker memory and successful quotes after deployment.
+Each retry closes the previous context/browser and starts a fresh session.
+Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
+even if the final HTTP fallback returns a non-transient status. The final error
+retains the in-page failure as well as the fallback status. Browser crashes/closed
+targets are also retried. The existing three-attempt and 90-second limits still
+apply; other institutes' 403 responses remain non-retryable.
+
 ## Validation and persistence
 
 - Numeric validation precedes conversion: boolean prices are invalid; fractional
