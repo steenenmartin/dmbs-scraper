@@ -31,7 +31,8 @@ HTTP uses aiohttp with a 20-second total request timeout and 5-second connection
 timeout. The entire network phase shares a 90-second budget including retries and
 Jyske's browser fallback. Only transient connection failures, timeouts and HTTP
 408/429/500/502/503/504 are retried, at most three attempts with 1- and 2-second
-delays. Certificate and malformed JSON errors are reported without retrying.
+delays (5 and 10 seconds for Jyske). Certificate and malformed JSON errors are
+reported without retrying.
 Unexpected programming errors propagate with their traceback and fail the job;
 they are not converted into ordinary quality issues or retried.
 Successful endpoints survive another endpoint's timeout. Browser resources have
@@ -39,13 +40,15 @@ bounded cleanup; the 90-second network budget can be followed by that cleanup.
 
 Jyske first tries direct access through the job's existing aiohttp session, without
 starting Playwright's Node process. An HTTP failure or direct-request
-timeout falls back to Firefox, which first captures the price page's own API
-response (including any headers supplied by the site's scripts). Navigation,
+timeout falls back to Firefox. On retries with the full page enabled, it first
+captures the price page's own API response, including headers supplied by the
+site's scripts. The lean first attempt goes straight to in-page fetch after page
+navigation, because it blocks the quote application. For full-page attempts, navigation,
 waiting for that response and reading its body share a 20-second limit. If that
 fails or returns invalid JSON, in-page fetch and context-request remain as
 fallbacks, each with a 10-second request limit. There is no network-idle wait.
 The in-page limit includes body reading. Final HTTP failures retain the in-page
-status/error for diagnosis; HTTP 400/403 do not trigger repeated browser launches.
+status/error for diagnosis; Jyske's 403 retry behavior is described below.
 Cancellation unwinds owned browser contexts. Successful retries and fallbacks
 do not create quality warnings. Pure parsers do not fetch, log or write.
 
@@ -63,6 +66,25 @@ from `web.1`, both during Jyske's browser fallback and between scrapes. Heroku's
 RSS, disk cache and swap separately; `memory_total` includes all three. Compare
 equivalent workloads rather than treating a lower idle reading as a lower browser
 peak. These changes do not put a hard cap on Firefox's memory usage.
+
+On the first attempt the browser blocks the embedded `jyskebank.tv` video player and the
+`calculators.jyskebank.dk/jyske-kursliste-app/` quote UI, in addition to media,
+styles and trackers. The quote UI otherwise starts another application and fetches
+the same JSON endpoint again; our in-page fetch supplies the data directly.
+The bank page, cookies and challenge scripts still load in Firefox. This is not a
+hard RAM cap; verify actual worker memory and successful quotes after deployment.
+Each retry closes the previous context/browser and starts a fresh session.
+Retries restore the original page's video and quote application requests, since
+their initialization may be needed even when the lean path works locally.
+The original image/media/font/stylesheet and tracker blocking stays in place.
+In-page logs identify `profile=lean` or `profile=full`. Failed in-page HTTP responses
+include at most 300 characters of their body in a separate `fetch_response` log;
+successful payloads and request cookies/headers are not logged.
+Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
+even if the final HTTP fallback returns a non-transient status. The final error
+retains the in-page failure as well as the fallback status. Browser crashes/closed
+targets are also retried. The existing three-attempt and 90-second limits still
+apply; other institutes' 403 responses remain non-retryable.
 
 ## Validation and persistence
 
