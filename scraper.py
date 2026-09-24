@@ -80,6 +80,8 @@ def run_institute(
                 entries, errors = sources.parse(institute, kind, payload)
                 products.extend(entries)
                 issues.extend(replace(i, message=f"url={url} {i.message}") for i in errors)
+        # Release raw responses before waiting for database connections/locks.
+        del payload, payloads
         parsed = time.monotonic()
         stage = "database"
         result: dict[str, Any] = dict(

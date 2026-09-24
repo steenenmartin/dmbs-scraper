@@ -6,6 +6,7 @@ import signal
 import tempfile
 import threading
 import unittest
+import weakref
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta, timezone
@@ -22,6 +23,29 @@ from test.support import ISIN, NORDEA, STAMP, DatabaseCase, payload
 
 
 class WorkerTests(unittest.TestCase):
+    def test_raw_responses_are_released_before_database_work(self):
+        class Payload(dict):
+            pass
+
+        references = []
+
+        async def fetch(institute):
+            raw = Payload(next(iter(payload(institute).values())))
+            responses = Payload({sources.ENDPOINTS[institute][0]: raw})
+            references.extend((weakref.ref(raw), weakref.ref(responses)))
+            return responses
+
+        def save(*args, **kwargs):
+            self.assertTrue(all(ref() is None for ref in references))
+            self.assertTrue(kwargs["products"])
+            return {"inserted": {}, "issues": 0, "committed_at": STAMP.isoformat()}
+
+        with (
+            patch.object(scraper.transport, "fetch", fetch),
+            patch.object(storage, "save", save),
+        ):
+            scraper.run_institute(None, "Jyske", STAMP)
+
     def test_complete_daily_schedule_in_both_dst_seasons(self):
         for month, offset in ((1, 1), (9, 2)):
             now = datetime(2026, month, 14, tzinfo=timezone.utc)

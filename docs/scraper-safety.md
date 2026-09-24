@@ -37,10 +37,32 @@ they are not converted into ordinary quality issues or retried.
 Successful endpoints survive another endpoint's timeout. Browser resources have
 bounded cleanup; the 90-second network budget can be followed by that cleanup.
 
-Jyske retains direct APIRequestContext, in-page fetch and context-request fallback.
-There is no network-idle wait. The in-page request aborts after 30 seconds including
-body reading. Cancellation unwinds owned browser contexts. Successful retries and
-fallbacks do not create quality warnings. Pure parsers do not fetch, log or write.
+Jyske first tries direct access through the job's existing aiohttp session, without
+starting Playwright's Node process. An HTTP failure or direct-request
+timeout falls back to Firefox, which first captures the price page's own API
+response (including any headers supplied by the site's scripts). Navigation,
+waiting for that response and reading its body share a 20-second limit. If that
+fails or returns invalid JSON, in-page fetch and context-request remain as
+fallbacks, each with a 10-second request limit. There is no network-idle wait.
+The in-page limit includes body reading. Final HTTP failures retain the in-page
+status/error for diagnosis; HTTP 400/403 do not trigger repeated browser launches.
+Cancellation unwinds owned browser contexts. Successful retries and fallbacks
+do not create quality warnings. Pure parsers do not fetch, log or write.
+
+Expected fetch errors retain their type/message for reporting, but their traceback
+frames and exception chains are released after logging so closed request/browser
+objects are not kept alive by failed jobs. Unexpected programming errors still
+propagate with full tracebacks. Raw endpoint payloads are released after parsing,
+before waiting for database connections or locks. Firefox and its Playwright driver
+remain scoped to one browser attempt and are closed afterward; they are not kept
+running between five-minute jobs.
+
+To compare worker memory before and after deployment, inspect `worker.1` separately
+from `web.1`, both during Jyske's browser fallback and between scrapes. Heroku's
+[runtime metrics](https://devcenter.heroku.com/articles/log-runtime-metrics) report
+RSS, disk cache and swap separately; `memory_total` includes all three. Compare
+equivalent workloads rather than treating a lower idle reading as a lower browser
+peak. These changes do not put a hard cap on Firefox's memory usage.
 
 ## Validation and persistence
 
