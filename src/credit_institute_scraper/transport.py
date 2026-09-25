@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import traceback
+from collections.abc import Mapping
 from contextlib import AsyncExitStack
 from time import monotonic
 from urllib.parse import urlsplit
@@ -29,13 +30,20 @@ HEADERS = {
     "referer": PAGE,
 }
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
+JYSKE_SESSION_SECONDS = 30 * 60
+JYSKE_SESSION_MAX_BYTES = 256 * 1024
+# One Jyske job runs at a time. Store JSON only, never browser/event-loop objects.
+_jyske_session: tuple[float, str] | None = None
 PAGE_FETCH = """async (url) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
         const response = await fetch(url, {credentials: 'include',
             headers: {'accept': 'application/json, text/plain, */*'}, signal: controller.signal});
-        return {ok: response.ok, status: response.status, text: await response.text()};
+        return {ok: response.ok, status: response.status, text: await response.text(),
+            headers: {'content-type': response.headers.get('content-type'),
+                'cf-mitigated': response.headers.get('cf-mitigated'),
+                'cf-ray': response.headers.get('cf-ray')}};
     } catch (error) { return {ok: false, error: String(error)}; }
     finally { clearTimeout(timer); }
 }"""
@@ -47,6 +55,47 @@ class FetchError(Exception):
         self.retryable = retryable
 
 
+def response_details(headers: Mapping[str, str | None]) -> str:
+    """Only diagnostic headers; never include cookies or authorization data."""
+    return " ".join(
+        f"{name.replace('-', '_')}={headers.get(name) or '-'}"
+        for name in ("content-type", "cf-mitigated", "cf-ray")
+    )
+
+
+def jyske_session_state() -> dict | None:
+    global _jyske_session
+    snapshot = _jyske_session
+    if snapshot is None:
+        return None
+    expires, encoded = snapshot
+    if monotonic() >= expires:
+        _jyske_session = None
+        return None
+    return json.loads(encoded)
+
+
+async def remember_jyske_session(context: BrowserContext, payload: JsonValue) -> JsonValue:
+    """Reuse the scraper's own successful session without keeping Firefox alive."""
+    global _jyske_session
+    if not isinstance(payload, dict) or not any(
+        isinstance(payload.get(key), list) and payload[key]
+        for key in ("fastRenteProdukter", "variabelRenteProdukter")
+    ):
+        return payload
+    try:
+        async with asyncio.timeout(1):
+            state = await context.storage_state()
+        encoded = json.dumps(state, ensure_ascii=True, separators=(",", ":"))
+        if len(encoded) <= JYSKE_SESSION_MAX_BYTES:
+            _jyske_session = (monotonic() + JYSKE_SESSION_SECONDS, encoded)
+    except (BrowserError, TimeoutError) as error:
+        # Session persistence is optional; do not log its contents.
+        logger.info("Jyske session snapshot unavailable error=%s", type(error).__name__)
+        release_error_frames(error)
+    return payload
+
+
 async def close_resource(resource: Browser | BrowserContext) -> None:
     try:
         async with asyncio.timeout(5):
@@ -56,7 +105,14 @@ async def close_resource(resource: Browser | BrowserContext) -> None:
 
 
 async def prepare_jyske_page(page: Page) -> None:
-    await page.goto(PAGE, wait_until="domcontentloaded", timeout=15000)
+    started = monotonic()
+    response = await page.goto(PAGE, wait_until="domcontentloaded", timeout=15000)
+    if response is not None:
+        logger.info(
+            "fetch_path institute=Jyske url=%s path=navigation status=%s elapsed_ms=%.0f %s",
+            PAGE, response.status, (monotonic() - started) * 1000,
+            response_details(response.headers),
+        )
     for selector in (
         "button:has-text('Acceptér alle')",
         "button:has-text('Accepter')",
@@ -85,13 +141,14 @@ async def jyske_page_payload(page: Page, url: str) -> JsonValue:
                 await prepare_jyske_page(page)
             response = await pending.value
             logger.info(
-                "fetch_path institute=Jyske url=%s path=page_response status=%s elapsed_ms=%.0f",
+                "fetch_path institute=Jyske url=%s path=page_response status=%s elapsed_ms=%.0f %s",
                 url,
                 response.status,
                 (monotonic() - started) * 1000,
+                response_details(response.headers),
             )
             if not response.ok:
-                raise FetchError(f"Jyske page response HTTP {response.status}")
+                raise FetchError(f"Jyske page response HTTP {response.status}; {response_details(response.headers)}")
             return await response.json()
     except (TimeoutError, BrowserTimeout) as error:
         raise FetchError("Jyske page response timed out", retryable=True) from error
@@ -105,13 +162,12 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
             headless=True,
         )
         cleanup.push_async_callback(close_resource, browser)
-        context = await browser.new_context(locale="da-DK", user_agent=USER_AGENT)
+        context = await browser.new_context(
+            locale="da-DK",
+            timezone_id="Europe/Copenhagen",
+            storage_state=jyske_session_state() if not full_page else None,
+        )
         cleanup.push_async_callback(close_resource, context)
-        await context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            Object.defineProperty(navigator, 'languages', {get: () => ['da-DK','da','en-US','en']});
-            Object.defineProperty(navigator, 'platform', {get: () => 'Win32'});
-        """)
 
         async def route_request(route: Route) -> None:
             blocked = (
@@ -149,7 +205,8 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
         page = await context.new_page()
         if full_page:
             try:
-                return await jyske_page_payload(page, url)
+                payload = await jyske_page_payload(page, url)
+                return await remember_jyske_session(context, payload)
             except (FetchError, json.JSONDecodeError) as error:
                 logger.info("Jyske page response unavailable url=%s error=%s", url, error)
                 release_error_frames(error)
@@ -159,15 +216,16 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
             await prepare_jyske_page(page)
         result = await page.evaluate(PAGE_FETCH, url)
         logger.info(
-            "fetch_path institute=Jyske url=%s path=in_page status=%s error=%s elapsed_ms=%.0f profile=%s",
+            "fetch_path institute=Jyske url=%s path=in_page status=%s error=%s elapsed_ms=%.0f profile=%s %s",
             url,
             result.get("status"),
             result.get("error"),
             (monotonic() - started) * 1000,
             "full" if full_page else "lean",
+            response_details(result.get("headers", {})),
         )
         if result.get("ok"):
-            return json.loads(result["text"])
+            return await remember_jyske_session(context, json.loads(result["text"]))
         if result.get("text"):
             # Only failed public feed responses; never log cookies/headers or
             # successful payloads. Keep enough context to distinguish HTTP 400s.
@@ -177,10 +235,11 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
             )
         response = await context.request.get(url, headers=HEADERS, max_redirects=3, timeout=10000)
         logger.info(
-            "fetch_path institute=Jyske url=%s path=context_request status=%s elapsed_ms=%.0f",
+            "fetch_path institute=Jyske url=%s path=context_request status=%s elapsed_ms=%.0f %s",
             url,
             response.status,
             (monotonic() - started) * 1000,
+            response_details(response.headers),
         )
         if not response.ok:
             # The cookie-sharing HTTP fallback can return 403 even when the
@@ -192,10 +251,12 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
             )
             raise FetchError(
                 f"Jyske HTTP {response.status}; in-page status={result.get('status')} "
-                f"error={result.get('error')}",
+                f"error={result.get('error')}; "
+                f"in-page {response_details(result.get('headers', {}))}; "
+                f"context-request {response_details(response.headers)}",
                 browser_transient or response.status in RETRY_STATUS | {403},
             )
-        return await response.json()
+        return await remember_jyske_session(context, await response.json())
 
 
 async def request_json(
@@ -211,10 +272,11 @@ async def request_json(
                 timeout=aiohttp.ClientTimeout(total=10, connect=5),
             ) as response:
                 logger.info(
-                    "fetch_path institute=Jyske url=%s path=direct status=%s elapsed_ms=%.0f",
+                    "fetch_path institute=Jyske url=%s path=direct status=%s elapsed_ms=%.0f %s",
                     url,
                     response.status,
                     (monotonic() - started) * 1000,
+                    response_details(response.headers),
                 )
                 if response.status < 400:
                     return await response.json(content_type=None)
@@ -253,7 +315,10 @@ async def retry(
     institute: str,
     url: str,
     results: dict[str, JsonValue | Exception],
+    *,
+    last_errors: dict[str, str] | None = None,
 ) -> None:
+    global _jyske_session
     started = monotonic()
     for attempt in range(1, 4):
         try:
@@ -274,6 +339,8 @@ async def retry(
             json.JSONDecodeError,
             UnicodeDecodeError,
         ) as error:
+            if institute == "Jyske":
+                _jyske_session = None
             transient = isinstance(
                 error,
                 (
@@ -301,6 +368,7 @@ async def retry(
                         "ns_error_net",
                         "page crashed",
                         "target page, context or browser has been closed",
+                        "execution context was destroyed",
                     )
                 )
             will_retry = transient and attempt < 3
@@ -316,6 +384,8 @@ async def retry(
                 will_retry,
             )
             release_error_frames(error)
+            if last_errors is not None:
+                last_errors[url] = f"{type(error).__name__}: {error}"[:2000]
             if not will_retry:
                 results[url] = error
                 return
@@ -331,6 +401,7 @@ async def fetch(institute: str) -> dict[str, JsonValue | Exception]:
     """One payload per unique endpoint; preserve successes when another endpoint times out."""
     urls = tuple(dict.fromkeys(ENDPOINTS[institute]))
     results: dict[str, JsonValue | Exception] = {}
+    last_errors: dict[str, str] = {}
     try:
         async with asyncio.timeout(FETCH_SECONDS):
             async with aiohttp.ClientSession(
@@ -338,13 +409,16 @@ async def fetch(institute: str) -> dict[str, JsonValue | Exception]:
             ) as session:
                 async with asyncio.TaskGroup() as tasks:
                     for url in urls:
-                        tasks.create_task(retry(session, institute, url, results))
+                        tasks.create_task(retry(session, institute, url, results, last_errors=last_errors))
     except TimeoutError:
         pass
     return {
         url: results.get(
             url,
-            TimeoutError(f"{institute} url={url} exceeded {FETCH_SECONDS}s fetch budget"),
+            TimeoutError(
+                f"{institute} url={url} exceeded {FETCH_SECONDS}s fetch budget"
+                + (f"; last_error={last_errors[url]}" if url in last_errors else "")
+            ),
         )
         for url in urls
     }

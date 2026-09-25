@@ -60,6 +60,20 @@ before waiting for database connections or locks. Firefox and its Playwright dri
 remain scoped to one browser attempt and are closed afterward; they are not kept
 running between five-minute jobs.
 
+The Firefox fallback uses its native user agent and platform, with Danish locale
+and Copenhagen timezone. It no longer overrides `navigator.webdriver`, platform
+or languages. The lightweight direct HTTP probe retains its own HTTP headers.
+After a browser fetch returns non-empty fixed or floating products, the worker
+may retain that browser's cookies/local storage as serialized Playwright storage
+state. This is the scraper's own session, never a user's browser profile. The
+snapshot stays in worker memory only, is capped at 256 KiB of ASCII JSON and expires
+30 minutes after capture. It is restored on the next first browser attempt; retries
+use fresh state, and a failed fetch attempt discards the saved snapshot. Session
+contents are never logged, written to disk or copied to the direct HTTP client.
+Capturing state has a one-second limit; a capture error does not discard fetched
+quotes. Browser/context processes still close after every attempt. A dyno restart
+loses the snapshot. Session reuse does not guarantee acceptance by Jyske/Cloudflare.
+
 To compare worker memory before and after deployment, inspect `worker.1` separately
 from `web.1`, both during Jyske's browser fallback and between scrapes. Heroku's
 [runtime metrics](https://devcenter.heroku.com/articles/log-runtime-metrics) report
@@ -83,8 +97,20 @@ successful payloads and request cookies/headers are not logged.
 Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
 even if the final HTTP fallback returns a non-transient status. The final error
 retains the in-page failure as well as the fallback status. Browser crashes/closed
-targets are also retried. The existing three-attempt and 90-second limits still
+targets and an execution context destroyed by navigation are also retried.
+The existing three-attempt and 90-second limits still
 apply; other institutes' 403 responses remain non-retryable.
+
+Jyske path logs include the response content type, `cf-mitigated` and `cf-ray`,
+including the initial page navigation. The final fallback error retains those
+fields in the database audit; cookies and authorization headers are excluded.
+`cf_mitigated=challenge` identifies a Cloudflare challenge rather than an API JSON
+response ([Cloudflare documentation](https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/)).
+A CORS failure may prevent the in-page fetch from reading these headers, so inspect
+the context-request and navigation paths too. A fetch-budget timeout now retains
+the last completed attempt's type/message as `last_error`, without retaining its
+traceback or changing the result into a success. These diagnostics do not resolve
+provider-side challenges or establish that every HTTP 400/403 has the same cause.
 
 ## Validation and persistence
 

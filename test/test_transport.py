@@ -62,6 +62,7 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
             (aiohttp.InvalidURL("bad"), 1),
             (transport.BrowserError("Page.goto: Page crashed"), 3),
             (transport.BrowserError("Target page, context or browser has been closed"), 3),
+            (transport.BrowserError("Page.evaluate: Execution context was destroyed, most likely because of a navigation"), 3),
             (transport.BrowserError("Executable doesn't exist"), 1),
         ]
         for error, attempts in cases:
@@ -173,6 +174,24 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(results["slow"], TimeoutError)
         self.assertTrue(cancelled.is_set())
 
+    async def test_budget_timeout_keeps_last_failure_without_retaining_its_frames(self):
+        error = transport.FetchError("Jyske HTTP 403; in-page status=400", retryable=True)
+        async def request(session, institute, url, *, attempt=1):
+            if attempt == 1:
+                raise error
+            await asyncio.Event().wait()
+
+        with (
+            patch.object(transport, "request_json", request),
+            patch.object(transport.asyncio, "sleep", AsyncMock()),
+            patch.object(transport, "FETCH_SECONDS", 0.05),
+        ):
+            result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
+        self.assertIsInstance(result, TimeoutError)
+        self.assertIn("exceeded 0.05s fetch budget", str(result))
+        self.assertIn("last_error=FetchError: Jyske HTTP 403; in-page status=400", str(result))
+        self.assertIsNone(error.__traceback__)
+
     async def test_http_timeout_includes_a_hanging_response_body(self):
         release = asyncio.Event()
 
@@ -245,6 +264,11 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
 
 
 class BrowserTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        session_patch = patch.object(transport, "_jyske_session", None)
+        session_patch.start()
+        self.addCleanup(session_patch.stop)
+
     def fixture(self, direct=False, in_page=True):
         runtime = MagicMock()
         manager = MagicMock()
@@ -252,6 +276,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         manager.__aexit__ = AsyncMock(return_value=False)
         response = AsyncMock()
         response.ok, response.status = direct, 200 if direct else 403
+        response.headers = {"content-type": "application/json"}
         response.json.return_value = {"direct": True}
         request = MagicMock()
         self.response_context = request.get.return_value
@@ -267,13 +292,15 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         browser, context = AsyncMock(), AsyncMock()
         runtime.firefox.launch = AsyncMock(return_value=browser)
         browser.new_context.return_value = context
+        context.storage_state.return_value = {"cookies": [], "origins": []}
         page = MagicMock()
         context.new_page.return_value = page
-        page.goto = AsyncMock()
+        page.goto = AsyncMock(return_value=MagicMock(status=200, headers={"content-type": "text/html"}))
         page.locator.return_value.first.click = AsyncMock()
         page.evaluate = AsyncMock(side_effect=[None, {"ok": in_page, "text": "{}", "status": 503}])
         native = AsyncMock()
         native.ok, native.status = False, 503
+        native.headers = {"content-type": "application/json"}
         pending = MagicMock()
         pending.value = asyncio.get_running_loop().create_future()
         pending.value.set_result(native)
@@ -281,6 +308,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         page.expect_response.return_value.__aexit__ = AsyncMock(return_value=False)
         fallback = AsyncMock()
         fallback.ok, fallback.status = True, 200
+        fallback.headers = {"content-type": "application/json"}
         fallback.json.return_value = {"fallback": True}
         context.request.get.return_value = fallback
         return manager, runtime, request, browser, context, page
@@ -292,6 +320,68 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.response_context.__aexit__.assert_awaited_once()
         playwright_start.assert_not_called()
         runtime.firefox.launch.assert_not_awaited()
+
+    async def test_successful_session_is_reused_with_native_browser_identity(self):
+        first, second = self.fixture(), self.fixture()
+        payload = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+        state = {"cookies": [{"name": "example", "value": "test-value"}], "origins": []}
+        first[4].storage_state.return_value = state
+        first[5].evaluate.side_effect = [None, {"ok": True, "text": json.dumps(payload)}]
+        with patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]):
+            self.assertEqual(await transport.jyske("url"), payload)
+            first[3].close.assert_awaited_once()
+            # The saved state is detached from the closed context's objects.
+            state["cookies"][0]["value"] = "changed-after-capture"
+            await transport.jyske("url")
+        self.assertIsNone(first[3].new_context.call_args.kwargs["storage_state"])
+        restored = second[3].new_context.call_args.kwargs["storage_state"]
+        self.assertEqual(restored["cookies"][0]["value"], "test-value")
+        for _, _, _, browser, context, _ in (first, second):
+            self.assertNotIn("user_agent", browser.new_context.call_args.kwargs)
+            self.assertEqual(browser.new_context.call_args.kwargs["timezone_id"], "Europe/Copenhagen")
+            context.add_init_script.assert_not_awaited()
+            browser.close.assert_awaited_once()
+
+    async def test_session_snapshot_expires_and_is_size_limited(self):
+        _, _, _, _, context, _ = self.fixture()
+        payload = {"variabelRenteProdukter": [{"fastrenteperiode": 3}]}
+        with patch.object(transport, "monotonic", return_value=100):
+            await transport.remember_jyske_session(context, payload)
+            self.assertIsNotNone(transport.jyske_session_state())
+        with patch.object(transport, "monotonic", return_value=100 + transport.JYSKE_SESSION_SECONDS):
+            self.assertIsNone(transport.jyske_session_state())
+            self.assertIsNone(transport._jyske_session)
+        context.storage_state.return_value = {"large": "x" * transport.JYSKE_SESSION_MAX_BYTES}
+        self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
+        self.assertIsNone(transport._jyske_session)
+
+    async def test_invalid_payload_and_snapshot_failure_do_not_create_session(self):
+        _, _, _, _, context, _ = self.fixture()
+        for payload in ({}, {"fastRenteProdukter": []}, "challenge"):
+            self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
+        context.storage_state.assert_not_awaited()
+        context.storage_state.side_effect = transport.BrowserError("context closed")
+        payload = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+        self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
+        self.assertIsNone(transport._jyske_session)
+
+    async def test_failed_attempt_discards_previous_session_before_retry(self):
+        fixtures = [self.fixture(in_page=False), self.fixture()]
+        cached = {"cookies": [{"name": "example", "value": "old"}], "origins": []}
+        transport._jyske_session = (transport.monotonic() + 1800, json.dumps(cached))
+        fixtures[0][4].request.get.return_value.ok = False
+        fixtures[0][4].request.get.return_value.status = 403
+
+        async def after_failure(delay):
+            self.assertIsNone(transport._jyske_session)
+
+        with (
+            patch.object(transport, "async_playwright", side_effect=[f[0] for f in fixtures]),
+            patch.object(transport.asyncio, "sleep", AsyncMock(side_effect=after_failure)),
+        ):
+            self.assertEqual(await transport.fetch("Jyske"), {transport.ENDPOINTS["Jyske"][0]: {}})
+        self.assertEqual(fixtures[0][3].new_context.call_args.kwargs["storage_state"], cached)
+        self.assertIsNone(fixtures[1][3].new_context.call_args.kwargs["storage_state"])
 
     async def test_in_page_fallback_succeeds_without_quality_warning(self):
         manager, _, request, browser, context, page = self.fixture()
@@ -532,6 +622,49 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("AbortError: body timed out", failed)
         self.assertIn("Jyske HTTP 403", failed)
         self.assertIn("retry=True", failed)
+
+    async def test_navigation_during_evaluate_retries_after_browser_cleanup(self):
+        first, second = self.fixture(), self.fixture()
+        first[5].evaluate.side_effect = [
+            None,
+            transport.BrowserError(
+                "Page.evaluate: Execution context was destroyed, most likely because of a navigation"
+            ),
+        ]
+
+        async def after_cleanup(delay):
+            self.assertEqual(delay, 5)
+            first[3].close.assert_awaited_once()
+            first[4].close.assert_awaited_once()
+            second[1].firefox.launch.assert_not_awaited()
+
+        with (
+            patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]),
+            patch.object(transport.asyncio, "sleep", AsyncMock(side_effect=after_cleanup)),
+        ):
+            self.assertEqual(await transport.fetch("Jyske"), {transport.ENDPOINTS["Jyske"][0]: {}})
+        second[3].close.assert_awaited_once()
+
+    async def test_cloudflare_diagnostics_survive_in_final_error_without_cookies(self):
+        manager, _, _, _, context, page = self.fixture(in_page=False)
+        context.request.get.return_value.ok = False
+        context.request.get.return_value.status = 403
+        context.request.get.return_value.headers = {
+            "content-type": "text/html",
+            "cf-mitigated": "challenge",
+            "cf-ray": "test-ray-CPH",
+            "set-cookie": "private-cookie",
+        }
+        page.evaluate.side_effect = [None, {"ok": False, "status": 400}]
+        with (
+            patch.object(transport, "async_playwright", return_value=manager),
+            self.assertLogs(level="INFO") as logs,
+            self.assertRaises(transport.FetchError) as raised,
+        ):
+            await transport.request_json(self.session, "Jyske", "url")
+        for detail in ("in-page status=400", "content_type=text/html", "cf_mitigated=challenge", "cf_ray=test-ray-CPH"):
+            self.assertIn(detail, str(raised.exception))
+        self.assertNotIn("private-cookie", str(raised.exception) + " ".join(logs.output))
 
     async def test_jyske_browser_failure_is_not_hidden_by_fallback_status(self):
         for in_page, fallback, retryable in (
