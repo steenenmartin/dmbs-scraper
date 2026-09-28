@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 
 FETCH_SECONDS = 90
-JYSKE_MAX_ATTEMPTS = 11  # Initial attempt plus up to ten retries within FETCH_SECONDS.
+JYSKE_FETCH_SECONDS = 270
+JYSKE_MAX_ATTEMPTS = 11  # Initial attempt plus up to ten retries within JYSKE_FETCH_SECONDS.
 RETRY_STATUS = {408, 429, 500, 502, 503, 504}
 PAGE = "https://www.jyskebank.dk/bolig/realkreditkurser"
 HEADERS = {
@@ -462,7 +463,7 @@ async def retry(
                 results[url] = error
                 return
             # A new browser immediately after a rejection can hit the same
-            # transient failure. Jyske still shares the 90-second total budget.
+            # transient failure. All attempts and pauses share the institute's budget.
             await asyncio.sleep(5 if institute == "Jyske" else attempt)
         except Exception as error:
             error.add_note(f"Fetch failed: institute={institute}, url={url}, attempt={attempt}")
@@ -472,10 +473,11 @@ async def retry(
 async def fetch(institute: str) -> dict[str, JsonValue | Exception]:
     """One payload per unique endpoint; preserve successes when another endpoint times out."""
     urls = tuple(dict.fromkeys(ENDPOINTS[institute]))
+    budget_seconds = JYSKE_FETCH_SECONDS if institute == "Jyske" else FETCH_SECONDS
     results: dict[str, JsonValue | Exception] = {}
     last_errors: dict[str, str] = {}
     try:
-        async with asyncio.timeout(FETCH_SECONDS):
+        async with asyncio.timeout(budget_seconds):
             async with aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=20, connect=5)
             ) as session:
@@ -488,7 +490,7 @@ async def fetch(institute: str) -> dict[str, JsonValue | Exception]:
         url: results.get(
             url,
             TimeoutError(
-                f"{institute} url={url} exceeded {FETCH_SECONDS}s fetch budget"
+                f"{institute} url={url} exceeded {budget_seconds}s fetch budget"
                 + (f"; last_error={last_errors[url]}" if url in last_errors else "")
             ),
         )

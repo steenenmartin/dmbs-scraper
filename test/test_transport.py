@@ -198,7 +198,7 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(transport, "request_json", request),
             patch.object(transport.asyncio, "sleep", AsyncMock()),
-            patch.object(transport, "FETCH_SECONDS", 0.05),
+            patch.object(transport, "JYSKE_FETCH_SECONDS", 0.05),
         ):
             result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
         self.assertIsInstance(result, TimeoutError)
@@ -427,7 +427,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
 
         request.get.side_effect = hang
         with (
-            patch.object(transport, "FETCH_SECONDS", 0.05),
+            patch.object(transport, "JYSKE_FETCH_SECONDS", 0.05),
             patch.object(transport, "async_playwright") as browser,
         ):
             result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
@@ -929,7 +929,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         page.evaluate.side_effect = hang
         with (
             patch.object(transport, "async_playwright", return_value=manager),
-            patch.object(transport, "FETCH_SECONDS", 0.05),
+            patch.object(transport, "JYSKE_FETCH_SECONDS", 0.05),
         ):
             results = await asyncio.wait_for(transport.fetch("Jyske"), 2)
         self.assertIsInstance(results[transport.ENDPOINTS["Jyske"][0]], TimeoutError)
