@@ -41,7 +41,14 @@ bounded cleanup; the 90-second network budget can be followed by that cleanup.
 Jyske first uses `curl_cffi` with a Chrome TLS/HTTP profile and matching default
 browser headers, without starting Firefox or Playwright's Node process. The request
 uses JSON/CORS headers, a ten-second timeout, and at most three redirects. Its HTTP
-session closes after the request; it does not borrow Firefox's cookies or identity.
+session closes after the request. Its own cookies are retained separately as an
+in-memory JSON snapshot, capped at 256 KiB and expiring after 30 minutes without
+an update. Domain, path, Secure, HttpOnly and cookie expiry are preserved; expired
+and non-Jyske cookies are excluded. Completed error responses also update the jar,
+including server-side cookie deletion. No HTTP client or event-loop objects persist
+between jobs. It does not borrow Firefox's cookies or identity.
+The HTTP request uses the bank origin as Referer, matching its strict-origin policy,
+and requests JSON. Logs show `session_restored=True/False`, never cookie contents.
 Other institutes still use aiohttp. This changes the connection fingerprint, not
 the outbound IP, and does not guarantee Cloudflare acceptance.
 An HTTP failure or connection timeout falls back to Firefox. A certificate error
@@ -74,8 +81,11 @@ snapshot stays in worker memory only, is capped at 256 KiB of ASCII JSON and exp
 30 minutes after capture. It is restored on the next first browser attempt; retries
 use fresh state, and a failed fetch attempt discards the saved snapshot. Session
 contents are never logged, written to disk or copied to the direct HTTP client.
-Capturing state has a one-second limit; a capture error does not discard fetched
-quotes. Browser/context processes still close after every attempt. A dyno restart
+Capturing full state has a one-second limit. If it fails or exceeds the size cap,
+the worker spends at most two additional seconds reading cookies scoped to the
+bank page and API. This fallback omits local storage and uses the same size/expiry
+limits. Logs identify `mode=cookies` without exposing cookie contents. A capture
+error does not discard fetched quotes. Browser/context processes still close after every attempt. A dyno restart
 loses the snapshot. Session reuse does not guarantee acceptance by Jyske/Cloudflare.
 
 To compare worker memory before and after deployment, inspect `worker.1` separately
@@ -92,9 +102,10 @@ and starts a fresh session. In-page logs identify `profile=native`. Failed in-pa
 include at most 300 characters of their body in a separate `fetch_response` log;
 successful payloads and request cookies/headers are not logged.
 If the bank page itself returns a Cloudflare challenge (`cf-mitigated: challenge`),
-the job reports the navigation status and diagnostic headers, closes Firefox and
-stops for this slot. It does not inject fetches into the challenge page or repeatedly
-launch browsers against it. The next scheduled slot tries again normally.
+the job reports the navigation status and diagnostic headers and closes Firefox.
+It does not inject fetches into the challenge page. A fresh attempt is allowed
+after the normal backoff, within the same three-attempt/90-second limits: an initial
+403 must not discard a slot that a subsequent attempt could recover.
 Other unsuccessful navigation responses also skip synthetic calls; transient HTTP
 statuses remain retryable. This limits wasted work; it does not solve the challenge
 or impose a hard cap on Firefox RAM usage.

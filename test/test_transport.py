@@ -272,6 +272,63 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         session_patch = patch.object(transport, "_jyske_session", None)
         session_patch.start()
         self.addCleanup(session_patch.stop)
+        http_patch = patch.object(transport, "_jyske_http_session", None)
+        http_patch.start()
+        self.addCleanup(http_patch.stop)
+
+    def http_cookie(self, domain=".jyskebank.dk", name="example", value="private-http-value"):
+        return transport.Cookie(
+            version=0, name=name, value=value, port=None, port_specified=False,
+            domain=domain, domain_specified=domain.startswith("."), domain_initial_dot=domain.startswith("."),
+            path="/api", path_specified=True, secure=True, expires=None, discard=True,
+            comment=None, comment_url=None, rest={"HttpOnly": None, "SameSite": "None"},
+        )
+
+    def test_http_cookie_snapshot_preserves_scope_and_is_detached_and_bounded(self):
+        jar = transport.CookieJar()
+        cookie = self.http_cookie(domain="jyskeberegner-api.jyskebank.dk")
+        jar.set_cookie(cookie)
+        expired = self.http_cookie(name="expired")
+        expired.expires = 1
+        jar.set_cookie(expired)
+        jar.set_cookie(self.http_cookie(domain="not-jyskebank.dk"))
+        with patch.object(transport, "monotonic", return_value=100):
+            transport.remember_jyske_http_cookies(jar)
+            cookie.value = "changed-after-capture"
+            restored = list(transport.jyske_http_cookies())
+            self.assertEqual(len(restored), 1)
+            self.assertEqual(restored[0].value, "private-http-value")
+            self.assertFalse(restored[0].domain_specified)
+            self.assertEqual(restored[0].path, "/api")
+            self.assertTrue(restored[0].secure)
+            self.assertTrue(restored[0].has_nonstandard_attr("HttpOnly"))
+            restored[0].value = "changed-after-restore"
+            self.assertEqual(next(iter(transport.jyske_http_cookies())).value, "private-http-value")
+        with patch.object(transport, "monotonic", return_value=100 + transport.JYSKE_SESSION_SECONDS):
+            self.assertEqual(list(transport.jyske_http_cookies()), [])
+            self.assertIsNone(transport._jyske_http_session)
+        jar.set_cookie(self.http_cookie(value="x" * transport.JYSKE_SESSION_MAX_BYTES))
+        transport.remember_jyske_http_cookies(jar)
+        self.assertIsNone(transport._jyske_http_session)
+
+    async def test_http_cookies_survive_session_close_and_honor_server_deletion(self):
+        first, second = self.fixture(direct=True), self.fixture(direct=True)
+        first[2].cookies.jar.set_cookie(self.http_cookie())
+        with (
+            patch.object(transport, "BrowserHttpSession", side_effect=[first[2], second[2]]) as factory,
+            patch.object(transport, "async_playwright") as browser,
+            self.assertLogs(level="INFO") as logs,
+        ):
+            await transport.request_json(None, "Jyske", transport.ENDPOINTS["Jyske"][0])
+            first[2].__aexit__.assert_awaited_once()
+            await transport.request_json(None, "Jyske", transport.ENDPOINTS["Jyske"][0])
+        self.assertEqual(list(factory.call_args_list[0].kwargs["cookies"]), [])
+        self.assertEqual(next(iter(factory.call_args_list[1].kwargs["cookies"])).value, "private-http-value")
+        self.assertIsNone(transport._jyske_http_session)  # The second response's jar is empty.
+        self.assertIn("session_restored=True", " ".join(logs.output))
+        self.assertNotIn("private-http-value", " ".join(logs.output))
+        browser.assert_not_called()
+        self.assertIsNone(transport._jyske_session)
 
     def fixture(self, direct=False, in_page=True):
         runtime = MagicMock()
@@ -285,6 +342,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         response.json.return_value = {"direct": True}
         response.text = '{"direct": true}'
         request = MagicMock()
+        request.cookies.jar = transport.CookieJar()
         request.get = AsyncMock(return_value=response)
         self.response_context = request
         self.response_context.__aenter__ = AsyncMock(return_value=request)
@@ -303,6 +361,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         runtime.firefox.launch = AsyncMock(return_value=browser)
         browser.new_context.return_value = context
         context.storage_state.return_value = {"cookies": [], "origins": []}
+        context.cookies.return_value = []
         page = MagicMock()
         context.new_page.return_value = page
         page.goto = AsyncMock(return_value=MagicMock(status=200, headers={"content-type": "text/html"}))
@@ -407,6 +466,52 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
         self.assertIsNone(transport._jyske_session)
 
+    async def test_full_snapshot_timeout_preserves_cookies_for_the_next_browser(self):
+        first, second = self.fixture(), self.fixture()
+        payload = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+        cookies = [{"name": "example", "value": "private-session-value", "domain": ".jyskebank.dk", "path": "/"}]
+        first[4].storage_state.side_effect = TimeoutError("storage collection stalled")
+        first[4].cookies.return_value = cookies
+        first[5].evaluate.side_effect = [None, {"ok": True, "text": json.dumps(payload)}]
+        with (
+            patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]),
+            self.assertLogs(level="INFO") as logs,
+        ):
+            self.assertEqual(await transport.jyske("url"), payload)
+            cookies[0]["value"] = "changed-after-capture"
+            await transport.jyske("url")
+        restored = second[3].new_context.call_args.kwargs["storage_state"]
+        self.assertEqual(restored["cookies"][0]["value"], "private-session-value")
+        self.assertEqual(restored["origins"], [])
+        first[4].cookies.assert_awaited_once_with([transport.PAGE, transport.ENDPOINTS["Jyske"][0]])
+        self.assertIn("mode=cookies", " ".join(logs.output))
+        self.assertNotIn("private-session-value", " ".join(logs.output))
+        for fixture in (first, second):
+            fixture[3].close.assert_awaited_once()
+            fixture[4].close.assert_awaited_once()
+
+    async def test_cookie_snapshot_is_bounded_and_never_discards_fetched_quotes(self):
+        _, _, _, _, context, _ = self.fixture()
+        payload = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+        context.storage_state.side_effect = TimeoutError()
+        context.cookies.return_value = [{"name": "large", "value": "x" * transport.JYSKE_SESSION_MAX_BYTES}]
+        self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
+        self.assertIsNone(transport._jyske_session)
+        cancelled = asyncio.Event()
+
+        async def stalled_cookies(*args):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+
+        context.cookies.side_effect = stalled_cookies
+        real_timeout = asyncio.timeout
+        with patch.object(transport.asyncio, "timeout", side_effect=lambda seconds: real_timeout(0.02)):
+            self.assertEqual(await transport.remember_jyske_session(context, payload), payload)
+        self.assertTrue(cancelled.is_set())
+        self.assertIsNone(transport._jyske_session)
+
     async def test_failed_attempt_discards_previous_session_before_retry(self):
         fixtures = [self.fixture(in_page=False), self.fixture()]
         cached = {"cookies": [{"name": "example", "value": "old"}], "origins": []}
@@ -450,7 +555,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         context.close.assert_awaited_once()
         browser.close.assert_awaited_once()
 
-    async def test_challenged_navigation_stops_without_synthetic_calls_or_browser_retries(self):
+    async def test_repeated_navigation_challenges_are_bounded_without_synthetic_calls(self):
         manager, runtime, _, browser, context, page = self.fixture()
         page.goto.return_value = MagicMock(status=403, headers={
             "content-type": "text/html",
@@ -469,30 +574,40 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("cf_ray=navigation-ray-DUB", str(result))
         self.assertNotIn("private-cookie", str(result))
         self.assertIsNone(result.__traceback__)
-        runtime.firefox.launch.assert_awaited_once()
+        self.assertEqual(runtime.firefox.launch.await_count, 3)
         page.evaluate.assert_not_awaited()
         context.request.get.assert_not_awaited()
-        sleep.assert_not_awaited()
-        context.close.assert_awaited_once()
-        browser.close.assert_awaited_once()
+        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
+        self.assertEqual(context.close.await_count, 3)
+        self.assertEqual(browser.close.await_count, 3)
 
     async def test_transient_navigation_failure_retries_then_reads_native_response(self):
-        first, second = self.fixture(), self.fixture()
-        first[5].goto.return_value.status = 503
-        native = second[5].expect_response.return_value.__aenter__.return_value.value.result()
-        native.ok, native.status = True, 200
-        native.json.return_value = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
-        with (
-            patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]),
-            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
-        ):
-            result = await transport.fetch("Jyske")
-        self.assertEqual(result[transport.ENDPOINTS["Jyske"][0]], native.json.return_value)
-        sleep.assert_awaited_once_with(5)
-        first[5].evaluate.assert_not_awaited()
-        for fixture in (first, second):
-            fixture[3].close.assert_awaited_once()
-            fixture[4].request.get.assert_not_awaited()
+        for status in (403, 503):
+            with self.subTest(status=status):
+                first, second = self.fixture(), self.fixture()
+                first[5].goto.return_value.status = status
+                if status == 403:
+                    first[5].goto.return_value.headers = {"cf-mitigated": "challenge"}
+                native = second[5].expect_response.return_value.__aenter__.return_value.value.result()
+                native.ok, native.status = True, 200
+                native.json.return_value = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+
+                async def after_cleanup(delay):
+                    first[3].close.assert_awaited_once()
+                    first[4].close.assert_awaited_once()
+                    second[1].firefox.launch.assert_not_awaited()
+
+                with (
+                    patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]),
+                    patch.object(transport.asyncio, "sleep", AsyncMock(side_effect=after_cleanup)) as sleep,
+                ):
+                    result = await transport.fetch("Jyske")
+                self.assertEqual(result[transport.ENDPOINTS["Jyske"][0]], native.json.return_value)
+                sleep.assert_awaited_once_with(5)
+                first[5].evaluate.assert_not_awaited()
+                for fixture in (first, second):
+                    fixture[3].close.assert_awaited_once()
+                    fixture[4].request.get.assert_not_awaited()
 
     async def test_page_response_matches_only_endpoint_gets(self):
         manager, _, _, _, _, page = self.fixture()

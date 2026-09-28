@@ -7,6 +7,7 @@ import os
 import traceback
 from collections.abc import Mapping
 from contextlib import AsyncExitStack
+from http.cookiejar import Cookie, CookieJar
 from time import monotonic
 from urllib.parse import urlsplit
 
@@ -28,9 +29,9 @@ FETCH_SECONDS = 90
 RETRY_STATUS = {408, 429, 500, 502, 503, 504}
 PAGE = "https://www.jyskebank.dk/bolig/realkreditkurser"
 HEADERS = {
-    "accept": "application/json, text/plain, */*",
+    "accept": "application/json",
     "origin": "https://www.jyskebank.dk",
-    "referer": PAGE,
+    "referer": "https://www.jyskebank.dk/",
 }
 BROWSER_HTTP_HEADERS = {
     **HEADERS,
@@ -40,11 +41,14 @@ BROWSER_HTTP_HEADERS = {
     "sec-fetch-site": "same-site",
     "sec-fetch-user": None,
     "upgrade-insecure-requests": None,
+    "priority": "u=1, i",
 }
 JYSKE_SESSION_SECONDS = 30 * 60
 JYSKE_SESSION_MAX_BYTES = 256 * 1024
 # One Jyske job runs at a time. Store JSON only, never browser/event-loop objects.
 _jyske_session: tuple[float, str] | None = None
+# HTTP and Firefox have different identities: their cookie snapshots stay separate.
+_jyske_http_session: tuple[float, str] | None = None
 PAGE_FETCH = """async (url) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
@@ -78,6 +82,38 @@ def response_details(headers: Mapping[str, str | None]) -> str:
     )
 
 
+def jyske_http_cookies() -> CookieJar:
+    """Restore HTTP cookies without retaining a client bound to a closed event loop."""
+    global _jyske_http_session
+    jar = CookieJar()
+    snapshot = _jyske_http_session
+    if snapshot is not None:
+        expires, encoded = snapshot
+        if monotonic() >= expires:
+            _jyske_http_session = None
+        else:
+            for fields in json.loads(encoded):
+                fields["rest"] = fields.pop("_rest")
+                cookie = Cookie(**fields)
+                if not cookie.is_expired():
+                    jar.set_cookie(cookie)
+    return jar
+
+
+def remember_jyske_http_cookies(jar: CookieJar) -> None:
+    global _jyske_http_session
+    cookies = [
+        vars(cookie) for cookie in jar
+        if not cookie.is_expired()
+        and (cookie.domain.lstrip(".") == "jyskebank.dk" or cookie.domain.endswith(".jyskebank.dk"))
+    ]
+    encoded = json.dumps(cookies, ensure_ascii=True, separators=(",", ":"))
+    _jyske_http_session = (
+        (monotonic() + JYSKE_SESSION_SECONDS, encoded)
+        if cookies and len(encoded) <= JYSKE_SESSION_MAX_BYTES else None
+    )
+
+
 def jyske_session_state() -> dict | None:
     global _jyske_session
     snapshot = _jyske_session
@@ -104,9 +140,23 @@ async def remember_jyske_session(context: BrowserContext, payload: JsonValue) ->
         encoded = json.dumps(state, ensure_ascii=True, separators=(",", ":"))
         if len(encoded) <= JYSKE_SESSION_MAX_BYTES:
             _jyske_session = (monotonic() + JYSKE_SESSION_SECONDS, encoded)
+            return payload
     except (BrowserError, TimeoutError) as error:
         # Session persistence is optional; do not log its contents.
         logger.info("Jyske session snapshot unavailable error=%s", type(error).__name__)
+        release_error_frames(error)
+    # Reading cookies does not require collecting local storage from every page
+    # origin. Keep this smaller snapshot if full storage capture stalls or is too big.
+    try:
+        async with asyncio.timeout(2):
+            cookies = await context.cookies([PAGE, ENDPOINTS["Jyske"][0]])
+        if cookies:
+            encoded = json.dumps({"cookies": cookies, "origins": []}, ensure_ascii=True, separators=(",", ":"))
+            if len(encoded) <= JYSKE_SESSION_MAX_BYTES:
+                _jyske_session = (monotonic() + JYSKE_SESSION_SECONDS, encoded)
+                logger.info("Jyske session snapshot saved mode=cookies")
+    except (BrowserError, TimeoutError) as error:
+        logger.info("Jyske cookie snapshot unavailable error=%s", type(error).__name__)
         release_error_frames(error)
     return payload
 
@@ -131,8 +181,8 @@ async def prepare_jyske_page(page: Page) -> None:
         if response.status >= 400 or response.headers.get("cf-mitigated") == "challenge":
             raise PageUnavailable(
                 f"Jyske navigation HTTP {response.status}; {response_details(response.headers)}",
-                retryable=response.status in RETRY_STATUS
-                and response.headers.get("cf-mitigated") != "challenge",
+                retryable=response.status in RETRY_STATUS | {403}
+                or response.headers.get("cf-mitigated") == "challenge",
             )
     for selector in (
         "button:has-text('Acceptér alle')",
@@ -219,8 +269,8 @@ async def jyske(url: str, *, fresh_session: bool = False) -> JsonValue:
             payload = await jyske_page_payload(page, url)
             return await remember_jyske_session(context, payload)
         except PageUnavailable:
-            # In particular, do not inject fetches into a Cloudflare challenge
-            # or launch more browsers against it in this five-minute slot.
+            # Close this attempt without injecting fetches into a challenge page.
+            # retry() may try a fresh browser within the shared attempt/time limits.
             raise
         except (FetchError, json.JSONDecodeError) as error:
             logger.info("Jyske page response unavailable url=%s error=%s", url, error)
@@ -278,15 +328,20 @@ async def request_json(
         try:
             # Match the TLS/HTTP fingerprint and default headers together. Never
             # combine an aiohttp connection with a claimed Firefox identity.
-            async with BrowserHttpSession(impersonate="chrome", max_clients=1) as direct:
+            cookies = jyske_http_cookies()
+            restored = bool(list(cookies))
+            async with BrowserHttpSession(impersonate="chrome", max_clients=1, cookies=cookies) as direct:
                 response = await direct.get(
                     url, headers=BROWSER_HTTP_HEADERS, timeout=10, max_redirects=3,
                 )
+                # Honor cookie updates/deletions on error responses too, as a browser does.
+                remember_jyske_http_cookies(direct.cookies.jar)
                 logger.info(
-                    "fetch_path institute=Jyske url=%s path=browser_http status=%s elapsed_ms=%.0f %s",
+                    "fetch_path institute=Jyske url=%s path=browser_http status=%s elapsed_ms=%.0f session_restored=%s %s",
                     url,
                     response.status_code,
                     (monotonic() - started) * 1000,
+                    restored,
                     response_details(response.headers),
                 )
                 if response.status_code < 400:
