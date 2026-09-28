@@ -40,7 +40,7 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
             ):
                 results = {}
                 await transport.retry(None, "Jyske", "url", results)
-            self.assertEqual(len(references), 3)
+            self.assertEqual(len(references), 11)
             self.assertTrue(all(ref() is None for ref in references))
             self.assertEqual(str(results["url"]), "Jyske fetch timed out")
         finally:
@@ -152,6 +152,20 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
             results = await transport.fetch("Jyske")
         self.assertEqual(len(results), 1)
         self.assertEqual(request.await_count, 1)
+
+    async def test_jyske_can_recover_after_the_old_three_attempt_limit(self):
+        request = AsyncMock(side_effect=[
+            *[transport.FetchError("HTTP 403", retryable=True) for _ in range(4)],
+            {"recovered": True},
+        ])
+        with (
+            patch.object(transport, "request_json", request),
+            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            results = await transport.fetch("Jyske")
+        self.assertEqual(results, {transport.ENDPOINTS["Jyske"][0]: {"recovered": True}})
+        self.assertEqual(request.await_count, 5)
+        self.assertEqual(sleep.await_args_list, [call(5)] * 4)
 
     async def test_total_budget_cancels_hang_but_retains_other_endpoint(self):
         cancelled = asyncio.Event()
@@ -574,12 +588,12 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("cf_ray=navigation-ray-DUB", str(result))
         self.assertNotIn("private-cookie", str(result))
         self.assertIsNone(result.__traceback__)
-        self.assertEqual(runtime.firefox.launch.await_count, 3)
+        self.assertEqual(runtime.firefox.launch.await_count, 11)
         page.evaluate.assert_not_awaited()
         context.request.get.assert_not_awaited()
-        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
-        self.assertEqual(context.close.await_count, 3)
-        self.assertEqual(browser.close.await_count, 3)
+        self.assertEqual(sleep.await_args_list, [call(5)] * 10)
+        self.assertEqual(context.close.await_count, 11)
+        self.assertEqual(browser.close.await_count, 11)
 
     async def test_transient_navigation_failure_retries_then_reads_native_response(self):
         for status in (403, 503):
@@ -760,7 +774,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         ):
             results = await transport.fetch("Jyske")
         self.assertEqual(results, {transport.ENDPOINTS["Jyske"][0]: {}})
-        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
+        self.assertEqual(sleep.await_args_list, [call(5), call(5)])
         for attempt, (_, _, _, browser, context, _) in enumerate(fixtures, start=1):
             route_request = context.route.await_args.args[1]
             for resource_type, url, blocked in (
@@ -887,8 +901,8 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(raised.exception.retryable, retryable)
                 browser.close.assert_awaited_once()
 
-    async def test_repeated_browser_abort_is_bounded_to_three_attempts(self):
-        fixtures = [self.fixture(in_page=False) for _ in range(3)]
+    async def test_repeated_browser_abort_is_bounded_to_ten_retries(self):
+        fixtures = [self.fixture(in_page=False) for _ in range(11)]
         for _, _, _, _, context, page in fixtures:
             page.evaluate.side_effect = [None, {"ok": False, "error": "AbortError"}]
             context.request.get.return_value.ok = False
@@ -901,7 +915,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         error = results[transport.ENDPOINTS["Jyske"][0]]
         self.assertIsInstance(error, transport.FetchError)
         self.assertIn("AbortError", str(error))
-        self.assertEqual(sleep.await_args_list, [call(5), call(10)])
+        self.assertEqual(sleep.await_args_list, [call(5)] * 10)
         for _, _, _, browser, context, _ in fixtures:
             context.close.assert_awaited_once()
             browser.close.assert_awaited_once()

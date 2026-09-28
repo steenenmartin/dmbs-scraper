@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 
 FETCH_SECONDS = 90
+JYSKE_MAX_ATTEMPTS = 11  # Initial attempt plus up to ten retries within FETCH_SECONDS.
 RETRY_STATUS = {408, 429, 500, 502, 503, 504}
 PAGE = "https://www.jyskebank.dk/bolig/realkreditkurser"
 HEADERS = {
@@ -390,7 +391,8 @@ async def retry(
 ) -> None:
     global _jyske_session
     started = monotonic()
-    for attempt in range(1, 4):
+    max_attempts = JYSKE_MAX_ATTEMPTS if institute == "Jyske" else 3
+    for attempt in range(1, max_attempts + 1):
         try:
             results[url] = await request_json(session, institute, url, attempt=attempt)
             logger.info(
@@ -441,7 +443,7 @@ async def retry(
                         "execution context was destroyed",
                     )
                 )
-            will_retry = transient and attempt < 3
+            will_retry = transient and attempt < max_attempts
             logger.info(
                 "fetch_failed institute=%s url=%s attempt=%d elapsed_ms=%.0f error=%s "
                 "message=%s retry=%s",
@@ -461,7 +463,7 @@ async def retry(
                 return
             # A new browser immediately after a rejection can hit the same
             # transient failure. Jyske still shares the 90-second total budget.
-            await asyncio.sleep(attempt * 5 if institute == "Jyske" else attempt)
+            await asyncio.sleep(5 if institute == "Jyske" else attempt)
         except Exception as error:
             error.add_note(f"Fetch failed: institute={institute}, url={url}, attempt={attempt}")
             raise

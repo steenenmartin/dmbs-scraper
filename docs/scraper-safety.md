@@ -30,8 +30,10 @@ additional endpoint request every five minutes compared with the previous pipeli
 HTTP uses aiohttp with a 20-second total request timeout and 5-second connection
 timeout. The entire network phase shares a 90-second budget including retries and
 Jyske's browser fallback. Only transient connection failures, timeouts and HTTP
-408/429/500/502/503/504 are retried, at most three attempts with 1- and 2-second
-delays (5 and 10 seconds for Jyske). Certificate and malformed JSON errors are
+408/429/500/502/503/504 are retried. Other institutes allow at most three attempts
+with 1- and 2-second delays. Jyske allows an initial attempt plus up to ten retries,
+with five seconds between attempts. The 90-second total budget includes these
+pauses and can stop the job before all eleven attempts run. Certificate and malformed JSON errors are
 reported without retrying.
 Unexpected programming errors propagate with their traceback and fail the job;
 they are not converted into ordinary quality issues or retried.
@@ -104,7 +106,7 @@ successful payloads and request cookies/headers are not logged.
 If the bank page itself returns a Cloudflare challenge (`cf-mitigated: challenge`),
 the job reports the navigation status and diagnostic headers and closes Firefox.
 It does not inject fetches into the challenge page. A fresh attempt is allowed
-after the normal backoff, within the same three-attempt/90-second limits: an initial
+after the normal backoff, within the eleven-attempt/90-second limits: an initial
 403 must not discard a slot that a subsequent attempt could recover.
 Other unsuccessful navigation responses also skip synthetic calls; transient HTTP
 statuses remain retryable. This limits wasted work; it does not solve the challenge
@@ -113,8 +115,8 @@ After successful navigation, Jyske's browser fetch errors, transient statuses an
 even if the final HTTP fallback returns a non-transient status. The final error
 retains the in-page failure as well as the fallback status. Browser crashes/closed
 targets and an execution context destroyed by navigation are also retried.
-The existing three-attempt and 90-second limits still
-apply; other institutes' 403 responses remain non-retryable.
+The shared 90-second limit still applies; other institutes retain their
+three-attempt limit and their 403 responses remain non-retryable.
 
 Jyske path logs include the response content type, `cf-mitigated` and `cf-ray`,
 including the initial page navigation. The final fallback error retains those
