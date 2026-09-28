@@ -23,6 +23,33 @@ from test.support import ISIN, NORDEA, STAMP, DatabaseCase, payload
 
 
 class WorkerTests(unittest.TestCase):
+    def test_live_probe_fetches_and_parses_without_opening_database_or_scheduler(self):
+        for responses, expected_code in (
+            (payload("Jyske"), 0),
+            ({sources.ENDPOINTS["Jyske"][0]: TimeoutError("test timeout \u2554\u2550\u2557")}, 1),
+        ):
+            with (
+                self.subTest(expected_code=expected_code),
+                patch.object(scraper.transport, "fetch", AsyncMock(return_value=responses)) as fetch,
+                patch.object(storage, "open_engine") as open_engine,
+                patch.object(storage, "save") as save,
+                patch.object(scraper, "create_scheduler") as scheduler,
+                redirect_stdout(io.StringIO()) as output,
+            ):
+                code = scraper.main(["--probe", "--institute", "Jyske"])
+            self.assertEqual(code, expected_code)
+            output.getvalue().encode("ascii")  # Probe errors also work on Windows consoles.
+            report = json.loads(output.getvalue())
+            self.assertEqual(report["database_writes"], 0)
+            self.assertEqual(bool(report["errors"]), bool(expected_code))
+            if not expected_code:
+                self.assertGreater(report["products"]["fixed"], 0)
+                self.assertGreater(report["products"]["floating"], 0)
+            fetch.assert_awaited_once_with("Jyske")
+            open_engine.assert_not_called()
+            save.assert_not_called()
+            scheduler.assert_not_called()
+
     def test_raw_responses_are_released_before_database_work(self):
         class Payload(dict):
             pass

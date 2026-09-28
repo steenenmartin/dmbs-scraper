@@ -92,6 +92,26 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(issues[0].product, "DK0002066521")
         self.assertIn("rate='unavailable'", issues[0].message)
 
+    def test_nordea_starred_closing_average_is_not_a_current_spot_price(self):
+        for marker in ("*&nbsp;100,150", "*\u00a0100,150", "* 100.150", " *&#160;100,150 "):
+            with self.subTest(marker=marker):
+                product = copy.deepcopy(PAYLOADS["nordea_fixed"][0])
+                product["rate"] = marker
+                entries, issues = sources.parse("Nordea", "fixed", [product])
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0].isin, product["isinCode"])
+                self.assertIsNone(entries[0].spot_price)
+                self.assertEqual(issues, [])
+
+    def test_nordea_star_does_not_hide_malformed_prices(self):
+        for marker in ("*", "*&nbsp;invalid", "**100,150", "*nan", "*-1,000"):
+            with self.subTest(marker=marker):
+                product = copy.deepcopy(PAYLOADS["nordea_fixed"][0])
+                product["rate"] = marker
+                entries, issues = sources.parse("Nordea", "fixed", [product])
+                self.assertIsNone(entries[0].spot_price)
+                self.assertEqual([issue.code for issue in issues], ["fixed.spot_price"])
+
     def test_rd_unavailable_spot_marker_keeps_offer_without_parser_warning(self):
         for marker in (-1, -1.0, "-1", "-1.0", "-1,0000", " -1.0000 "):
             with self.subTest(marker=marker):

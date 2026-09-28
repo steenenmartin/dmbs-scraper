@@ -164,7 +164,32 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--institute", choices=sources.ENDPOINTS)
     parser.add_argument("--kind", choices=("fixed", "floating"))
+    parser.add_argument(
+        "--probe", action="store_true",
+        help="Fetch and parse live data once; never connect to the database or start the scheduler",
+    )
     args = parser.parse_args(argv)
+    if args.probe:
+        if not args.institute or args.inspect or args.kind:
+            parser.error("--probe requires --institute and cannot be combined with --inspect or --kind")
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+        started = time.monotonic()
+        payloads = asyncio.run(transport.fetch(args.institute))
+        counts, issues, errors = {}, [], []
+        for kind, url in zip(("fixed", "floating"), sources.ENDPOINTS[args.institute]):
+            value = payloads[url]
+            if isinstance(value, Exception):
+                errors.append(dict(kind=kind, error=type(value).__name__, message=str(value)))
+            else:
+                products, found_issues = sources.parse(args.institute, kind, value)
+                counts[kind] = len(products)
+                issues.extend(asdict(issue) for issue in found_issues)
+        print(json.dumps(dict(
+            institute=args.institute, checked_at=datetime.now(timezone.utc).isoformat(),
+            seconds=round(time.monotonic() - started, 3), database_writes=0,
+            products=counts, issues=issues, errors=errors,
+        ), ensure_ascii=True))
+        return int(bool(issues or errors))
     if args.inspect:
         if not args.institute or not args.kind:
             parser.error("--inspect requires --institute and --kind")

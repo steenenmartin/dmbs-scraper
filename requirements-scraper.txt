@@ -10,6 +10,12 @@ apscheduler==3.11.3
     # via -r requirements-scraper.in
 attrs==26.1.0
     # via aiohttp
+certifi==2026.7.22
+    # via curl-cffi
+cffi==2.1.1
+    # via curl-cffi
+curl-cffi==0.16.3
+    # via -r requirements-scraper.in
 frozenlist==1.8.0
     # via
     #   aiohttp
@@ -32,6 +38,8 @@ propcache==0.5.2
     #   yarl
 psycopg2-binary==2.9.13
     # via -r requirements-scraper.in
+pycparser==3.0
+    # via cffi
 pyee==13.0.1
     # via playwright
 python-dateutil==2.9.0.post0

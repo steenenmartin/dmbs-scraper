@@ -90,6 +90,19 @@ python scraper.py --inspect response.json --institute Nordea --kind fixed
 The command prints products and validation issues. It only inspects saved JSON;
 missed historical quotes cannot be retrieved by running a new scrape.
 
+To test the actual network and parser path once without opening a database
+connection or starting the scheduler:
+
+```bash
+python scraper.py --probe --institute Jyske
+```
+
+The command reports product counts, errors, elapsed time and `database_writes: 0`.
+Exit code 0 means fetching and parsing succeeded; 1 means a fetch or validation
+issue. To test Heroku's outbound connection after deploying this version, run
+`heroku run "python scraper.py --probe --institute Jyske" -a <your-app>`.
+A local success does not establish that Cloudflare accepts Heroku traffic.
+
 ## Deploying on Heroku (single app: TypeScript dashboard + Python scraper)
 This repository runs as **one Heroku app**:
 - `web` dyno: Node/TypeScript dashboard server (serves API + built frontend)

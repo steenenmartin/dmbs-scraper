@@ -4,6 +4,7 @@ import math
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
+from html import unescape
 from typing import Any, Literal, overload
 
 ENDPOINTS = {
@@ -160,6 +161,14 @@ def jyske(kind: str, p: dict[str, Any]) -> Bond | Rate:
         field(p, "kuponrenteProcent"),
         field(p, "isin"),
     )
+
+
+def nordea_unavailable(value: object) -> bool:
+    """A starred price is a previous closing average, not a current quote."""
+    if not isinstance(value, str):
+        return False
+    value = unescape(value).strip()
+    return value.startswith("*") and price(value[1:].strip()) is not None
 
 
 def nordea(kind: str, p: dict[str, Any]) -> Bond | None:
@@ -334,6 +343,8 @@ def parse(institute: str, kind: str, payload: Any) -> tuple[list[Bond | Rate], l
                 if getattr(entry, quote) is None:
                     raw_field = QUOTE_FIELDS[institute][quote]
                     detail = f"{raw_field}={product.get(raw_field)!r}"
+                    if institute == "Nordea" and nordea_unavailable(product.get(raw_field)):
+                        continue
                     if institute == "RealKreditDanmark" and isinstance(entry, Bond):
                         raw = product.get(raw_field)
                         if quote == "spot_price":

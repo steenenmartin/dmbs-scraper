@@ -38,12 +38,16 @@ they are not converted into ordinary quality issues or retried.
 Successful endpoints survive another endpoint's timeout. Browser resources have
 bounded cleanup; the 90-second network budget can be followed by that cleanup.
 
-Jyske first tries direct access through the job's existing aiohttp session, without
-starting Playwright's Node process. An HTTP failure or direct-request
-timeout falls back to Firefox. On retries with the full page enabled, it first
-captures the price page's own API response, including headers supplied by the
-site's scripts. The lean first attempt goes straight to in-page fetch after page
-navigation, because it blocks the quote application. For full-page attempts, navigation,
+Jyske first uses `curl_cffi` with a Chrome TLS/HTTP profile and matching default
+browser headers, without starting Firefox or Playwright's Node process. The request
+uses JSON/CORS headers, a ten-second timeout, and at most three redirects. Its HTTP
+session closes after the request; it does not borrow Firefox's cookies or identity.
+Other institutes still use aiohttp. This changes the connection fingerprint, not
+the outbound IP, and does not guarantee Cloudflare acceptance.
+An HTTP failure or connection timeout falls back to Firefox. A certificate error
+is reported without browser fallback. Every browser attempt first captures the
+price page's own API response, including headers supplied by the site's scripts.
+Navigation,
 waiting for that response and reading its body share a 20-second limit. If that
 fails or returns invalid JSON, in-page fetch and context-request remain as
 fallbacks, each with a 10-second request limit. There is no network-idle wait.
@@ -62,7 +66,7 @@ running between five-minute jobs.
 
 The Firefox fallback uses its native user agent and platform, with Danish locale
 and Copenhagen timezone. It no longer overrides `navigator.webdriver`, platform
-or languages. The lightweight direct HTTP probe retains its own HTTP headers.
+or languages. The lightweight HTTP client uses its own consistent Chrome profile.
 After a browser fetch returns non-empty fixed or floating products, the worker
 may retain that browser's cookies/local storage as serialized Playwright storage
 state. This is the scraper's own session, never a user's browser profile. The
@@ -81,20 +85,20 @@ RSS, disk cache and swap separately; `memory_total` includes all three. Compare
 equivalent workloads rather than treating a lower idle reading as a lower browser
 peak. These changes do not put a hard cap on Firefox's memory usage.
 
-On the first attempt the browser blocks the embedded `jyskebank.tv` video player and the
-`calculators.jyskebank.dk/jyske-kursliste-app/` quote UI, in addition to media,
-styles and trackers. The quote UI otherwise starts another application and fetches
-the same JSON endpoint again; our in-page fetch supplies the data directly.
-The bank page, cookies and challenge scripts still load in Firefox. This is not a
-hard RAM cap; verify actual worker memory and successful quotes after deployment.
-Each retry closes the previous context/browser and starts a fresh session.
-Retries restore the original page's video and quote application requests, since
-their initialization may be needed even when the lean path works locally.
-The original image/media/font/stylesheet and tracker blocking stays in place.
-In-page logs identify `profile=lean` or `profile=full`. Failed in-page HTTP responses
+The browser loads the quote application on the first attempt, and blocks the
+embedded `jyskebank.tv` video player on all attempts. Image/media/font/stylesheet
+and tracker blocking stays in place. Each retry closes the previous context/browser
+and starts a fresh session. In-page logs identify `profile=native`. Failed in-page HTTP responses
 include at most 300 characters of their body in a separate `fetch_response` log;
 successful payloads and request cookies/headers are not logged.
-Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
+If the bank page itself returns a Cloudflare challenge (`cf-mitigated: challenge`),
+the job reports the navigation status and diagnostic headers, closes Firefox and
+stops for this slot. It does not inject fetches into the challenge page or repeatedly
+launch browsers against it. The next scheduled slot tries again normally.
+Other unsuccessful navigation responses also skip synthetic calls; transient HTTP
+statuses remain retryable. This limits wasted work; it does not solve the challenge
+or impose a hard cap on Firefox RAM usage.
+After successful navigation, Jyske's browser fetch errors, transient statuses and 403 responses remain retryable
 even if the final HTTP fallback returns a non-transient status. The final error
 retains the in-page failure as well as the fallback status. Browser crashes/closed
 targets and an execution context destroyed by navigation are also retried.
@@ -123,6 +127,9 @@ provider-side challenges or establish that every HTTP 400/403 has the same cause
   Expected invalid input becomes a contextual issue without discarding valid siblings.
   RD's explicit `-1` quote sentinel means unavailable and does not create a parser
   warning. A previously quoted bond still leaves a coverage gap when its quote disappears.
+  Nordea's starred prices (including `*&nbsp;100,150`) are previous closing averages,
+  [not current quotes](https://www.nordea.dk/privat/produkter/boliglaan/Kurser-realkreditlaan-kredit.html).
+  They retain product identity with no spot observation or malformed-value warning.
   Parsers catch only explicit source-validation errors; programming errors propagate.
 - Existing master products and manual corrections are insert-only. Security issuer
   and coupon conflicts are rejected across product keys. Jyske retains the greatest

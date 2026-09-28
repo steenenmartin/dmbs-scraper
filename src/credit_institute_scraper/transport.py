@@ -11,6 +11,9 @@ from time import monotonic
 from urllib.parse import urlsplit
 
 import aiohttp
+from curl_cffi.requests import AsyncSession as BrowserHttpSession
+from curl_cffi.requests.exceptions import RequestException as BrowserHttpError
+from curl_cffi.requests.exceptions import SSLError as BrowserHttpSSLError
 from playwright.async_api import Browser, BrowserContext, Page, Route, async_playwright
 from playwright.async_api import Error as BrowserError
 from playwright.async_api import TimeoutError as BrowserTimeout
@@ -29,7 +32,15 @@ HEADERS = {
     "origin": "https://www.jyskebank.dk",
     "referer": PAGE,
 }
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:131.0) Gecko/20100101 Firefox/131.0"
+BROWSER_HTTP_HEADERS = {
+    **HEADERS,
+    "accept-language": "da-DK,da;q=0.9,en;q=0.8",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    "sec-fetch-user": None,
+    "upgrade-insecure-requests": None,
+}
 JYSKE_SESSION_SECONDS = 30 * 60
 JYSKE_SESSION_MAX_BYTES = 256 * 1024
 # One Jyske job runs at a time. Store JSON only, never browser/event-loop objects.
@@ -53,6 +64,10 @@ class FetchError(Exception):
     def __init__(self, message: str, retryable: bool = False) -> None:
         super().__init__(message)
         self.retryable = retryable
+
+
+class PageUnavailable(FetchError):
+    """The bank page did not load; synthetic API calls from it are not useful."""
 
 
 def response_details(headers: Mapping[str, str | None]) -> str:
@@ -113,6 +128,12 @@ async def prepare_jyske_page(page: Page) -> None:
             PAGE, response.status, (monotonic() - started) * 1000,
             response_details(response.headers),
         )
+        if response.status >= 400 or response.headers.get("cf-mitigated") == "challenge":
+            raise PageUnavailable(
+                f"Jyske navigation HTTP {response.status}; {response_details(response.headers)}",
+                retryable=response.status in RETRY_STATUS
+                and response.headers.get("cf-mitigated") != "challenge",
+            )
     for selector in (
         "button:has-text('Acceptér alle')",
         "button:has-text('Accepter')",
@@ -154,7 +175,7 @@ async def jyske_page_payload(page: Page, url: str) -> JsonValue:
         raise FetchError("Jyske page response timed out", retryable=True) from error
 
 
-async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
+async def jyske(url: str, *, fresh_session: bool = False) -> JsonValue:
     started = monotonic()
     async with async_playwright() as runtime, AsyncExitStack() as cleanup:
         browser = await runtime.firefox.launch(
@@ -165,7 +186,7 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
         context = await browser.new_context(
             locale="da-DK",
             timezone_id="Europe/Copenhagen",
-            storage_state=jyske_session_state() if not full_page else None,
+            storage_state=jyske_session_state() if not fresh_session else None,
         )
         cleanup.push_async_callback(close_resource, context)
 
@@ -182,38 +203,28 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
                 "cdn.segment.com",
             )
             parsed_url = urlsplit(route.request.url)
-            # Save memory on the first attempt, but restore the previously
-            # working page on retries in case its initialization is required.
-            optional_app = not full_page and (
-                parsed_url.hostname == "jyskebank.tv"
-                or (
-                    parsed_url.hostname == "calculators.jyskebank.dk"
-                    and parsed_url.path.startswith("/jyske-kursliste-app/")
-                )
-            )
             if route.request.resource_type in {
                 "image",
                 "media",
                 "font",
                 "stylesheet",
-            } or any(h in route.request.url for h in blocked) or optional_app:
+            } or any(h in route.request.url for h in blocked) or parsed_url.hostname == "jyskebank.tv":
                 await route.abort()
             else:
                 await route.continue_()
 
         await context.route("**/*", route_request)
         page = await context.new_page()
-        if full_page:
-            try:
-                payload = await jyske_page_payload(page, url)
-                return await remember_jyske_session(context, payload)
-            except (FetchError, json.JSONDecodeError) as error:
-                logger.info("Jyske page response unavailable url=%s error=%s", url, error)
-                release_error_frames(error)
-        else:
-            # The lean profile blocks the quote application, so it cannot emit
-            # a native API response. Do not spend its budget waiting for one.
-            await prepare_jyske_page(page)
+        try:
+            payload = await jyske_page_payload(page, url)
+            return await remember_jyske_session(context, payload)
+        except PageUnavailable:
+            # In particular, do not inject fetches into a Cloudflare challenge
+            # or launch more browsers against it in this five-minute slot.
+            raise
+        except (FetchError, json.JSONDecodeError) as error:
+            logger.info("Jyske page response unavailable url=%s error=%s", url, error)
+            release_error_frames(error)
         result = await page.evaluate(PAGE_FETCH, url)
         logger.info(
             "fetch_path institute=Jyske url=%s path=in_page status=%s error=%s elapsed_ms=%.0f profile=%s %s",
@@ -221,7 +232,7 @@ async def jyske(url: str, *, full_page: bool = False) -> JsonValue:
             result.get("status"),
             result.get("error"),
             (monotonic() - started) * 1000,
-            "full" if full_page else "lean",
+            "native",
             response_details(result.get("headers", {})),
         )
         if result.get("ok"):
@@ -265,29 +276,33 @@ async def request_json(
     if institute == "Jyske":
         started = monotonic()
         try:
-            async with session.get(
-                url,
-                headers={**HEADERS, "user-agent": USER_AGENT},
-                max_redirects=3,
-                timeout=aiohttp.ClientTimeout(total=10, connect=5),
-            ) as response:
+            # Match the TLS/HTTP fingerprint and default headers together. Never
+            # combine an aiohttp connection with a claimed Firefox identity.
+            async with BrowserHttpSession(impersonate="chrome", max_clients=1) as direct:
+                response = await direct.get(
+                    url, headers=BROWSER_HTTP_HEADERS, timeout=10, max_redirects=3,
+                )
                 logger.info(
-                    "fetch_path institute=Jyske url=%s path=direct status=%s elapsed_ms=%.0f %s",
+                    "fetch_path institute=Jyske url=%s path=browser_http status=%s elapsed_ms=%.0f %s",
                     url,
-                    response.status,
+                    response.status_code,
                     (monotonic() - started) * 1000,
                     response_details(response.headers),
                 )
-                if response.status < 400:
-                    return await response.json(content_type=None)
-        except TimeoutError:
+                if response.status_code < 400:
+                    return json.loads(response.text)
+        except BrowserHttpSSLError as error:
+            raise FetchError(f"Jyske TLS verification failed: {error}") from error
+        except (TimeoutError, BrowserHttpError) as error:
             logger.info(
-                "fetch_path institute=Jyske url=%s path=direct error=TimeoutError elapsed_ms=%.0f",
+                "fetch_path institute=Jyske url=%s path=browser_http error=%s elapsed_ms=%.0f",
                 url,
+                type(error).__name__,
                 (monotonic() - started) * 1000,
             )
+            release_error_frames(error)
         # Release the HTTP response before starting the browser/Node processes.
-        return await jyske(url, full_page=attempt > 1)
+        return await jyske(url, fresh_session=attempt > 1)
     async with session.get(url) as response:
         if response.status >= 400:
             raise FetchError(f"HTTP {response.status}: {url}", response.status in RETRY_STATUS)

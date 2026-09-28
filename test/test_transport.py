@@ -253,10 +253,14 @@ class NetworkTests(unittest.IsolatedAsyncioTestCase):
                     browser.assert_not_awaited()
                     result = await transport.request_json(session, "Jyske", base + "/blocked")
                     self.assertEqual(result, {"fallback": True})
-                    browser.assert_awaited_once_with(base + "/blocked", full_page=False)
+                    browser.assert_awaited_once_with(base + "/blocked", fresh_session=False)
             for headers in observed:
                 normalized = {key.lower(): value for key, value in headers.items()}
-                self.assertEqual(normalized["user-agent"], transport.USER_AGENT)
+                self.assertIn("Chrome/", normalized["user-agent"])
+                self.assertEqual(normalized["sec-fetch-mode"], "cors")
+                self.assertEqual(normalized["sec-fetch-dest"], "empty")
+                self.assertNotIn("sec-fetch-user", normalized)
+                self.assertNotIn("upgrade-insecure-requests", normalized)
                 for key, value in transport.HEADERS.items():
                     self.assertEqual(normalized[key], value)
         finally:
@@ -276,12 +280,18 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         manager.__aexit__ = AsyncMock(return_value=False)
         response = AsyncMock()
         response.ok, response.status = direct, 200 if direct else 403
+        response.status_code = response.status
         response.headers = {"content-type": "application/json"}
         response.json.return_value = {"direct": True}
+        response.text = '{"direct": true}'
         request = MagicMock()
-        self.response_context = request.get.return_value
-        self.response_context.__aenter__ = AsyncMock(return_value=response)
+        request.get = AsyncMock(return_value=response)
+        self.response_context = request
+        self.response_context.__aenter__ = AsyncMock(return_value=request)
         self.response_context.__aexit__ = AsyncMock(return_value=False)
+        browser_http_patch = patch.object(transport, "BrowserHttpSession", return_value=request)
+        browser_http_patch.start()
+        self.addCleanup(browser_http_patch.stop)
         self.session = request
         session_context = MagicMock()
         session_context.__aenter__ = AsyncMock(return_value=request)
@@ -320,6 +330,38 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.response_context.__aexit__.assert_awaited_once()
         playwright_start.assert_not_called()
         runtime.firefox.launch.assert_not_awaited()
+
+    async def test_browser_http_certificate_failure_does_not_start_firefox(self):
+        manager, _, request, *_ = self.fixture()
+        request.get.side_effect = transport.BrowserHttpSSLError("certificate verification failed")
+        with patch.object(transport, "async_playwright", return_value=manager) as browser:
+            result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
+        self.assertIsInstance(result, transport.FetchError)
+        self.assertFalse(result.retryable)
+        request.get.assert_awaited_once()
+        request.__aexit__.assert_awaited_once()
+        browser.assert_not_called()
+
+    async def test_total_budget_cancels_browser_http_and_closes_session(self):
+        _, _, request, *_ = self.fixture()
+        cancelled = asyncio.Event()
+
+        async def hang(*args, **kwargs):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                cancelled.set()
+
+        request.get.side_effect = hang
+        with (
+            patch.object(transport, "FETCH_SECONDS", 0.05),
+            patch.object(transport, "async_playwright") as browser,
+        ):
+            result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
+        self.assertIsInstance(result, TimeoutError)
+        self.assertTrue(cancelled.is_set())
+        request.__aexit__.assert_awaited_once()
+        browser.assert_not_called()
 
     async def test_successful_session_is_reused_with_native_browser_identity(self):
         first, second = self.fixture(), self.fixture()
@@ -402,11 +444,55 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         native.ok, native.status = True, 200
         native.json.return_value = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
         with patch.object(transport, "async_playwright", return_value=manager):
-            self.assertEqual(await transport.request_json(self.session, "Jyske", "url", attempt=2), native.json.return_value)
+            self.assertEqual(await transport.request_json(self.session, "Jyske", "url"), native.json.return_value)
         self.assertEqual(page.evaluate.await_count, 1)  # Scroll only, no synthetic fetch.
         context.request.get.assert_not_awaited()
         context.close.assert_awaited_once()
         browser.close.assert_awaited_once()
+
+    async def test_challenged_navigation_stops_without_synthetic_calls_or_browser_retries(self):
+        manager, runtime, _, browser, context, page = self.fixture()
+        page.goto.return_value = MagicMock(status=403, headers={
+            "content-type": "text/html",
+            "cf-mitigated": "challenge",
+            "cf-ray": "navigation-ray-DUB",
+            "set-cookie": "private-cookie",
+        })
+        with (
+            patch.object(transport, "async_playwright", return_value=manager),
+            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            result = (await transport.fetch("Jyske"))[transport.ENDPOINTS["Jyske"][0]]
+        self.assertIsInstance(result, transport.PageUnavailable)
+        self.assertIn("navigation HTTP 403", str(result))
+        self.assertIn("cf_mitigated=challenge", str(result))
+        self.assertIn("cf_ray=navigation-ray-DUB", str(result))
+        self.assertNotIn("private-cookie", str(result))
+        self.assertIsNone(result.__traceback__)
+        runtime.firefox.launch.assert_awaited_once()
+        page.evaluate.assert_not_awaited()
+        context.request.get.assert_not_awaited()
+        sleep.assert_not_awaited()
+        context.close.assert_awaited_once()
+        browser.close.assert_awaited_once()
+
+    async def test_transient_navigation_failure_retries_then_reads_native_response(self):
+        first, second = self.fixture(), self.fixture()
+        first[5].goto.return_value.status = 503
+        native = second[5].expect_response.return_value.__aenter__.return_value.value.result()
+        native.ok, native.status = True, 200
+        native.json.return_value = {"fastRenteProdukter": [{"isin": "DK0009420069"}]}
+        with (
+            patch.object(transport, "async_playwright", side_effect=[first[0], second[0]]),
+            patch.object(transport.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            result = await transport.fetch("Jyske")
+        self.assertEqual(result[transport.ENDPOINTS["Jyske"][0]], native.json.return_value)
+        sleep.assert_awaited_once_with(5)
+        first[5].evaluate.assert_not_awaited()
+        for fixture in (first, second):
+            fixture[3].close.assert_awaited_once()
+            fixture[4].request.get.assert_not_awaited()
 
     async def test_page_response_matches_only_endpoint_gets(self):
         manager, _, _, _, _, page = self.fixture()
@@ -484,7 +570,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await transport.request_json(self.session, "Jyske", "url"), {"fallback": True})
         context.request.get.assert_awaited_once()
         browser.close.assert_awaited_once()
-        self.assertIn("institute=Jyske url=url path=direct status=403", logs.output[0])
+        self.assertIn("institute=Jyske url=url path=browser_http status=403", logs.output[0])
         self.assertTrue(any(
             "path=in_page status=None error=AbortError: body timed out" in entry
             for entry in logs.output
@@ -494,7 +580,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             "elapsed_ms=" in entry for entry in logs.output if "fetch_path" in entry
         ))
 
-    async def test_blocks_video_and_duplicate_quote_ui_but_keeps_browser_fetch_dependencies(self):
+    async def test_blocks_video_but_loads_quote_application_on_first_attempt(self):
         manager, _, _, _, context, _ = self.fixture()
         with patch.object(transport, "async_playwright", return_value=manager):
             await transport.jyske("url")
@@ -502,7 +588,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         for resource_type, url, blocked in (
             ("document", "https://jyskebank.tv/v.ihtml/player.html", True),
             ("script", "https://jyskebank.tv/v.ihtml/player.js", True),
-            ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", True),
+            ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", False),
             ("document", transport.PAGE, False),
             ("fetch", transport.ENDPOINTS["Jyske"][0], False),
             ("script", "https://www.jyskebank.dk/cdn-cgi/challenge-platform/scripts/jsd/main.js", False),
@@ -542,7 +628,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Jyske HTTP 403; in-page status=400", str(raised.exception))
         request.get.assert_called_once()
 
-    async def test_network_error_and_400_restore_original_page_on_retries(self):
+    async def test_network_error_and_400_retry_native_page_without_loading_video(self):
         fixtures = [self.fixture(in_page=False), self.fixture(in_page=False), self.fixture()]
         failures = [
             {"ok": False, "error": "TypeError: NetworkError when attempting to fetch resource."},
@@ -563,8 +649,8 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         for attempt, (_, _, _, browser, context, _) in enumerate(fixtures, start=1):
             route_request = context.route.await_args.args[1]
             for resource_type, url, blocked in (
-                ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", attempt == 1),
-                ("document", "https://jyskebank.tv/v.ihtml/player.html", attempt == 1),
+                ("script", "https://calculators.jyskebank.dk/jyske-kursliste-app/jyske-kursliste-app.js", False),
+                ("document", "https://jyskebank.tv/v.ihtml/player.html", True),
                 ("image", "https://www.jyskebank.dk/image.png", True),
                 ("script", "https://www.jyskebank.dk/cdn-cgi/challenge-platform/scripts/jsd/main.js", False),
             ):
@@ -578,8 +664,8 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             browser.close.assert_awaited_once()
         paths = [line for line in logs.output if "path=in_page" in line]
         self.assertEqual(len(paths), 3)
-        for line, profile in zip(paths, ("lean", "full", "full")):
-            self.assertIn("profile=" + profile, line)
+        for line in paths:
+            self.assertIn("profile=native", line)
         excerpt = next(line for line in logs.output if "body_excerpt=" in line)
         self.assertIn("Bad Request", excerpt)
         self.assertNotIn("x" * 300, excerpt)
